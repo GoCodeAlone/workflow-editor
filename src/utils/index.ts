@@ -16,3 +16,5 @@ export {
 } from './connectionCompatibility';
 export { computeContainerView, autoGroupOrphanedNodes } from './grouping';
 export { findSnapCandidate } from './snapToConnect';
+export { buildYamlLineMap } from './yamlLineMap';
+export type { YamlLineRange } from './yamlLineMap';

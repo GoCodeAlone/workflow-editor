@@ -209,6 +209,7 @@ function editorSchemaToModuleTypeInfo(
     ioSignature: schema.ioSignature,
     maxIncoming: schema.maxIncoming,
     maxOutgoing: schema.maxOutgoing,
+    pluginSource: pluginName,
   };
 }
 

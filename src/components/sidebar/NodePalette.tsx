@@ -9,6 +9,7 @@ export default function NodePalette() {
   const [expanded, setExpanded] = useState<Record<string, boolean>>(
     Object.fromEntries(CATEGORIES.map((c) => [c.key, false]))
   );
+  const [pluginExpanded, setPluginExpanded] = useState<Record<string, boolean>>({});
   const [search, setSearch] = useState('');
 
   const addNode = useWorkflowStore((s) => s.addNode);
@@ -77,6 +78,7 @@ export default function NodePalette() {
     return CATEGORIES.map((cat) => ({
       ...cat,
       types: moduleTypes.filter((t) => {
+        if (t.pluginSource) return false; // handled separately as plugin group
         if (t.category !== cat.key) return false;
         if (!searchLower) return true;
         return (
@@ -85,6 +87,18 @@ export default function NodePalette() {
         );
       }),
     }));
+  }, [searchLower, moduleTypes]);
+
+  const pluginGroups = useMemo(() => {
+    const map = new Map<string, typeof moduleTypes>();
+    for (const t of moduleTypes) {
+      if (!t.pluginSource) continue;
+      if (searchLower && !t.label.toLowerCase().includes(searchLower) && !t.type.toLowerCase().includes(searchLower)) continue;
+      const group = map.get(t.pluginSource) ?? [];
+      group.push(t);
+      map.set(t.pluginSource, group);
+    }
+    return map;
   }, [searchLower, moduleTypes]);
 
   // Stop all clicks/events on the palette from propagating to sibling components
@@ -215,6 +229,64 @@ export default function NodePalette() {
           )}
         </div>
       ))}
+      {pluginGroups.size > 0 && (
+        <div style={{ borderTop: '1px solid #313244', marginTop: 4, paddingTop: 4 }}>
+          <div style={{ padding: '4px 16px', fontSize: 11, color: '#585b70', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+            Plugins
+          </div>
+          {Array.from(pluginGroups.entries()).map(([pluginName, types]) => (
+            <div key={pluginName}>
+              <div
+                onClick={(e) => { e.stopPropagation(); setPluginExpanded((prev) => ({ ...prev, [pluginName]: !prev[pluginName] })); }}
+                onMouseDown={(e) => e.stopPropagation()}
+                style={{
+                  padding: '6px 16px',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 6,
+                  color: '#cba6f7',
+                  fontSize: 12,
+                  fontWeight: 600,
+                  userSelect: 'none',
+                }}
+              >
+                <span style={{ transform: pluginExpanded[pluginName] ? 'rotate(90deg)' : 'none', transition: 'transform 0.15s' }}>
+                  &#9654;
+                </span>
+                {pluginName}
+                <span style={{ marginLeft: 'auto', color: '#585b70', fontSize: 11 }}>{types.length}</span>
+              </div>
+              {pluginExpanded[pluginName] && types.map((t) => (
+                <div
+                  key={t.type}
+                  draggable
+                  onDragStart={(e) => onDragStart(e, t.type)}
+                  onDoubleClick={(e) => onDoubleClick(e, t.type)}
+                  onClick={(e) => e.stopPropagation()}
+                  onMouseDown={(e) => e.stopPropagation()}
+                  title="Drag to canvas or double-click to add"
+                  style={{
+                    padding: '5px 16px 5px 28px',
+                    cursor: 'grab',
+                    fontSize: 12,
+                    color: '#bac2de',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 6,
+                    transition: 'background 0.1s',
+                  }}
+                  onMouseOver={(e) => (e.currentTarget.style.background = '#313244')}
+                  onMouseOut={(e) => (e.currentTarget.style.background = 'transparent')}
+                >
+                  <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#cba6f7', flexShrink: 0 }} />
+                  {t.label}
+                </div>
+              ))}
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

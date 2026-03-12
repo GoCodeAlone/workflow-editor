@@ -171,13 +171,26 @@ export default function BaseNode({
     return null;
   }, [moduleType, edges, id]);
 
-  // Validation error highlighting
+  // Validation error highlighting (flat legacy errors + per-node errors)
   const validationErrors = useWorkflowStore((s) => s.validationErrors);
-  const nodeErrors = useMemo(
+  const nodeValidationErrors = useWorkflowStore((s) => s.nodeValidationErrors);
+  const legacyNodeErrors = useMemo(
     () => validationErrors.filter((e) => e.nodeId === id),
     [validationErrors, id],
   );
+  const perNodeErrors = nodeValidationErrors[id] ?? [];
+  const nodeErrors = useMemo(
+    () => [
+      ...legacyNodeErrors.map((e) => e.message),
+      ...perNodeErrors,
+    ],
+    [legacyNodeErrors, perNodeErrors],
+  );
   const hasError = nodeErrors.length > 0;
+
+  // Cursor→node highlight
+  const highlightedNodeId = useWorkflowStore((s) => s.highlightedNodeId);
+  const isHighlighted = highlightedNodeId === id;
 
   // Connection drag highlighting
   const isDragging = connectingFrom !== null;
@@ -190,7 +203,7 @@ export default function BaseNode({
   const isSnapTarget = snapTargetId === id;
 
   const nodeStyle = useMemo(() => {
-    const borderColor = hasError ? '#f38ba8' : isSelected ? '#fff' : color;
+    const borderColor = hasError ? '#f38ba8' : isHighlighted ? '#fab387' : isSelected ? '#fff' : color;
     const base: React.CSSProperties = {
       background: '#1e1e2e',
       border: `2px solid ${borderColor}`,
@@ -202,9 +215,11 @@ export default function BaseNode({
       color: '#cdd6f4',
       boxShadow: hasError
         ? `0 0 0 2px rgba(243, 139, 168, 0.3), 0 4px 12px rgba(0,0,0,0.4)`
-        : isSelected
-          ? `0 0 0 2px ${color}40, 0 4px 12px rgba(0,0,0,0.4)`
-          : '0 2px 8px rgba(0,0,0,0.3)',
+        : isHighlighted
+          ? `0 0 0 3px rgba(250, 179, 135, 0.5), 0 4px 12px rgba(0,0,0,0.4)`
+          : isSelected
+            ? `0 0 0 2px ${color}40, 0 4px 12px rgba(0,0,0,0.4)`
+            : '0 2px 8px rgba(0,0,0,0.3)',
       cursor: 'pointer',
       transition: 'opacity 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease, filter 0.3s ease',
     };
@@ -223,7 +238,7 @@ export default function BaseNode({
     }
 
     return base;
-  }, [isSelected, color, isSource, isCompatible, isIncompatible, isSnapTarget, hasError]);
+  }, [isSelected, color, isSource, isCompatible, isIncompatible, isSnapTarget, hasError, isHighlighted]);
 
   const targetHandleStyle = useMemo(() => {
     const base: React.CSSProperties = {
@@ -268,7 +283,10 @@ export default function BaseNode({
   return (
     <div
       onClick={() => setSelectedNode(id)}
-      className={isSnapTarget ? 'snap-target-glow' : isCompatible ? 'connection-compatible' : undefined}
+      className={[
+        isSnapTarget ? 'snap-target-glow' : isCompatible ? 'connection-compatible' : undefined,
+        isHighlighted ? 'node-highlighted' : undefined,
+      ].filter(Boolean).join(' ') || undefined}
       style={nodeStyle}
     >
       {hasInput && (
@@ -338,7 +356,7 @@ export default function BaseNode({
               fontWeight: 700,
               flexShrink: 0,
             }}
-            title={nodeErrors.map((e) => e.message).join('\n')}
+            title={nodeErrors.join('\n')}
           >
             {nodeErrors.length}
           </span>

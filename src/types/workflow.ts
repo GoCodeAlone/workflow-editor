@@ -114,6 +114,7 @@ export interface ModuleTypeInfo {
   ioSignature?: IOSignature;
   maxIncoming?: number | null;  // null/undefined=unlimited, 0=none, N=limit
   maxOutgoing?: number | null;
+  pluginSource?: string;  // set for plugin-contributed types; absent for built-in
 }
 
 export interface ConfigFieldDef {

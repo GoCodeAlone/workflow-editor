@@ -17,6 +17,7 @@ import { nodesToConfig, configToNodes, nodeComponentType } from '../utils/serial
 import { layoutNodes } from '../utils/autoLayout.ts';
 import { autoGroupOrphanedNodes } from '../utils/grouping.ts';
 import { isPipelineFlowConnection } from '../utils/connectionCompatibility.ts';
+import { buildYamlLineMap } from '../utils/yamlLineMap.ts';
 
 export interface Toast {
   id: string;
@@ -122,6 +123,18 @@ interface WorkflowStore {
   validationErrors: Array<{ nodeId?: string; message: string }>;
   setValidationErrors: (errors: Array<{ nodeId?: string; message: string }>) => void;
   clearValidationErrors: () => void;
+
+  // Per-node validation errors (keyed by node ID) — used by BaseNode to show badge
+  nodeValidationErrors: Record<string, string[]>;
+  validateNodes: () => void;
+
+  // Cursor→node highlight
+  highlightedNodeId: string | null;
+  setHighlightedNode: (id: string | null) => void;
+
+  // YAML line map (node/step name → line range in YAML text)
+  yamlLineMap: Record<string, { startLine: number; endLine: number }>;
+  updateYamlLineMap: (yaml: string) => void;
 
   // Connection drag state (smart connection UX)
   connectingFrom: {
@@ -357,6 +370,7 @@ const useWorkflowStore = create<WorkflowStore>()(
         );
       }
     }
+    get().validateNodes();
   },
 
   removeNode: (id) => {
@@ -423,6 +437,7 @@ const useWorkflowStore = create<WorkflowStore>()(
       importedTriggers: config.triggers ?? {},
       importedPipelines: config.pipelines ?? {},
     });
+    get().validateNodes();
   },
 
   clearCanvas: () => {
@@ -434,6 +449,34 @@ const useWorkflowStore = create<WorkflowStore>()(
   validationErrors: [],
   setValidationErrors: (errors) => set({ validationErrors: errors }),
   clearValidationErrors: () => set({ validationErrors: [] }),
+
+  // Per-node validation errors
+  nodeValidationErrors: {},
+  validateNodes: () => {
+    const { nodes } = get();
+    const moduleTypeMap = useModuleSchemaStore.getState().moduleTypeMap;
+    const errors: Record<string, string[]> = {};
+    for (const node of nodes) {
+      const info = moduleTypeMap[node.data.moduleType];
+      if (!info?.configFields) continue;
+      const nodeErrors: string[] = [];
+      for (const field of info.configFields) {
+        if (field.required && !node.data.config?.[field.key]) {
+          nodeErrors.push(`Missing required field: ${field.label || field.key}`);
+        }
+      }
+      if (nodeErrors.length > 0) errors[node.id] = nodeErrors;
+    }
+    set({ nodeValidationErrors: errors });
+  },
+
+  // Cursor→node highlight
+  highlightedNodeId: null,
+  setHighlightedNode: (id) => set({ highlightedNodeId: id }),
+
+  // YAML line map
+  yamlLineMap: {},
+  updateYamlLineMap: (yaml) => set({ yamlLineMap: buildYamlLineMap(yaml) }),
 
   // Connection drag state
   connectingFrom: null,
