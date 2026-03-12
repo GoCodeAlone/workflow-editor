@@ -46,10 +46,7 @@ export function buildYamlLineMap(yaml: string): Record<string, YamlLineRange> {
       const itemMatch = line.match(/^(\s+)-\s*/);
       if (itemMatch) {
         const indent = itemMatch[1].length;
-        if (indent === moduleIndent - 2 || indent === 0) {
-          flush(lineNum - 1);
-          currentStart = lineNum;
-        } else if (indent === moduleIndent - 2) {
+        if (indent === moduleIndent) {
           flush(lineNum - 1);
           currentStart = lineNum;
         }
