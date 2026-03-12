@@ -1,0 +1,49 @@
+name: Publish
+
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+  packages: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          registry-url: 'https://npm.pkg.github.com'
+          scope: '@gocodealone'
+
+      - run: npm ci
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - run: npm test
+      - run: npm run build
+      - run: npm publish
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  notify-consumers:
+    name: Notify Consumers
+    runs-on: ubuntu-latest
+    needs: publish
+    strategy:
+      matrix:
+        repo:
+          - 'GoCodeAlone/workflow-vscode'
+          - 'GoCodeAlone/workflow-jetbrains'
+          - 'GoCodeAlone/workflow-plugin-admin'
+    steps:
+      - name: Dispatch editor-release to ${{ matrix.repo }}
+        uses: peter-evans/repository-dispatch@v4
+        with:
+          token: ${{ secrets.REPO_DISPATCH_TOKEN }}
+          repository: ${{ matrix.repo }}
+          event-type: editor-release
+          client-payload: '{"version": "${{ github.ref_name }}"}'

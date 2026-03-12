@@ -10,8 +10,9 @@ export {
 } from './serialization';
 export { layoutNodes } from './autoLayout';
 export {
-  getCompatibleTargets,
-  isCompatibleConnection,
+  getCompatibleNodes,
+  getCompatibleModuleTypes,
+  isTypeCompatible,
 } from './connectionCompatibility';
 export { computeContainerView, autoGroupOrphanedNodes } from './grouping';
 export { findSnapCandidate } from './snapToConnect';

@@ -1,0 +1,63 @@
+name: Sync Schema on Workflow Release
+
+on:
+  repository_dispatch:
+    types: [workflow-release]
+
+permissions:
+  contents: write
+  packages: write
+
+jobs:
+  sync:
+    name: Update types and publish
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.26'
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          registry-url: 'https://npm.pkg.github.com'
+          scope: '@gocodealone'
+
+      - name: Install wfctl
+        env:
+          GOPRIVATE: github.com/GoCodeAlone/*
+          GONOSUMCHECK: github.com/GoCodeAlone/*
+          GOFLAGS: -buildvcs=false
+        run: |
+          WORKFLOW_VERSION="${{ github.event.client_payload.version }}"
+          go install "github.com/GoCodeAlone/workflow/cmd/wfctl@${WORKFLOW_VERSION}"
+
+      - name: Regenerate type catalogue
+        run: wfctl schema --output schemas/workflow-config.schema.json
+
+      - name: Bump version
+        run: |
+          WORKFLOW_VERSION="${{ github.event.client_payload.version }}"
+          EDITOR_VERSION="${WORKFLOW_VERSION#v}"
+          npm version "${EDITOR_VERSION}" --no-git-tag-version
+
+      - run: npm ci
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - run: npx tsc --noEmit
+      - run: npm test
+      - run: npm run build
+
+      - name: Commit and tag
+        run: |
+          WORKFLOW_VERSION="${{ github.event.client_payload.version }}"
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git diff --cached --quiet && echo "No changes" && exit 0
+          git commit -m "chore: sync types to workflow ${WORKFLOW_VERSION}"
+          git push
+          git tag "${WORKFLOW_VERSION}"
+          git push origin "${WORKFLOW_VERSION}"
