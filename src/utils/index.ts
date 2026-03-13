@@ -8,6 +8,9 @@ export {
   extractWorkflowEdges,
   multiConfigToTabs,
   nodesToMultiConfig,
+  resolveImports,
+  exportToFiles,
+  hasFileReferences,
 } from './serialization';
 export { layoutNodes } from './autoLayout';
 export {

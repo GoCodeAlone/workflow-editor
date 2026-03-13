@@ -7,14 +7,20 @@ export interface WorkflowEditorProps {
   initialYaml?: string;
   /** Called when the editor produces updated YAML (graph edit, node add/remove, etc.) */
   onChange?: (yaml: string) => void;
-  /** Called when user triggers save (Ctrl+S or toolbar button) */
-  onSave?: (yaml: string) => Promise<void>;
+  /** Called when user triggers save (Ctrl+S or toolbar button).
+   *  If multi-file resolution is active, fileMap contains relative-path → YAML for each file.
+   *  The null key in fileMap represents the main/open file. */
+  onSave?: (yaml: string, fileMap?: Map<string | null, string>) => Promise<void>;
   /** Called when user clicks a node — host should navigate to the YAML line */
   onNavigateToSource?: (line: number, col: number) => void;
   /** Called when editor needs schema data (module types, step types) */
   onSchemaRequest?: () => Promise<ModuleSchemaData | null>;
   /** Called when editor needs plugin schemas */
   onPluginSchemaRequest?: () => Promise<PluginSchemaData[] | null>;
+  /** Called when editor detects file: references in YAML and needs the host to resolve them.
+   *  The host reads the file at the given path (relative to the open document) and returns its content.
+   *  Returns null if file not found. */
+  onResolveFile?: (relativePath: string) => Promise<string | null>;
   /** When true, hides standalone-only controls (Import, Export, Save, AI Copilot) */
   embedded?: boolean;
   /** Called when user clicks AI Design button. Host IDE invokes its built-in AI with the provided context. */

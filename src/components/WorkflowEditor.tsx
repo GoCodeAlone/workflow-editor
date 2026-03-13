@@ -7,17 +7,20 @@ import Toolbar from './toolbar/Toolbar.tsx';
 import { useWorkflowStore } from '../stores/workflowStore.ts';
 import { useModuleSchemaStore } from '../stores/moduleSchemaStore.ts';
 import useUILayoutStore from '../stores/uiLayoutStore.ts';
-import { parseYamlSafe, configToYaml } from '../utils/serialization.ts';
+import { parseYamlSafe, configToYaml, resolveImports, hasFileReferences } from '../utils/serialization.ts';
 import { useEffect, useRef } from 'react';
 
 export function WorkflowEditor(props: WorkflowEditorProps) {
-  const { initialYaml, onSave, onNavigateToSource, onSchemaRequest, onPluginSchemaRequest, embedded, onAIRequest, onChange } = props;
+  const { initialYaml, onSave, onNavigateToSource, onSchemaRequest, onPluginSchemaRequest, embedded, onAIRequest, onChange, onResolveFile } = props;
   const importFromConfig = useWorkflowStore((s) => s.importFromConfig);
   const exportToConfig = useWorkflowStore((s) => s.exportToConfig);
+  const exportToFileMap = useWorkflowStore((s) => s.exportToFileMap);
   const addToast = useWorkflowStore((s) => s.addToast);
+  const sourceMap = useWorkflowStore((s) => s.sourceMap);
   const loadSchemas = useModuleSchemaStore((s) => s.loadSchemas);
   const loadPluginSchemas = useModuleSchemaStore((s) => s.loadPluginSchemas);
   const importingRef = useRef(false);
+  const hasMultiFileRef = useRef(false);
 
   // Import YAML whenever initialYaml prop changes
   useEffect(() => {
@@ -28,13 +31,27 @@ export function WorkflowEditor(props: WorkflowEditorProps) {
     if (currentYaml.trim() === initialYaml.trim()) return;
 
     importingRef.current = true;
-    const { config, error } = parseYamlSafe(initialYaml);
-    if (error) {
-      addToast(`YAML parse error: ${error}`, 'error');
+
+    // Check for multi-file references and resolve if possible
+    if (onResolveFile && hasFileReferences(initialYaml)) {
+      hasMultiFileRef.current = true;
+      resolveImports(initialYaml, onResolveFile).then(({ config, sourceMap: newSourceMap, error }) => {
+        if (error) {
+          addToast(`Import resolution: ${error}`, 'warning');
+        }
+        importFromConfig(config, newSourceMap);
+        importingRef.current = false;
+      });
+    } else {
+      hasMultiFileRef.current = false;
+      const { config, error } = parseYamlSafe(initialYaml);
+      if (error) {
+        addToast(`YAML parse error: ${error}`, 'error');
+      }
+      importFromConfig(config);
+      importingRef.current = false;
     }
-    importFromConfig(config);
-    importingRef.current = false;
-  }, [initialYaml, importFromConfig, exportToConfig, addToast]);
+  }, [initialYaml, importFromConfig, exportToConfig, addToast, onResolveFile]);
 
   // Notify host of store changes via onChange
   useEffect(() => {
@@ -76,7 +93,14 @@ export function WorkflowEditor(props: WorkflowEditorProps) {
         )}
         <div style={{ flex: 1, minWidth: 200, position: 'relative', display: 'flex', flexDirection: 'column' }}>
           <Toolbar
-            onSave={onSave}
+            onSave={onSave ? async (yamlContent: string) => {
+              if (hasMultiFileRef.current && sourceMap.size > 0) {
+                const fileMap = exportToFileMap();
+                await onSave(yamlContent, fileMap);
+              } else {
+                await onSave(yamlContent);
+              }
+            } : undefined}
             showServerControls={false}
             embedded={embedded}
             onAIRequest={onAIRequest}

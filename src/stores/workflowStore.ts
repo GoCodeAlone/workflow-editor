@@ -13,7 +13,7 @@ import {
 import type { WorkflowConfig, WorkflowTab, CrossWorkflowLink } from '../types/workflow.ts';
 import { MODULE_TYPE_MAP as STATIC_MODULE_TYPE_MAP } from '../types/workflow.ts';
 import useModuleSchemaStore from './moduleSchemaStore.ts';
-import { nodesToConfig, configToNodes, nodeComponentType } from '../utils/serialization.ts';
+import { nodesToConfig, configToNodes, nodeComponentType, exportToFiles } from '../utils/serialization.ts';
 import { layoutNodes } from '../utils/autoLayout.ts';
 import { autoGroupOrphanedNodes } from '../utils/grouping.ts';
 import { isPipelineFlowConnection } from '../utils/connectionCompatibility.ts';
@@ -97,8 +97,13 @@ interface WorkflowStore {
   importedTriggers: Record<string, unknown>;
   importedPipelines: Record<string, unknown>;
 
+  // Multi-file resolution: maps module name → source file path
+  sourceMap: Map<string, string>;
+  setSourceMap: (sourceMap: Map<string, string>) => void;
+
   exportToConfig: () => WorkflowConfig;
-  importFromConfig: (config: WorkflowConfig) => void;
+  exportToFileMap: () => Map<string | null, string>;
+  importFromConfig: (config: WorkflowConfig, sourceMap?: Map<string, string>) => void;
   clearCanvas: () => void;
 
   // Active workflow record (generic — host provides the shape)
@@ -183,6 +188,10 @@ const useWorkflowStore = create<WorkflowStore>()(
   importedWorkflows: {},
   importedTriggers: {},
   importedPipelines: {},
+
+  // Multi-file resolution
+  sourceMap: new Map<string, string>(),
+  setSourceMap: (sourceMap) => set({ sourceMap }),
 
   // Active workflow record
   activeWorkflowRecord: null,
@@ -425,18 +434,28 @@ const useWorkflowStore = create<WorkflowStore>()(
     return config;
   },
 
-  importFromConfig: (config) => {
+  exportToFileMap: () => {
+    const config = get().exportToConfig();
+    const { sourceMap } = get();
+    return exportToFiles(config, sourceMap);
+  },
+
+  importFromConfig: (config, sourceMap) => {
     get().pushHistory();
     const moduleTypeMap = useModuleSchemaStore.getState().moduleTypeMap;
     const { nodes, edges } = configToNodes(config, moduleTypeMap);
-    set({
+    const updates: Partial<WorkflowStore> = {
       nodes,
       edges,
       selectedNodeId: null,
       importedWorkflows: config.workflows ?? {},
       importedTriggers: config.triggers ?? {},
       importedPipelines: config.pipelines ?? {},
-    });
+    };
+    if (sourceMap) {
+      updates.sourceMap = sourceMap;
+    }
+    set(updates as WorkflowStore);
     get().validateNodes();
   },
 
