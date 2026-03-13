@@ -81,7 +81,6 @@ jobs:
         repo:
           - 'GoCodeAlone/workflow-vscode'
           - 'GoCodeAlone/workflow-jetbrains'
-          - 'GoCodeAlone/workflow-plugin-admin'
     steps:
       - name: Dispatch editor-release to ${{ matrix.repo }}
         uses: peter-evans/repository-dispatch@v4
