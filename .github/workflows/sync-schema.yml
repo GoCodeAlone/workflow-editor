@@ -44,7 +44,12 @@ jobs:
         run: |
           WORKFLOW_VERSION="${{ github.event.client_payload.version }}"
           EDITOR_VERSION="${WORKFLOW_VERSION#v}"
-          npm version "${EDITOR_VERSION}" --no-git-tag-version
+          CURRENT=$(node -p "require('./package.json').version")
+          if [ "$CURRENT" = "$EDITOR_VERSION" ]; then
+            echo "Already at ${EDITOR_VERSION}, skipping"
+          else
+            npm version "${EDITOR_VERSION}" --no-git-tag-version
+          fi
 
       - run: npm ci
         env:
@@ -54,7 +59,7 @@ jobs:
       - run: npm run build
 
       - name: Publish to GitHub Packages
-        run: npm publish
+        run: npm publish || echo "Publish failed (version may already exist)"
         env:
           NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -68,8 +73,12 @@ jobs:
           git commit -m "chore: sync types to workflow ${WORKFLOW_VERSION}"
           git pull --rebase origin master
           git push
-          git tag "${WORKFLOW_VERSION}"
-          git push origin "${WORKFLOW_VERSION}"
+          if git rev-parse "${WORKFLOW_VERSION}" >/dev/null 2>&1; then
+            echo "Tag ${WORKFLOW_VERSION} already exists, skipping"
+          else
+            git tag "${WORKFLOW_VERSION}"
+            git push origin "${WORKFLOW_VERSION}"
+          fi
 
   notify-consumers:
     name: Notify IDE Plugins
