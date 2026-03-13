@@ -10,7 +10,7 @@ permissions:
 
 jobs:
   sync:
-    name: Update types and publish
+    name: Update types, publish, and notify
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -53,6 +53,11 @@ jobs:
       - run: npm test
       - run: npm run build
 
+      - name: Publish to GitHub Packages
+        run: npm publish
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Commit and tag
         run: |
           WORKFLOW_VERSION="${{ github.event.client_payload.version }}"
@@ -65,3 +70,22 @@ jobs:
           git push
           git tag "${WORKFLOW_VERSION}"
           git push origin "${WORKFLOW_VERSION}"
+
+  notify-consumers:
+    name: Notify IDE Plugins
+    runs-on: ubuntu-latest
+    needs: sync
+    strategy:
+      matrix:
+        repo:
+          - 'GoCodeAlone/workflow-vscode'
+          - 'GoCodeAlone/workflow-jetbrains'
+          - 'GoCodeAlone/workflow-plugin-admin'
+    steps:
+      - name: Dispatch editor-release to ${{ matrix.repo }}
+        uses: peter-evans/repository-dispatch@v4
+        with:
+          token: ${{ secrets.REPO_DISPATCH_TOKEN }}
+          repository: ${{ matrix.repo }}
+          event-type: editor-release
+          client-payload: '{"version": "${{ github.event.client_payload.version }}"}'
