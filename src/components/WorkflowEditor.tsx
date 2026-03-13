@@ -7,28 +7,46 @@ import Toolbar from './toolbar/Toolbar.tsx';
 import { useWorkflowStore } from '../stores/workflowStore.ts';
 import { useModuleSchemaStore } from '../stores/moduleSchemaStore.ts';
 import useUILayoutStore from '../stores/uiLayoutStore.ts';
-import { parseYamlSafe } from '../utils/serialization.ts';
+import { parseYamlSafe, configToYaml } from '../utils/serialization.ts';
 import { useEffect, useRef } from 'react';
 
 export function WorkflowEditor(props: WorkflowEditorProps) {
-  const { initialYaml, onSave, onNavigateToSource, onSchemaRequest, onPluginSchemaRequest, embedded, onAIRequest } = props;
-  const initialized = useRef(false);
+  const { initialYaml, onSave, onNavigateToSource, onSchemaRequest, onPluginSchemaRequest, embedded, onAIRequest, onChange } = props;
   const importFromConfig = useWorkflowStore((s) => s.importFromConfig);
+  const exportToConfig = useWorkflowStore((s) => s.exportToConfig);
   const addToast = useWorkflowStore((s) => s.addToast);
   const loadSchemas = useModuleSchemaStore((s) => s.loadSchemas);
   const loadPluginSchemas = useModuleSchemaStore((s) => s.loadPluginSchemas);
+  const importingRef = useRef(false);
 
-  // Load initial YAML
+  // Import YAML whenever initialYaml prop changes
   useEffect(() => {
-    if (initialYaml && !initialized.current) {
-      initialized.current = true;
-      const { config, error } = parseYamlSafe(initialYaml);
-      if (error) {
-        addToast(`YAML parse error: ${error}`, 'error');
-      }
-      importFromConfig(config);
+    if (!initialYaml) return;
+    // Avoid re-import loop: compare incoming YAML to current store state
+    const currentConfig = exportToConfig();
+    const currentYaml = configToYaml(currentConfig);
+    if (currentYaml.trim() === initialYaml.trim()) return;
+
+    importingRef.current = true;
+    const { config, error } = parseYamlSafe(initialYaml);
+    if (error) {
+      addToast(`YAML parse error: ${error}`, 'error');
     }
-  }, [initialYaml, importFromConfig, addToast]);
+    importFromConfig(config);
+    importingRef.current = false;
+  }, [initialYaml, importFromConfig, exportToConfig, addToast]);
+
+  // Notify host of store changes via onChange
+  useEffect(() => {
+    if (!onChange) return;
+    const unsub = useWorkflowStore.subscribe(() => {
+      if (importingRef.current) return;
+      const config = exportToConfig();
+      const yaml = configToYaml(config);
+      onChange(yaml);
+    });
+    return unsub;
+  }, [onChange, exportToConfig]);
 
   // Request schemas from host
   useEffect(() => {
