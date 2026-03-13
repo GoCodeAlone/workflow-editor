@@ -10,6 +10,7 @@ interface ToolbarProps {
   onLoadFromServer?: () => Promise<string | null>;
   onImportFromPath?: (path: string) => Promise<string | null>;
   showServerControls?: boolean;
+  embedded?: boolean;
 }
 
 export default function Toolbar(props: ToolbarProps) {
@@ -276,15 +277,15 @@ export default function Toolbar(props: ToolbarProps) {
         </span>
       )}
 
-      <ToolbarButton label="Import" onClick={handleImport} />
+      {!props.embedded && <ToolbarButton label="Import" onClick={handleImport} />}
       {props.showServerControls && (
         <ToolbarButton label="Load Server" onClick={handleLoadFromServer} />
       )}
       {props.showServerControls && (
         <ToolbarButton label="From Path" onClick={handleImportFromServerPath} />
       )}
-      <ToolbarButton label="Export YAML" onClick={handleExport} disabled={nodes.length === 0} />
-      <ToolbarButton label="Save" onClick={handleSave} disabled={nodes.length === 0} />
+      {!props.embedded && <ToolbarButton label="Export YAML" onClick={handleExport} disabled={nodes.length === 0} />}
+      {!props.embedded && <ToolbarButton label="Save" onClick={handleSave} disabled={nodes.length === 0} />}
       {props.showServerControls && activeWorkflowRecord && (workflowStatus === 'draft' || workflowStatus === 'stopped' || workflowStatus === 'error') && (
         <ToolbarButton label={deployInProgress ? 'Deploying...' : 'Deploy'} onClick={handleDeploy} disabled={deployInProgress} variant="deploy" />
       )}
@@ -300,16 +301,20 @@ export default function Toolbar(props: ToolbarProps) {
 
       <Separator />
 
-      <ToolbarButton
-        label="AI Copilot"
-        onClick={toggleAIPanel}
-        variant={showAIPanel ? 'active' : undefined}
-      />
-      <ToolbarButton
-        label="Components"
-        onClick={toggleComponentBrowser}
-        variant={showComponentBrowser ? 'active' : undefined}
-      />
+      {!props.embedded && (
+        <>
+          <ToolbarButton
+            label="AI Copilot"
+            onClick={toggleAIPanel}
+            variant={showAIPanel ? 'active' : undefined}
+          />
+          <ToolbarButton
+            label="Components"
+            onClick={toggleComponentBrowser}
+            variant={showComponentBrowser ? 'active' : undefined}
+          />
+        </>
+      )}
 
       <Separator />
 

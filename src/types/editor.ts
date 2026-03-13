@@ -15,6 +15,8 @@ export interface WorkflowEditorProps {
   onSchemaRequest?: () => Promise<ModuleSchemaData | null>;
   /** Called when editor needs plugin schemas */
   onPluginSchemaRequest?: () => Promise<PluginSchemaData[] | null>;
+  /** When true, hides standalone-only controls (Import, Export, Save, AI Copilot) */
+  embedded?: boolean;
 }
 
 /** Schema data the host provides for built-in module/step types */

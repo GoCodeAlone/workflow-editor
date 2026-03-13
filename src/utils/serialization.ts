@@ -752,16 +752,43 @@ export function configToYaml(config: WorkflowConfig): string {
 }
 
 export function parseYaml(text: string): WorkflowConfig {
-  const parsed = yaml.load(text) as Record<string, unknown>;
-  const config: WorkflowConfig = {
-    modules: (parsed.modules ?? []) as ModuleConfig[],
-    workflows: (parsed.workflows ?? {}) as Record<string, unknown>,
-    triggers: (parsed.triggers ?? {}) as Record<string, unknown>,
-  };
-  if (parsed.pipelines) {
-    config.pipelines = parsed.pipelines as Record<string, unknown>;
+  try {
+    const parsed = yaml.load(text) as Record<string, unknown>;
+    if (!parsed || typeof parsed !== 'object') {
+      return { modules: [], workflows: {}, triggers: {} };
+    }
+    const config: WorkflowConfig = {
+      modules: (parsed.modules ?? []) as ModuleConfig[],
+      workflows: (parsed.workflows ?? {}) as Record<string, unknown>,
+      triggers: (parsed.triggers ?? {}) as Record<string, unknown>,
+    };
+    if (parsed.pipelines) {
+      config.pipelines = parsed.pipelines as Record<string, unknown>;
+    }
+    return config;
+  } catch {
+    return { modules: [], workflows: {}, triggers: {} };
   }
-  return config;
+}
+
+export function parseYamlSafe(text: string): { config: WorkflowConfig; error?: string } {
+  try {
+    const parsed = yaml.load(text) as Record<string, unknown>;
+    if (!parsed || typeof parsed !== 'object') {
+      return { config: { modules: [], workflows: {}, triggers: {} }, error: 'YAML parsed to non-object value' };
+    }
+    const config: WorkflowConfig = {
+      modules: (parsed.modules ?? []) as ModuleConfig[],
+      workflows: (parsed.workflows ?? {}) as Record<string, unknown>,
+      triggers: (parsed.triggers ?? {}) as Record<string, unknown>,
+    };
+    if (parsed.pipelines) {
+      config.pipelines = parsed.pipelines as Record<string, unknown>;
+    }
+    return { config };
+  } catch (e) {
+    return { config: { modules: [], workflows: {}, triggers: {} }, error: (e as Error).message };
+  }
 }
 
 // Extract conditional branch points from state machine workflow definitions

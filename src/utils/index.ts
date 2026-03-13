@@ -3,6 +3,7 @@ export {
   nodesToConfig,
   configToYaml,
   parseYaml,
+  parseYamlSafe,
   nodeComponentType,
   extractWorkflowEdges,
   multiConfigToTabs,

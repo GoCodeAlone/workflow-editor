@@ -533,6 +533,8 @@ export default function WorkflowCanvas(props: WorkflowCanvasProps) {
         nodeTypes={nodeTypes}
         edgeTypes={edgeTypes}
         fitView
+        minZoom={0.1}
+        maxZoom={2.5}
         proOptions={{ hideAttribution: true }}
         defaultEdgeOptions={{
           type: 'deletable',
