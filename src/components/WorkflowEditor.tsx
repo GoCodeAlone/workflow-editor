@@ -7,6 +7,7 @@ import Toolbar from './toolbar/Toolbar.tsx';
 import { useWorkflowStore } from '../stores/workflowStore.ts';
 import { useModuleSchemaStore } from '../stores/moduleSchemaStore.ts';
 import useUILayoutStore from '../stores/uiLayoutStore.ts';
+import ToastContainer from './ToastContainer.tsx';
 import { parseYamlSafe, configToYaml, resolveImports, hasFileReferences } from '../utils/serialization.ts';
 import { useEffect, useRef } from 'react';
 
@@ -92,6 +93,7 @@ export function WorkflowEditor(props: WorkflowEditorProps) {
           </div>
         )}
         <div style={{ flex: 1, minWidth: 200, position: 'relative', display: 'flex', flexDirection: 'column' }}>
+          <ToastContainer />
           <Toolbar
             onSave={onSave ? async (yamlContent: string) => {
               if (hasMultiFileRef.current && sourceMap.size > 0) {

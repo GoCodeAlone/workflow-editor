@@ -46,6 +46,12 @@ export default function Toolbar(props: ToolbarProps) {
     const yaml = configToYaml(config);
     const moduleTypeList = Object.keys(useModuleSchemaStore.getState().moduleTypeMap);
 
+    if (props.embedded) {
+      // In IDE context, let the host handle prompt collection
+      props.onAIRequest({ yaml, moduleTypes: moduleTypeList, userPrompt: '' });
+      return;
+    }
+
     const userPrompt = window.prompt(
       'Describe what you want the AI to help design:\n\n' +
       'Examples:\n' +
