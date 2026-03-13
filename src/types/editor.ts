@@ -17,6 +17,18 @@ export interface WorkflowEditorProps {
   onPluginSchemaRequest?: () => Promise<PluginSchemaData[] | null>;
   /** When true, hides standalone-only controls (Import, Export, Save, AI Copilot) */
   embedded?: boolean;
+  /** Called when user clicks AI Design button. Host IDE invokes its built-in AI with the provided context. */
+  onAIRequest?: (context: AIRequestContext) => void;
+}
+
+/** Context sent to the host IDE's AI when user clicks AI Design */
+export interface AIRequestContext {
+  /** Current workflow YAML */
+  yaml: string;
+  /** Available module type names */
+  moduleTypes: string[];
+  /** User's natural language request */
+  userPrompt: string;
 }
 
 /** Schema data the host provides for built-in module/step types */

@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import useWorkflowStore from '../../stores/workflowStore.ts';
+import useModuleSchemaStore from '../../stores/moduleSchemaStore.ts';
 import { configToYaml, parseYaml } from '../../utils/serialization.ts';
+import type { AIRequestContext } from '../../types/editor.ts';
 
 interface ToolbarProps {
   onSave?: (yaml: string) => Promise<void>;
@@ -11,6 +13,7 @@ interface ToolbarProps {
   onImportFromPath?: (path: string) => Promise<string | null>;
   showServerControls?: boolean;
   embedded?: boolean;
+  onAIRequest?: (context: AIRequestContext) => void;
 }
 
 export default function Toolbar(props: ToolbarProps) {
@@ -36,6 +39,24 @@ export default function Toolbar(props: ToolbarProps) {
   const activeWorkflowRecord = useWorkflowStore((s) => s.activeWorkflowRecord);
 
   const [deployInProgress, setDeployInProgress] = useState(false);
+
+  const handleAIDesign = () => {
+    if (!props.onAIRequest) return;
+    const config = exportToConfig();
+    const yaml = configToYaml(config);
+    const moduleTypeList = Object.keys(useModuleSchemaStore.getState().moduleTypeMap);
+
+    const userPrompt = window.prompt(
+      'Describe what you want the AI to help design:\n\n' +
+      'Examples:\n' +
+      '  "Add a REST API with authentication"\n' +
+      '  "Add a PostgreSQL database module"\n' +
+      '  "Connect the HTTP server to a message broker"'
+    );
+    if (!userPrompt) return;
+
+    props.onAIRequest({ yaml, moduleTypes: moduleTypeList, userPrompt });
+  };
 
   const handleSave = async () => {
     if (props.onSave) {
@@ -301,6 +322,9 @@ export default function Toolbar(props: ToolbarProps) {
 
       <Separator />
 
+      {props.embedded && props.onAIRequest && (
+        <ToolbarButton label="AI Design" onClick={handleAIDesign} />
+      )}
       {!props.embedded && (
         <>
           <ToolbarButton

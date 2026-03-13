@@ -11,7 +11,7 @@ import { parseYamlSafe } from '../utils/serialization.ts';
 import { useEffect, useRef } from 'react';
 
 export function WorkflowEditor(props: WorkflowEditorProps) {
-  const { initialYaml, onSave, onNavigateToSource, onSchemaRequest, onPluginSchemaRequest, embedded } = props;
+  const { initialYaml, onSave, onNavigateToSource, onSchemaRequest, onPluginSchemaRequest, embedded, onAIRequest } = props;
   const initialized = useRef(false);
   const importFromConfig = useWorkflowStore((s) => s.importFromConfig);
   const addToast = useWorkflowStore((s) => s.addToast);
@@ -61,6 +61,7 @@ export function WorkflowEditor(props: WorkflowEditorProps) {
             onSave={onSave}
             showServerControls={false}
             embedded={embedded}
+            onAIRequest={onAIRequest}
           />
           <WorkflowCanvas
             onSave={onSave}
