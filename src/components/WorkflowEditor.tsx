@@ -9,10 +9,11 @@ import { useModuleSchemaStore } from '../stores/moduleSchemaStore.ts';
 import useUILayoutStore from '../stores/uiLayoutStore.ts';
 import ToastContainer from './ToastContainer.tsx';
 import { parseYamlSafe, configToYaml, resolveImports, hasFileReferences } from '../utils/serialization.ts';
+import { applyMode } from '../modes/defaultMode.ts';
 import { useEffect, useRef } from 'react';
 
 export function WorkflowEditor(props: WorkflowEditorProps) {
-  const { initialYaml, onSave, onNavigateToSource, onSchemaRequest, onPluginSchemaRequest, embedded, onAIRequest, onChange, onResolveFile } = props;
+  const { initialYaml, onSave, onNavigateToSource, onSchemaRequest, onPluginSchemaRequest, embedded, onAIRequest, onChange, onResolveFile, mode } = props;
   const importFromConfig = useWorkflowStore((s) => s.importFromConfig);
   const exportToConfig = useWorkflowStore((s) => s.exportToConfig);
   const exportToFileMap = useWorkflowStore((s) => s.exportToFileMap);
@@ -65,6 +66,11 @@ export function WorkflowEditor(props: WorkflowEditorProps) {
     });
     return unsub;
   }, [onChange, exportToConfig]);
+
+  // Apply mode config to registries on mount and when mode changes
+  useEffect(() => {
+    applyMode(mode);
+  }, [mode]);
 
   // Request schemas from host
   useEffect(() => {
