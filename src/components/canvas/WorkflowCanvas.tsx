@@ -15,7 +15,7 @@ import {
   type IsValidConnection,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
-import { nodeTypes } from '../nodes/index.ts';
+import useNodeTypeRegistry from '../../stores/nodeTypeRegistry.ts';
 import useWorkflowStore from '../../stores/workflowStore.ts';
 import useModuleSchemaStore from '../../stores/moduleSchemaStore.ts';
 import useUILayoutStore from '../../stores/uiLayoutStore.ts';
@@ -44,6 +44,7 @@ interface WorkflowCanvasProps {
 }
 
 export default function WorkflowCanvas(props: WorkflowCanvasProps) {
+  const nodeTypes = useNodeTypeRegistry((s) => s.nodeTypes);
   const nodes = useWorkflowStore((s) => s.nodes);
   const edges = useWorkflowStore((s) => s.edges);
   const onNodesChange = useWorkflowStore((s) => s.onNodesChange);
