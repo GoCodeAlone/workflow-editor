@@ -2,6 +2,8 @@ import yaml from 'js-yaml';
 import type { Edge } from '@xyflow/react';
 import type { WorkflowNode } from '../../../src/stores/workflowStore.ts';
 import type { WorkflowConfig, ModuleConfig } from '../../../src/types/workflow.ts';
+import { validateEffects } from './effectValidator.ts';
+import type { EffectValidationInput } from './effectValidator.ts';
 
 export interface GameGraph {
   nodes: WorkflowNode[];
@@ -75,6 +77,7 @@ export function gameToYaml(graph: GameGraph): CompileResult {
   const pipelines: Record<string, unknown> = {};
   const workflows: Record<string, unknown> = {};
   const triggers: Record<string, unknown> = {};
+  const effectInputs: EffectValidationInput[] = [];
 
   // Module-type nodes: direct mapping to modules[]
   const MODULE_TYPES = new Set([
@@ -103,7 +106,12 @@ export function gameToYaml(graph: GameGraph): CompileResult {
 
       case 'game.effect': {
         const trigger = (config.trigger as string) || 'game_event';
+        const action = (config.action as string) || '';
+        const stateWrites = (config.stateWrites as string[]) ?? [];
         const handlerPipelineName = `${name}_effect_pipeline`;
+
+        // Collect for static analysis
+        effectInputs.push({ trigger, action, stateWrites });
 
         // Messaging-style workflow: broker subscribes topic → handler pipeline
         workflows[`${trigger}_effect`] = {
@@ -163,6 +171,12 @@ export function gameToYaml(graph: GameGraph): CompileResult {
         config: { ...n.data.config },
       })),
     };
+  }
+
+  // Run static analysis on effects
+  const effectWarnings = validateEffects(effectInputs);
+  for (const w of effectWarnings) {
+    warnings.push(w.message);
   }
 
   const config: WorkflowConfig = {
