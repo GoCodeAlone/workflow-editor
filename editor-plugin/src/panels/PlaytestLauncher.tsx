@@ -50,6 +50,7 @@ export default function PlaytestLauncher({ serverUrl, onLaunch }: PlaytestLaunch
 
       const data = await res.json() as { gameId: string };
       setState({ status: 'running', gameId: data.gameId });
+      window.open(`${serverUrl}/play/${data.gameId}`, '_blank');
       onLaunch?.(data.gameId);
     } catch (err) {
       setState({ status: 'error', message: `Launch failed: ${(err as Error).message}` });

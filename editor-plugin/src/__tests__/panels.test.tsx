@@ -108,6 +108,35 @@ describe('PlaytestLauncher', () => {
     });
   });
 
+  it('opens game client in new window after successful launch', async () => {
+    const openSpy = vi.spyOn(window, 'open').mockImplementation(() => null);
+    vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(
+      new Response(JSON.stringify({ gameId: 'game-xyz' }), { status: 200 }),
+    );
+
+    useWorkflowStore.setState({
+      nodes: [
+        {
+          id: 'n1',
+          type: 'game.deck',
+          position: { x: 0, y: 0 },
+          data: { moduleType: 'game.deck', label: 'Deck', config: {} },
+        },
+      ],
+      edges: [],
+    });
+
+    render(<PlaytestLauncher serverUrl="http://localhost:9090" />);
+    fireEvent.click(screen.getByRole('button', { name: /playtest/i }));
+
+    await waitFor(() => {
+      expect(openSpy).toHaveBeenCalledWith(
+        'http://localhost:9090/play/game-xyz',
+        '_blank',
+      );
+    });
+  });
+
   it('accepts optional onLaunch callback', async () => {
     const onLaunch = vi.fn();
     vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(
