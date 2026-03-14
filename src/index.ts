@@ -8,6 +8,9 @@ export { default as PropertyPanel } from './components/properties/PropertyPanel.
 export { default as Toolbar } from './components/toolbar/Toolbar.tsx';
 export { nodeTypes } from './components/nodes/index.ts';
 
+// Mode system
+export { applyMode } from './modes/defaultMode.ts';
+
 // Re-export sub-paths
 export * from './types/index.ts';
 export * from './stores/index.ts';
