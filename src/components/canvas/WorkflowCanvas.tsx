@@ -16,6 +16,7 @@ import {
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import useNodeTypeRegistry from '../../stores/nodeTypeRegistry.ts';
+import useEdgeStyleRegistry from '../../stores/edgeStyleRegistry.ts';
 import useWorkflowStore from '../../stores/workflowStore.ts';
 import useModuleSchemaStore from '../../stores/moduleSchemaStore.ts';
 import useUILayoutStore from '../../stores/uiLayoutStore.ts';
@@ -45,6 +46,7 @@ interface WorkflowCanvasProps {
 
 export default function WorkflowCanvas(props: WorkflowCanvasProps) {
   const nodeTypes = useNodeTypeRegistry((s) => s.nodeTypes);
+  const getEdgeStyle = useEdgeStyleRegistry((s) => s.getStyle);
   const nodes = useWorkflowStore((s) => s.nodes);
   const edges = useWorkflowStore((s) => s.edges);
   const onNodesChange = useWorkflowStore((s) => s.onNodesChange);
@@ -81,17 +83,6 @@ export default function WorkflowCanvas(props: WorkflowCanvasProps) {
   const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null);
 
   const styledEdges: Edge[] = useMemo(() => {
-    // Clean solid lines with opacity/thickness differentiation instead of dashes
-    const edgeStyles: Record<string, { stroke: string; strokeWidth: number; opacity?: number }> = {
-      'dependency':              { stroke: '#585b70', strokeWidth: 1.5, opacity: 0.4 },
-      'http-route':              { stroke: '#3b82f6', strokeWidth: 2.5 },
-      'messaging-subscription':  { stroke: '#8b5cf6', strokeWidth: 2.5 },
-      'statemachine':            { stroke: '#f59e0b', strokeWidth: 2.5 },
-      'event':                   { stroke: '#ef4444', strokeWidth: 2 },
-      'conditional':             { stroke: '#22c55e', strokeWidth: 2 },
-      'middleware-chain':        { stroke: '#fab387', strokeWidth: 2.5 },
-      'pipeline-flow':           { stroke: '#e879f9', strokeWidth: 3 },
-    };
     return edges.map((edge) => {
       const edgeData = edge.data as WorkflowEdgeData | undefined;
       const edgeType = edgeData?.edgeType;
@@ -114,7 +105,7 @@ export default function WorkflowCanvas(props: WorkflowCanvasProps) {
         }
         return { ...edge, type: 'deletable' };
       }
-      const style = edgeStyles[edgeType];
+      const style = getEdgeStyle(edgeType);
       if (!style) return edge;
       const isMiddlewareChain = edgeType === 'middleware-chain';
       const isPipelineFlow = edgeType === 'pipeline-flow';
@@ -149,7 +140,7 @@ export default function WorkflowCanvas(props: WorkflowCanvasProps) {
         labelBgPadding: (isMiddlewareChain || isPipelineFlow) ? [4, 4] as [number, number] : undefined,
       };
     });
-  }, [edges, selectedEdgeId]);
+  }, [edges, selectedEdgeId, getEdgeStyle]);
 
   const { nodes: displayNodes, edges: displayEdges } = useMemo(() => {
     if (viewLevel === 'container' && nodes.length > 0) {
