@@ -241,9 +241,6 @@ export function nodesToConfig(
       case 'pipeline-flow':
         pipelineFlowEdges.push(edge);
         break;
-      case 'auto-wire':
-        // Auto-wire edges are computed, not serialized
-        break;
       default:
         dependencyEdges.push(edge);
         break;
@@ -696,28 +693,6 @@ export function configToNodes(
     if (!existingPairs.has(key)) {
       edges.push(we);
       existingPairs.add(key);
-    }
-  }
-
-  // Auto-wire edges: observability modules auto-wire to the first router
-  const autoWireTypes = new Set(['health.checker', 'metrics.collector', 'log.collector']);
-  const routerTypes = new Set(['http.router']);
-  const firstRouter = config.modules.find((m) => routerTypes.has(m.type));
-  if (firstRouter) {
-    const routerId = nameToId[firstRouter.name];
-    if (routerId) {
-      for (const mod of config.modules) {
-        if (autoWireTypes.has(mod.type)) {
-          const modId = nameToId[mod.name];
-          if (modId) {
-            const key = `${modId}->${routerId}`;
-            if (!existingPairs.has(key)) {
-              edges.push(makeEdge(modId, routerId, 'auto-wire', 'auto-wired'));
-              existingPairs.add(key);
-            }
-          }
-        }
-      }
     }
   }
 

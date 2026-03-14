@@ -14,7 +14,7 @@ export default function NodeContextMenu({ x, y, nodeId, onClose }: NodeContextMe
 
   const connectedEdges = edges.filter(
     (e) => e.source === nodeId || e.target === nodeId
-  ).filter((e) => (e.data as Record<string, unknown> | undefined)?.edgeType !== 'auto-wire');
+  );
 
   return (
     <div

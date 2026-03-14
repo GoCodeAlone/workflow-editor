@@ -88,15 +88,13 @@ export default function WorkflowCanvas(props: WorkflowCanvasProps) {
       'statemachine':            { stroke: '#f59e0b', strokeWidth: 2.5 },
       'event':                   { stroke: '#ef4444', strokeWidth: 2 },
       'conditional':             { stroke: '#22c55e', strokeWidth: 2 },
-      'auto-wire':               { stroke: '#45475a', strokeWidth: 1, opacity: 0.3 },
       'middleware-chain':        { stroke: '#fab387', strokeWidth: 2.5 },
       'pipeline-flow':           { stroke: '#e879f9', strokeWidth: 3 },
     };
     return edges.map((edge) => {
       const edgeData = edge.data as WorkflowEdgeData | undefined;
       const edgeType = edgeData?.edgeType;
-      const isAutoWire = edgeType === 'auto-wire';
-      const isSelected = edge.id === selectedEdgeId && !isAutoWire;
+      const isSelected = edge.id === selectedEdgeId;
 
       if (!edgeType) {
         // Untyped edge — apply selected styling if applicable
@@ -130,7 +128,7 @@ export default function WorkflowCanvas(props: WorkflowCanvasProps) {
 
       return {
         ...edge,
-        ...(!isAutoWire ? { type: 'deletable' as const } : {}),
+        type: 'deletable' as const,
         ...(chainOrder !== undefined
           ? { label: `#${chainOrder}` }
           : {}),
@@ -148,7 +146,6 @@ export default function WorkflowCanvas(props: WorkflowCanvasProps) {
           ? { fill: '#1e1e2e', fillOpacity: 0.95, rx: 10, ry: 10 }
           : { fill: '#1e1e2e', fillOpacity: 0.9 },
         labelBgPadding: (isMiddlewareChain || isPipelineFlow) ? [4, 4] as [number, number] : undefined,
-        ...(isAutoWire ? { deletable: false, selectable: false, animated: false } : {}),
       };
     });
   }, [edges, selectedEdgeId]);
@@ -202,8 +199,6 @@ export default function WorkflowCanvas(props: WorkflowCanvasProps) {
   );
 
   const handleEdgeClick = useCallback((_event: React.MouseEvent, edge: Edge) => {
-    const edgeData = edge.data as WorkflowEdgeData | undefined;
-    if (edgeData?.edgeType === 'auto-wire') return; // auto-wire not selectable
     setSelectedEdge(edge.id);
   }, [setSelectedEdge]);
 
@@ -220,8 +215,6 @@ export default function WorkflowCanvas(props: WorkflowCanvasProps) {
   const handleEdgeContextMenu = useCallback(
     (event: React.MouseEvent, edge: Edge) => {
       event.preventDefault();
-      const edgeData = edge.data as WorkflowEdgeData | undefined;
-      if (edgeData?.edgeType === 'auto-wire') return;
       setContextMenu({ type: 'edge', x: event.clientX, y: event.clientY, id: edge.id });
     },
     []

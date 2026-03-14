@@ -366,60 +366,10 @@ describe('serialization', () => {
       expect(serverToRouter).toHaveLength(1);
     });
 
-    it('creates auto-wire edges from health.checker to first router', () => {
+    it('does not create auto-wire edges for observability modules', () => {
       const config: WorkflowConfig = {
         modules: [
           { name: 'my-server', type: 'http.server' },
-          { name: 'my-router', type: 'http.router' },
-          { name: 'health', type: 'health.checker' },
-        ],
-        workflows: {},
-        triggers: {},
-      };
-
-      const { edges } = configToNodes(config);
-      const autoWireEdges = edges.filter((e) => (e.data as WorkflowEdgeData)?.edgeType === 'auto-wire');
-      expect(autoWireEdges).toHaveLength(1);
-      expect(autoWireEdges[0].target).toContain('http_router');
-      expect((autoWireEdges[0].data as WorkflowEdgeData).label).toBe('auto-wired');
-    });
-
-    it('creates auto-wire edges from metrics.collector to first router', () => {
-      const config: WorkflowConfig = {
-        modules: [
-          { name: 'my-server', type: 'http.server' },
-          { name: 'my-router', type: 'http.router' },
-          { name: 'metrics', type: 'metrics.collector' },
-        ],
-        workflows: {},
-        triggers: {},
-      };
-
-      const { edges } = configToNodes(config);
-      const autoWireEdges = edges.filter((e) => (e.data as WorkflowEdgeData)?.edgeType === 'auto-wire');
-      expect(autoWireEdges).toHaveLength(1);
-      expect(autoWireEdges[0].target).toContain('http_router');
-      expect((autoWireEdges[0].data as WorkflowEdgeData).label).toBe('auto-wired');
-    });
-
-    it('does not create auto-wire edges when no router exists', () => {
-      const config: WorkflowConfig = {
-        modules: [
-          { name: 'my-server', type: 'http.server' },
-          { name: 'health', type: 'health.checker' },
-        ],
-        workflows: {},
-        triggers: {},
-      };
-
-      const { edges } = configToNodes(config);
-      const autoWireEdges = edges.filter((e) => (e.data as WorkflowEdgeData)?.edgeType === 'auto-wire');
-      expect(autoWireEdges).toHaveLength(0);
-    });
-
-    it('auto-wires multiple observability modules to the same router', () => {
-      const config: WorkflowConfig = {
-        modules: [
           { name: 'my-router', type: 'http.router' },
           { name: 'health', type: 'health.checker' },
           { name: 'metrics', type: 'metrics.collector' },
@@ -429,25 +379,11 @@ describe('serialization', () => {
       };
 
       const { edges } = configToNodes(config);
-      const autoWireEdges = edges.filter((e) => (e.data as WorkflowEdgeData)?.edgeType === 'auto-wire');
-      expect(autoWireEdges).toHaveLength(2);
-      // Both should target the same router
-      expect(autoWireEdges[0].target).toBe(autoWireEdges[1].target);
-    });
-
-    it('auto-wire edges are not serialized to config', () => {
-      const nodes: WorkflowNode[] = [
-        { id: 'rtr', type: 'httpRouterNode', position: { x: 0, y: 0 }, data: { moduleType: 'http.router', label: 'my-router', config: {} } },
-        { id: 'hc', type: 'infrastructureNode', position: { x: 0, y: 0 }, data: { moduleType: 'health.checker', label: 'health', config: {} } },
-      ];
-      const edges: Edge[] = [
-        { id: 'aw1', source: 'hc', target: 'rtr', data: { edgeType: 'auto-wire', label: 'auto-wired' } as WorkflowEdgeData },
-      ];
-
-      const config = nodesToConfig(nodes, edges);
-      // Auto-wire edges should not appear as dependencies
-      expect(config.modules[0].dependsOn).toBeUndefined();
-      expect(config.modules[1].dependsOn).toBeUndefined();
+      // Auto-wire was removed; observability modules should have no automatic edges
+      const healthEdges = edges.filter((e) => e.source.includes('health_checker') || e.target.includes('health_checker'));
+      expect(healthEdges).toHaveLength(0);
+      const metricsEdges = edges.filter((e) => e.source.includes('metrics_collector') || e.target.includes('metrics_collector'));
+      expect(metricsEdges).toHaveLength(0);
     });
 
     it('uses defaultConfig when module config is missing', () => {

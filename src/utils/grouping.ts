@@ -26,13 +26,13 @@ export function computeContainerView(
   const newNodes: WorkflowNode[] = [];
   const nodeToGroup: Record<string, string> = {};
   const GROUP_WIDTH = 320;
-  const GROUP_PADDING = 50;
+  const GROUP_HEADER_HEIGHT = 44;
   const NODE_HEIGHT = 80;
 
   let groupX = 50;
   for (const [category, categoryNodes] of Object.entries(groups)) {
     const groupId = `group-${category}`;
-    const groupHeight = GROUP_PADDING + categoryNodes.length * (NODE_HEIGHT + 20) + 20;
+    const groupHeight = GROUP_HEADER_HEIGHT + categoryNodes.length * (NODE_HEIGHT + 20) + 30;
 
     // Create group node
     newNodes.push({
@@ -53,12 +53,12 @@ export function computeContainerView(
       },
     } as WorkflowNode);
 
-    // Position children relative to parent
+    // Position children relative to parent (below header)
     categoryNodes.forEach((node, i) => {
       nodeToGroup[node.id] = groupId;
       newNodes.push({
         ...node,
-        position: { x: 20, y: GROUP_PADDING + i * (NODE_HEIGHT + 20) },
+        position: { x: 20, y: GROUP_HEADER_HEIGHT + 10 + i * (NODE_HEIGHT + 20) },
         parentId: groupId,
         extent: 'parent' as const,
       } as WorkflowNode);
@@ -160,7 +160,7 @@ export function autoGroupOrphanedNodes(
   const resultNodes: WorkflowNode[] = nodes.filter((n) => !orphanIds.has(n.id));
 
   const GROUP_WIDTH = 320;
-  const GROUP_PADDING = 50;
+  const GROUP_HEADER_HEIGHT = 44;
   const NODE_HEIGHT = 80;
 
   // Find rightmost x position to place groups after existing content
@@ -178,7 +178,7 @@ export function autoGroupOrphanedNodes(
     }
 
     const groupId = `autogroup-${category}`;
-    const groupHeight = GROUP_PADDING + catOrphans.length * (NODE_HEIGHT + 20) + 20;
+    const groupHeight = GROUP_HEADER_HEIGHT + catOrphans.length * (NODE_HEIGHT + 20) + 30;
     const color = CATEGORY_COLORS[category as ModuleCategory] || '#64748b';
 
     // Create group node
@@ -201,11 +201,11 @@ export function autoGroupOrphanedNodes(
       },
     } as WorkflowNode);
 
-    // Add children with parentId set
+    // Add children with parentId set (below header)
     catOrphans.forEach((orphan, i) => {
       resultNodes.push({
         ...orphan,
-        position: { x: 20, y: GROUP_PADDING + i * (NODE_HEIGHT + 20) },
+        position: { x: 20, y: GROUP_HEADER_HEIGHT + 10 + i * (NODE_HEIGHT + 20) },
         parentId: groupId,
         extent: 'parent' as const,
       } as WorkflowNode);

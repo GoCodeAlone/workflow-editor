@@ -31,14 +31,13 @@ function DeletableEdge({
     targetPosition,
   });
 
-  const isAutoWire = data?.edgeType === 'auto-wire';
   const edgeColor = (style?.stroke as string) || '#585b70';
   const displayLabel = label ?? data?.label;
 
   return (
     <>
       <BaseEdge path={edgePath} markerEnd={markerEnd} style={style} />
-      {!isAutoWire && (
+      {(
         <EdgeLabelRenderer>
           <div
             style={{
