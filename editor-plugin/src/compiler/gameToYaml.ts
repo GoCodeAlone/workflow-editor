@@ -22,8 +22,9 @@ function toName(label: string): string {
 }
 
 /** Topological sort of nodes using Kahn's algorithm.
- *  Returns nodes in dependency order; unconnected nodes maintain original order. */
-function topoSort(nodes: WorkflowNode[], edges: Edge[]): WorkflowNode[] {
+ *  Returns nodes in dependency order; unconnected nodes maintain original order.
+ *  Warns if a cycle is detected (dropped nodes). */
+function topoSort(nodes: WorkflowNode[], edges: Edge[], warnings: string[]): WorkflowNode[] {
   const ids = new Set(nodes.map((n) => n.id));
   const relevant = edges.filter((e) => ids.has(e.source) && ids.has(e.target));
 
@@ -48,6 +49,11 @@ function topoSort(nodes: WorkflowNode[], edges: Edge[]): WorkflowNode[] {
       inDegree.set(succId, deg);
       if (deg === 0) queue.push(byId.get(succId)!);
     }
+  }
+
+  if (sorted.length < nodes.length) {
+    const missing = nodes.filter((n) => !sorted.includes(n)).map((n) => n.data?.label || n.id);
+    warnings.push(`Cycle detected in phase graph — ${missing.length} node(s) dropped: ${missing.join(', ')}`);
   }
 
   return sorted;
@@ -163,7 +169,7 @@ export function gameToYaml(graph: GameGraph): CompileResult {
 
   // Compile phase chain → turn_loop pipeline
   if (phaseNodes.length > 0) {
-    const sorted = topoSort(phaseNodes, edges);
+    const sorted = topoSort(phaseNodes, edges, warnings);
     pipelines['turn_loop'] = {
       steps: sorted.map((n) => ({
         name: toName(n.data.label),

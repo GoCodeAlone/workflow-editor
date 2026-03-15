@@ -11,11 +11,19 @@ interface PlaytestLauncherProps {
 
 type LaunchState =
   | { status: 'idle' }
-  | { status: 'compiling' }
   | { status: 'launching' }
   | { status: 'running'; gameId: string }
   | { status: 'error'; message: string }
   | { status: 'empty' };
+
+function isValidServerUrl(url: string): boolean {
+  try {
+    const parsed = new URL(url);
+    return parsed.protocol === 'http:' || parsed.protocol === 'https:';
+  } catch {
+    return false;
+  }
+}
 
 export default function PlaytestLauncher({ serverUrl, onLaunch }: PlaytestLauncherProps) {
   const nodes = useWorkflowStore((s) => s.nodes);
@@ -28,7 +36,11 @@ export default function PlaytestLauncher({ serverUrl, onLaunch }: PlaytestLaunch
       return;
     }
 
-    setState({ status: 'compiling' });
+    if (!isValidServerUrl(serverUrl)) {
+      setState({ status: 'error', message: 'Invalid server URL — must be http:// or https://' });
+      return;
+    }
+
     const { yaml, warnings } = gameToYaml({ nodes, edges });
 
     if (warnings.length > 0) {
@@ -67,15 +79,11 @@ export default function PlaytestLauncher({ serverUrl, onLaunch }: PlaytestLaunch
       <div style={{ padding: '10px 14px' }}>
         <button
           onClick={handleLaunch}
-          disabled={state.status === 'compiling' || state.status === 'launching'}
-          style={buttonStyle(state.status === 'compiling' || state.status === 'launching')}
+          disabled={state.status === 'launching'}
+          style={buttonStyle(state.status === 'launching')}
           aria-label="Launch playtest"
         >
-          {state.status === 'compiling'
-            ? 'Compiling...'
-            : state.status === 'launching'
-              ? 'Launching...'
-              : '▶ Playtest'}
+          {state.status === 'launching' ? 'Launching...' : '▶ Playtest'}
         </button>
 
         {state.status === 'empty' && (

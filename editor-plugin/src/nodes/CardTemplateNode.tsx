@@ -4,14 +4,14 @@ import BaseNode from '../../../src/components/nodes/BaseNode.tsx';
 
 export default function CardTemplateNode({ id, data }: NodeProps<WorkflowNode>) {
   const cardType = (data.config?.cardType as string) || 'creature';
-  const cost = (data.config?.cost as number) ?? '';
+  const cost = (data.config?.cost as number | undefined) ?? null;
   return (
     <BaseNode
       id={id}
       label={data.label}
       moduleType={data.moduleType}
       icon={<CardTemplateIcon />}
-      preview={cost !== '' ? `${cardType} · cost ${cost}` : cardType}
+      preview={cost !== null ? `${cardType} · cost ${cost}` : cardType}
     />
   );
 }
