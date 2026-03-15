@@ -4,7 +4,7 @@ import BaseNode from '../../../src/components/nodes/BaseNode.tsx';
 
 export default function PlayerRoleNode({ id, data }: NodeProps<WorkflowNode>) {
   const role = (data.config?.role as string) || 'player';
-  const startingHp = (data.config?.startingHp as number) | 0;
+  const startingHp = (data.config?.startingHp as number) || 0;
   return (
     <BaseNode
       id={id}
