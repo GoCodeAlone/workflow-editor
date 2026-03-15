@@ -3,3 +3,8 @@ export type { Toast, WorkflowNode, WorkflowNodeData } from './workflowStore';
 export { useModuleSchemaStore } from './moduleSchemaStore';
 export type { ServiceInfo } from './moduleSchemaStore';
 export { default as useUILayoutStore, PANEL_WIDTH_LIMITS } from './uiLayoutStore';
+export { useNodeTypeRegistry } from './nodeTypeRegistry.ts';
+export { useFieldEditorRegistry } from './fieldEditorRegistry.ts';
+export type { FieldEditorProps, FieldEditorComponent } from './fieldEditorRegistry.ts';
+export { useEdgeStyleRegistry } from './edgeStyleRegistry.ts';
+export type { EdgeStyle } from './edgeStyleRegistry.ts';

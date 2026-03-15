@@ -26,3 +26,10 @@ export const nodeTypes: NodeTypes = {
   infrastructureNode: InfrastructureNode,
   conditionalNode: ConditionalNode,
 };
+
+/** Register all default workflow node types into a NodeTypeRegistry instance */
+export function registerDefaultNodes(registry: { register: (key: string, component: NodeTypes[string]) => void }): void {
+  for (const [key, component] of Object.entries(nodeTypes)) {
+    registry.register(key, component as NodeTypes[string]);
+  }
+}

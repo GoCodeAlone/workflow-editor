@@ -1,3 +1,24 @@
+import type { ComponentType } from 'react';
+import type { NodeProps } from '@xyflow/react';
+import type { EdgeStyle } from '../stores/edgeStyleRegistry.ts';
+import type { FieldEditorProps } from '../stores/fieldEditorRegistry.ts';
+
+/**
+ * Configuration for an editor mode.
+ * A mode extends the editor with custom node types, edge styles, and field editors.
+ * Applied via the `mode` prop on WorkflowEditor.
+ */
+export interface EditorModeConfig {
+  /** Custom node types to register: key → ReactFlow node component */
+  nodeTypes?: Record<string, ComponentType<NodeProps>>;
+  /** Custom edge styles to register: edgeType → style */
+  edgeStyles?: Record<string, EdgeStyle>;
+  /** Custom field editors to register: fieldType → editor component */
+  fieldEditors?: Record<string, ComponentType<FieldEditorProps>>;
+  /** Called after the mode has been fully applied to all registries */
+  onLoad?: () => void;
+}
+
 /**
  * Props for the top-level WorkflowEditor component.
  * The host environment (IDE webview, browser app) provides these callbacks.
@@ -23,6 +44,8 @@ export interface WorkflowEditorProps {
   onResolveFile?: (relativePath: string) => Promise<string | null>;
   /** When true, hides standalone-only controls (Import, Export, Save, AI Copilot) */
   embedded?: boolean;
+  /** Optional mode configuration to extend the editor with custom nodes/edges/fields */
+  mode?: EditorModeConfig;
   /** Called when user clicks AI Design button. Host IDE invokes its built-in AI with the provided context. */
   onAIRequest?: (context: AIRequestContext) => void;
 }

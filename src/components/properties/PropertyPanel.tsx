@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import useWorkflowStore from '../../stores/workflowStore.ts';
 import useModuleSchemaStore from '../../stores/moduleSchemaStore.ts';
+import useFieldEditorRegistry from '../../stores/fieldEditorRegistry.ts';
 import { CATEGORY_COLORS } from '../../types/workflow.ts';
 import type { ConfigFieldDef, IOPort, WorkflowEdgeData } from '../../types/workflow.ts';
 import ArrayFieldEditor from './ArrayFieldEditor.tsx';
@@ -58,6 +59,7 @@ export default function PropertyPanel() {
   const setSelectedNode = useWorkflowStore((s) => s.setSelectedNode);
 
   const moduleTypeMap = useModuleSchemaStore((s) => s.moduleTypeMap);
+  const getFieldEditor = useFieldEditorRegistry((s) => s.getEditor);
   const fetchSchemas = useModuleSchemaStore((s) => s.fetchSchemas);
   const schemasLoaded = useModuleSchemaStore((s) => s.loaded);
 
@@ -261,6 +263,7 @@ export default function PropertyPanel() {
                 ? { ...inputStyle, fontStyle: 'italic' as const, color: '#a6e3a1', opacity: 0.8 }
                 : inputStyle;
 
+              const CustomEditor = getFieldEditor(field.type);
               return (
               <label key={field.key} style={{ display: 'block', marginBottom: 10 }}>
                 <span style={{ color: '#a6adc8', fontSize: 11, display: 'flex', alignItems: 'center', marginBottom: 3, gap: 4 }}>
@@ -294,7 +297,15 @@ export default function PropertyPanel() {
                     </span>
                   )}
                 </span>
-                {field.type === 'select' ? (
+                {CustomEditor ? (
+                  <CustomEditor
+                    field={field}
+                    value={effectiveValue}
+                    onChange={(val) => handleFieldChange(field.key, val)}
+                    nodeId={node.id}
+                    moduleType={node.data.moduleType}
+                  />
+                ) : field.type === 'select' ? (
                   <select
                     value={String(effectiveValue ?? '')}
                     onChange={(e) => handleFieldChange(field.key, e.target.value)}
