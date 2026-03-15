@@ -4,7 +4,7 @@ import BaseNode from '../../../src/components/nodes/BaseNode.tsx';
 
 export default function AchievementNode({ id, data }: NodeProps<WorkflowNode>) {
   const achievementId = (data.config?.achievementId as string) || '';
-  const points = (data.config?.points as number) || 0;
+  const points = (data.config?.points as number) ?? 0;
   return (
     <BaseNode
       id={id}
