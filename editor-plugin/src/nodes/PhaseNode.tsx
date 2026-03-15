@@ -4,7 +4,7 @@ import BaseNode from '../../../src/components/nodes/BaseNode.tsx';
 
 export default function PhaseNode({ id, data }: NodeProps<WorkflowNode>) {
   const phaseName = (data.config?.phaseName as string) || 'draw';
-  const timeout = (data.config?.timeoutSeconds as number) ?? 0;
+  const timeout = (data.config?.timeoutSeconds as number) || 0;
   return (
     <BaseNode
       id={id}

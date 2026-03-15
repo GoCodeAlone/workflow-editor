@@ -4,7 +4,7 @@ import BaseNode from '../../../src/components/nodes/BaseNode.tsx';
 
 export default function ZoneNode({ id, data }: NodeProps<WorkflowNode>) {
   const zoneName = (data.config?.zoneName as string) || 'battlefield';
-  const capacity = (data.config?.capacity as number) ?? 0;
+  const capacity = (data.config?.capacity as number) || 0;
   return (
     <BaseNode
       id={id}
