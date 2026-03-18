@@ -1,66 +1,14 @@
 import type { Edge } from '@xyflow/react';
 import type { ModuleTypeInfo, IOPort } from '../types/workflow.ts';
 import type { WorkflowNode } from '../stores/workflowStore.ts';
+import { getEngineCoercionRules } from '../generated/load-schemas';
 
 /**
  * Type compatibility matrix. Maps output types to the set of input types
  * they can connect to (beyond exact match).
+ * Loaded from engine-generated schemas for accuracy.
  */
-const COERCION_RULES: Record<string, string[]> = {
-  // Data types
-  'http.Request': ['any', 'PipelineContext'],
-  'http.Response': ['any', 'JSON', '[]byte'],
-  'JSON': ['any', '[]byte', 'string'],
-  '[]byte': ['any', 'string'],
-  'Event': ['any', '[]byte', 'JSON'],
-  'CloudEvent': ['any', 'Event', '[]byte', 'JSON'],
-  'Transition': ['any', 'Event'],
-  'State': ['any'],
-  'string': ['any'],
-  'boolean': ['any'],
-  'Token': ['any', 'string'],
-  'Credentials': ['any'],
-  'Time': ['any', 'Event'],
-  'SQL': ['any', 'string'],
-  'Rows': ['any', 'JSON'],
-  'HealthStatus': ['any', 'JSON'],
-  'Metric[]': ['any'],
-  'LogEntry': ['any', 'JSON'],
-  'LogEntry[]': ['any'],
-  '[]LogEntry': ['any'],
-  'Span[]': ['any'],
-  'Command': ['any', 'PipelineContext'],
-  'RouteConfig': ['any', 'JSON'],
-  'OpenAPISpec': ['any', 'JSON'],
-  'SlackResponse': ['any', 'JSON'],
-  'SQLiteStorage': ['any', 'sql.DB'],
-  'func()': ['any'],
-
-  // Pipeline types
-  'PipelineContext': ['any', 'StepResult', 'PipelineContext'],
-  'StepResult': ['any', 'PipelineContext', 'StepResult'],
-
-  // Service/provider types (output by infrastructure modules, consumed by dependents)
-  'prometheus.Metrics': ['any'],
-  'net.Listener': ['any'],
-  'Scheduler': ['any'],
-  'AuthService': ['any'],
-  'EventBus': ['any'],
-  'Cache': ['any'],
-  'http.Client': ['any'],
-  'sql.DB': ['any'],
-  'SchemaValidator': ['any'],
-  'StorageProvider': ['any'],
-  'SecretProvider': ['any'],
-  'PersistenceStore': ['any'],
-  'WorkflowRegistry': ['any'],
-  'ExternalAPIClient': ['any'],
-  'FileStore': ['any', 'StorageProvider'],
-  'ObjectStore': ['any', 'StorageProvider'],
-  'UserStore': ['any'],
-  'trace.Span': ['any'],
-  'trace.Tracer': ['any'],
-};
+const COERCION_RULES: Record<string, string[]> = getEngineCoercionRules();
 
 /**
  * Check if an output type is compatible with an input type.

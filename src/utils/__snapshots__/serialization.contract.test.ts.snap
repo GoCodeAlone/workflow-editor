@@ -1,0 +1,82 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`serialization contract: round-trip produces valid engine configs > round-trip snapshot for "Conditional routing" is stable 1`] = `
+"modules:
+  - name: server
+    type: http.server
+    config:
+      address: ':8080'
+  - name: router
+    type: http.router
+workflows: {}
+triggers: {}
+"
+`;
+
+exports[`serialization contract: round-trip produces valid engine configs > round-trip snapshot for "Database module" is stable 1`] = `
+"modules:
+  - name: server
+    type: http.server
+    config:
+      address: ':8080'
+  - name: db
+    type: database.workflow
+    config:
+      driver: sqlite3
+      dsn: ':memory:'
+  - name: router
+    type: http.router
+workflows: {}
+triggers: {}
+"
+`;
+
+exports[`serialization contract: round-trip produces valid engine configs > round-trip snapshot for "HTTP server + router" is stable 1`] = `
+"modules:
+  - name: server
+    type: http.server
+    config:
+      address: ':8080'
+  - name: router
+    type: http.router
+workflows:
+  http:
+    server: server
+    router: router
+triggers: {}
+"
+`;
+
+exports[`serialization contract: round-trip produces valid engine configs > round-trip snapshot for "Middleware chain" is stable 1`] = `
+"modules:
+  - name: server
+    type: http.server
+    config:
+      address: ':8080'
+  - name: cors
+    type: http.middleware.cors
+    config:
+      allowedOrigins:
+        - '*'
+  - name: router
+    type: http.router
+workflows:
+  http:
+    server: server
+    router: router
+triggers: {}
+"
+`;
+
+exports[`serialization contract: round-trip produces valid engine configs > round-trip snapshot for "Pipeline with steps" is stable 1`] = `
+"modules:
+  - name: server
+    type: http.server
+    config:
+      address: ':8080'
+  - name: router
+    type: http.router
+workflows: {}
+triggers: {}
+"
+`;

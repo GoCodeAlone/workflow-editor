@@ -2,6 +2,8 @@ import { create } from 'zustand';
 import type { ModuleTypeInfo, ConfigFieldDef, ModuleCategory, IOSignature } from '../types/workflow.ts';
 import { MODULE_TYPES, MODULE_TYPE_MAP as STATIC_MODULE_TYPE_MAP } from '../types/workflow.ts';
 import type { PluginSchemaData, ServerModuleSchema as EditorServerModuleSchema } from '../types/editor.ts';
+import { getEngineModuleTypes } from '../generated/load-schemas.ts';
+import { getEngineModuleTypes } from '../generated/load-schemas';
 
 // Shape of a server-side I/O port definition
 interface ServerIODef {
@@ -213,12 +215,21 @@ function editorSchemaToModuleTypeInfo(
   };
 }
 
+// Engine schemas are primary, static MODULE_TYPES fills gaps
+const engineTypes = getEngineModuleTypes();
+const initial: Record<string, ModuleTypeInfo> = { ...STATIC_MODULE_TYPE_MAP };
+for (const [type, info] of Object.entries(engineTypes)) {
+  initial[type] = info;
+}
+const initialModuleTypeMap = initial;
+const initialModuleTypes = Object.values(initialModuleTypeMap);
+
 const useModuleSchemaStore = create<ModuleSchemaState>((set, get) => ({
   loaded: false,
   loading: false,
   serverSchemas: {},
-  moduleTypes: MODULE_TYPES,
-  moduleTypeMap: STATIC_MODULE_TYPE_MAP,
+  moduleTypes: initialModuleTypes,
+  moduleTypeMap: initialModuleTypeMap,
   services: [],
   servicesLoaded: false,
 

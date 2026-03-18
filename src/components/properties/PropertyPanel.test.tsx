@@ -75,10 +75,8 @@ describe('PropertyPanel', () => {
 
     render(<PropertyPanel />);
 
-    // HTTP Server has Address, Read Timeout, Write Timeout fields
-    expect(screen.getByText('Address')).toBeInTheDocument();
-    expect(screen.getByText('Read Timeout')).toBeInTheDocument();
-    expect(screen.getByText('Write Timeout')).toBeInTheDocument();
+    // HTTP Server has Listen Address field (from engine schema)
+    expect(screen.getByText('Listen Address')).toBeInTheDocument();
   });
 
   it('shows the Properties header when a node is selected', () => {
@@ -175,10 +173,10 @@ describe('PropertyPanel', () => {
 
     render(<PropertyPanel />);
 
-    // Auth Middleware has Auth Type with select options
+    // Auth Middleware has Auth Type with select options (engine schema: default 'Bearer')
     expect(screen.getByText('Auth Type')).toBeInTheDocument();
     // Should have a select element with options
-    const select = screen.getByDisplayValue('jwt');
+    const select = screen.getByDisplayValue('Bearer');
     expect(select.tagName).toBe('SELECT');
   });
 
@@ -192,8 +190,9 @@ describe('PropertyPanel', () => {
 
     render(<PropertyPanel />);
 
-    expect(screen.getByText('Requests/sec')).toBeInTheDocument();
-    const rpsInput = screen.getByDisplayValue('100');
+    // Rate limit middleware has Requests Per Minute field (from engine schema)
+    expect(screen.getByText('Requests Per Minute')).toBeInTheDocument();
+    const rpsInput = screen.getByDisplayValue('60');
     expect(rpsInput).toHaveAttribute('type', 'number');
   });
 });
