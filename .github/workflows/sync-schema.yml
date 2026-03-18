@@ -32,6 +32,9 @@ jobs:
       - name: Regenerate type catalogue
         run: wfctl schema --output schemas/workflow-config.schema.json
 
+      - name: Export editor schemas
+        run: wfctl editor-schemas --output src/generated/engine-schemas.json
+
       - name: Bump version
         run: |
           WORKFLOW_VERSION="${{ github.event.client_payload.version }}"
