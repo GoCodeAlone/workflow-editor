@@ -39,6 +39,12 @@
 - **One design note**: `api.gateway`/`api.handler` are NOT pipeline-flow sources (only `api.query`/`api.command`). Not a bug, but worth tracking if those types ever route to step chains.
 - **Total tests**: 340 across 20 test files (up from 195 at session start)
 
+### 2026-03-18 — Iteration 14: Observability Node Component
+- **New**: `ObservabilityNode` component with bar chart icon (lime #84cc16), shows serviceName/endpoint preview
+- **Wired**: `nodeComponentType()` routes `observability.*`, `health.checker`, `log.collector`, `metrics.collector`, `tracing.propagation` to `observabilityNode`
+- **Covers**: 5 types (observability.otel, health.checker, log.collector, metrics.collector, tracing.propagation). http.middleware.otel still uses middlewareNode via http.middleware.* prefix — correct.
+- **Total node components**: 14 (was 13). Database + Security + Observability trifecta complete.
+
 ### 2026-03-18 — Iteration 13: Security Node Component
 - **New**: `SecurityNode` component with shield+checkmark icon (orange #fb923c), shows provider/engine preview
 - **Wired**: `nodeComponentType()` routes `auth.*`, `security.*`, `policy.*` to `securityNode`

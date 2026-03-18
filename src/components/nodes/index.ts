@@ -10,6 +10,7 @@ import MiddlewareNode from './MiddlewareNode.tsx';
 import InfrastructureNode from './InfrastructureNode.tsx';
 import DatabaseNode from './DatabaseNode.tsx';
 import SecurityNode from './SecurityNode.tsx';
+import ObservabilityNode from './ObservabilityNode.tsx';
 import GroupNode from './GroupNode.tsx';
 import ConditionalNode from './ConditionalNode.tsx';
 
@@ -28,6 +29,7 @@ export const nodeTypes: NodeTypes = {
   infrastructureNode: InfrastructureNode,
   databaseNode: DatabaseNode,
   securityNode: SecurityNode,
+  observabilityNode: ObservabilityNode,
   conditionalNode: ConditionalNode,
 };
 
