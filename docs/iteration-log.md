@@ -5,11 +5,11 @@
 - **LOW / ide**: JetBrains `aiResponse` not programmatic — clipboard+notification is correct (JetBrains AI Assistant has no public API). Platform limitation.
 - **LOW / completeness**: 47 of 272 types (17%) use generic InfrastructureNode — diverse infra (actors, caches, cloud) where catch-all is appropriate.
 - **LOW / completeness**: 168 step types have no IO definitions — by design (steps don't participate in module-level connections).
-- **ENHANCEMENT / gap**: E2E test suite (`e2e/editor.spec.ts`) is a skeleton.
+- ~~**ENHANCEMENT / gap**: E2E test suite is a skeleton~~ — Replaced with 40 component-level integration tests (iteration 17). Browser E2E requires a host app; integration tests cover the full data flow without one.
 
-## Session Summary (2026-03-18, 16 iterations)
+## Session Summary (2026-03-18, 17 iterations)
 
-**Tests**: 195 → 508 (+313 new tests across 4 new test files)
+**Tests**: 195 → 548 (+353 new tests across 5 new test files)
 **Issues fixed**: 11 (2 CRITICAL, 2 HIGH, 4 MEDIUM, 3 LOW)
 **Node components**: 11 → 14 (+DatabaseNode, SecurityNode, ObservabilityNode)
 **Config round-trip**: 3 sections → 9 (+pipelines, imports, requires, platform, infrastructure, sidecars)
@@ -41,6 +41,11 @@
 - **No divergence**: Editor loads coercion rules directly from engine export, cannot drift
 - **One design note**: `api.gateway`/`api.handler` are NOT pipeline-flow sources (only `api.query`/`api.command`). Not a bug, but worth tracking if those types ever route to step chains.
 - **Total tests**: 340 across 20 test files (up from 195 at session start)
+
+### 2026-03-18 — Iteration 17: Integration Tests
+- **New**: 40 component-level integration tests replacing the E2E skeleton
+- **Covers**: Full workflow lifecycle, pipeline flow lifecycle, layout sidecar lifecycle, schema-driven node type mapping, coercion + edge type integration, config pass-through integrity
+- **Total tests**: 548 across 23 files
 
 ### 2026-03-18 — Iteration 16: Completeness Audit + Log Cleanup
 - **Edge type audit**: All 8 edge types (dependency, http-route, messaging-subscription, statemachine, event, conditional, middleware-chain, pipeline-flow) are auto-created by serialization. No orphans.
