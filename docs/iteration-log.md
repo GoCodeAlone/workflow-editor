@@ -9,7 +9,7 @@
 - ~~**LOW / completeness**: `database.modular` phantom type~~ — FIXED iteration 6 (removed from MODULE_TYPES)
 - ~~**MEDIUM / serialization**: Top-level `pipelines:` section dropped during round-trip~~ — FIXED iteration 7 (`nodesToConfig` now accepts `originalConfig` for pass-through)
 - ~~**LOW / completeness**: 8 database types fall to generic InfrastructureNode~~ — FIXED iteration 11 (new DatabaseNode component)
-- **LOW / completeness**: 32 infrastructure types, 3 platform types have no specialized node components (fall to generic InfrastructureNode).
+- **LOW / completeness**: 47 types (17%) fall to generic InfrastructureNode — diverse infrastructure (actors, caches, cloud accounts, etc.) where catch-all is appropriate. 225 types (83%) get specialized rendering.
 - **LOW / completeness**: 168 of 272 engine module types have no IO definitions (inputs/outputs). Most are step types — expected behavior.
 - ~~**ENHANCEMENT / completeness**: No pipeline configs in real-world tests~~ — FIXED iteration 6 (added webhook-pipeline + test-route-pipeline)
 - **ENHANCEMENT / gap**: E2E test suite (`e2e/editor.spec.ts`) is a skeleton — needs fleshing out.
@@ -38,6 +38,12 @@
 - **No divergence**: Editor loads coercion rules directly from engine export, cannot drift
 - **One design note**: `api.gateway`/`api.handler` are NOT pipeline-flow sources (only `api.query`/`api.command`). Not a bug, but worth tracking if those types ever route to step chains.
 - **Total tests**: 340 across 20 test files (up from 195 at session start)
+
+### 2026-03-18 — Iteration 15: Coverage Analysis + Drift Check
+- **Drift check**: Zero drift — 272/272 types, 48/48 rules match between live engine and committed schemas
+- **Contract tests**: 18/18 pass
+- **Node component coverage**: 225/272 types (83%) get specialized rendering. 47 types (17%) use generic InfrastructureNode — appropriate for diverse infrastructure types.
+- **Breakdown**: integrationNode 177, infrastructureNode 47, httpRouterNode 10, securityNode 8, databaseNode 8, middlewareNode 7, observabilityNode 5, messagingNode 5, stateMachineNode 3, httpNode 1, schedulerNode 1
 
 ### 2026-03-18 — Iteration 14: Observability Node Component
 - **New**: `ObservabilityNode` component with bar chart icon (lime #84cc16), shows serviceName/endpoint preview
