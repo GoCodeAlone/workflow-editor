@@ -8,6 +8,7 @@ import EventProcessorNode from './EventProcessorNode.tsx';
 import IntegrationNode from './IntegrationNode.tsx';
 import MiddlewareNode from './MiddlewareNode.tsx';
 import InfrastructureNode from './InfrastructureNode.tsx';
+import DatabaseNode from './DatabaseNode.tsx';
 import GroupNode from './GroupNode.tsx';
 import ConditionalNode from './ConditionalNode.tsx';
 
@@ -24,6 +25,7 @@ export const nodeTypes: NodeTypes = {
   integrationNode: IntegrationNode,
   middlewareNode: MiddlewareNode,
   infrastructureNode: InfrastructureNode,
+  databaseNode: DatabaseNode,
   conditionalNode: ConditionalNode,
 };
 

@@ -408,7 +408,7 @@ describe('serialization', () => {
           { name: 'Sched', type: 'scheduler.modular' },
           { name: 'Slack', type: 'notification.slack' },
           { name: 'Step', type: 'step.validate' },
-          { name: 'DB', type: 'database.modular' },
+          { name: 'DB', type: 'database.workflow' },
         ],
         workflows: {},
         triggers: {},
@@ -421,7 +421,7 @@ describe('serialization', () => {
       expect(nodes[3].type).toBe('schedulerNode');
       expect(nodes[4].type).toBe('integrationNode');
       expect(nodes[5].type).toBe('integrationNode');
-      expect(nodes[6].type).toBe('infrastructureNode');
+      expect(nodes[6].type).toBe('databaseNode');
     });
   });
 

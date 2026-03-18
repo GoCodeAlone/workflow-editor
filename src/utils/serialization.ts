@@ -728,6 +728,7 @@ export function nodeComponentType(moduleType: string): string {
   if (moduleType.startsWith('statemachine.') || moduleType.startsWith('state.')) return 'stateMachineNode';
   if (moduleType === 'scheduler.modular') return 'schedulerNode';
   if (moduleType === 'notification.slack' || moduleType === 'storage.s3') return 'integrationNode';
+  if (moduleType.startsWith('database.') || moduleType.startsWith('nosql.') || moduleType === 'storage.sqlite' || moduleType === 'persistence.store') return 'databaseNode';
   if (moduleType === 'observability.otel') return 'infrastructureNode';
   if (moduleType.startsWith('step.')) return 'integrationNode';
   return 'infrastructureNode';
