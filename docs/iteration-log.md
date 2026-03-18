@@ -2,7 +2,9 @@
 
 ## Known Issues
 
-_None yet — first iteration will populate this._
+- **LOW / completeness**: 168 of 272 engine module types have no IO definitions (inputs/outputs). These render in the editor but can't participate in connections. Most are step types — expected behavior, but pipeline category (23 types with IO) could benefit from better node rendering.
+- **ENHANCEMENT / completeness**: No pipeline configs in the 3 tested example files (api-server, event-driven, data-pipeline). Contract tests cover pipelines but real-world round-trip tests should include a pipeline-heavy config.
+- **ENHANCEMENT / gap**: E2E test suite (`e2e/editor.spec.ts`) is a skeleton — needs fleshing out for browser-level validation.
 
 ## Fixed Issues
 
@@ -12,6 +14,13 @@ _None yet — first iteration will populate this._
 - **HIGH / drift**: `mergeSchemas()` preserved static ioSignature over engine schemas — FIXED: engine schemas now take priority
 - **HIGH / connections**: Connection rules were static in editor, not derived from engine — FIXED: coercion rules + IO signatures loaded from engine export
 - **MEDIUM / ide**: Both IDE plugin sync workflows were manually disabled since March 13 — FIXED: re-enabled, both synced to v0.3.4800
+
+### 2026-03-18 — Iteration 1: Round-Trip Fidelity QA
+- **QA scenario**: Round-trip fidelity on 3 real configs (api-server, event-driven, data-pipeline)
+- **Result**: 27/27 tests pass — all modules, configs, dependsOn, workflows, routes, subscriptions preserved
+- **Contract tests**: 18/18 pass, engine schemas in sync (272 module types, 48 coercion rules)
+- **Drift check**: No drift detected between engine and editor schemas
+- **New test added**: `src/utils/serialization-realworld.test.ts` (27 tests on real configs)
 
 ## Learnings
 
