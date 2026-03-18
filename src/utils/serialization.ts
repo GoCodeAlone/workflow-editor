@@ -302,12 +302,6 @@ export function nodesToConfig(
       mod.branches = branches;
     }
 
-    // Persist canvas position so layout survives save/load
-    mod.ui_position = {
-      x: Math.round(node.position.x),
-      y: Math.round(node.position.y),
-    };
-
     return mod;
   });
 
@@ -518,19 +512,16 @@ export function configToNodes(
   const edges: Edge[] = [];
   const nameToId: Record<string, string> = {};
 
-  let hasPositions = false;
   config.modules.forEach((mod, i) => {
     const id = `${mod.type.replace(/\./g, '_')}_${i + 1}`;
     nameToId[mod.name] = id;
 
     const info = moduleTypeMap[mod.type];
-    const savedPos = mod.ui_position;
-    if (savedPos) hasPositions = true;
 
     nodes.push({
       id,
       type: nodeComponentType(mod.type),
-      position: savedPos ? { x: savedPos.x, y: savedPos.y } : { x: 0, y: 0 },
+      position: { x: 0, y: 0 },
       data: {
         moduleType: mod.type,
         label: mod.name,
@@ -696,12 +687,9 @@ export function configToNodes(
     }
   }
 
-  // Apply dagre layout only when no saved positions exist
-  if (!hasPositions) {
-    const laid = layoutNodes(nodes, edges);
-    for (let i = 0; i < nodes.length; i++) {
-      nodes[i].position = laid[i].position;
-    }
+  const laid = layoutNodes(nodes, edges);
+  for (let i = 0; i < nodes.length; i++) {
+    nodes[i].position = laid[i].position;
   }
 
   return { nodes, edges };
