@@ -2,10 +2,10 @@
 
 ## Known Issues
 
-- **MEDIUM / ide**: JetBrains missing `cursorMoved` — no cursor-to-node sync in split panel (VS Code has it). User can't see which node corresponds to cursor position.
+- ~~**MEDIUM / ide**: JetBrains missing `cursorMoved`~~ — FIXED iteration 5
 - **MEDIUM / ide**: JetBrains missing `aiResponse` — AI-assisted design copies to clipboard instead of auto-applying. VS Code dispatches result back to webview.
 - ~~**MEDIUM / ide**: JetBrains missing `ready` handshake~~ — FIXED iteration 4
-- **MEDIUM / schema**: `api.command` and `api.query` render as generic InfrastructureNode despite being primary HTTP handler types used for pipeline-flow chains. Should render as `httpRouterNode` like `api.handler` does.
+- ~~**MEDIUM / schema**: `api.command` and `api.query` render as generic InfrastructureNode~~ — FIXED iteration 3
 - **LOW / completeness**: `database.modular` is a phantom type in static MODULE_TYPES — engine uses `database.workflow`. Stale alias, candidate for cleanup.
 - **LOW / completeness**: 8 database types, 32 infrastructure types, 3 platform types have no specialized node components (all fall to generic InfrastructureNode).
 - **LOW / completeness**: 168 of 272 engine module types have no IO definitions (inputs/outputs). Most are step types — expected behavior.
@@ -36,6 +36,12 @@
 - **No divergence**: Editor loads coercion rules directly from engine export, cannot drift
 - **One design note**: `api.gateway`/`api.handler` are NOT pipeline-flow sources (only `api.query`/`api.command`). Not a bug, but worth tracking if those types ever route to step chains.
 - **Total tests**: 340 across 20 test files (up from 195 at session start)
+
+### 2026-03-18 — Iteration 5: JetBrains Cursor Sync
+- **Fix**: Added `CaretListener` to `WorkflowBridge` that forwards caret position changes to webview via `window.onCursorMoved(line, col)`
+- **Before**: No cursor-to-node sync in JetBrains split panel
+- **After**: Cursor position in YAML text editor syncs to webview for node highlighting, matching VS Code behavior
+- **Cleanup**: Listener removed in `dispose()` to prevent leaks
 
 ### 2026-03-18 — Iteration 4: JetBrains Ready Handshake
 - **Fix**: Added `readyQuery` JBCefJSQuery + `hostBridge.sendReady()` to JetBrains WorkflowBridge
