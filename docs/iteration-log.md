@@ -38,6 +38,12 @@
 - **One design note**: `api.gateway`/`api.handler` are NOT pipeline-flow sources (only `api.query`/`api.command`). Not a bug, but worth tracking if those types ever route to step chains.
 - **Total tests**: 340 across 20 test files (up from 195 at session start)
 
+### 2026-03-18 — Iteration 9: Serialization Edge Cases
+- **QA**: 31 edge case tests covering pass-through fields, step.conditional, module ordering, complex config values, empty configs, YAML comments, special character names
+- **No bugs found**: All edge cases handled correctly
+- **Key findings**: `imports`/`requires`/`platform` are intentionally not surfaced by parseYaml() (only modules/workflows/triggers/pipelines). YAML comments stripped by js-yaml (spec-correct). Module insertion order preserved. Nested objects/arrays/nulls round-trip intact.
+- **Total tests**: 479 across 22 files
+
 ### 2026-03-18 — Iteration 8: Property Panel Schema Fidelity
 - **QA scenario**: Scenario C — Property panel correctness for 10 module types
 - **Result**: 90/90 tests pass — all configFields, types, required flags, defaults, select options match engine
