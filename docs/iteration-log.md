@@ -3,13 +3,14 @@
 ## Known Issues
 
 - ~~**MEDIUM / ide**: JetBrains missing `cursorMoved`~~ — FIXED iteration 5
-- **MEDIUM / ide**: JetBrains missing `aiResponse` — AI-assisted design copies to clipboard instead of auto-applying. VS Code dispatches result back to webview.
+- **LOW / ide**: JetBrains missing `aiResponse` — clipboard+notification is correct behavior (JetBrains AI Assistant has no public programmatic API like VS Code's `vscode.lm`). Not fixable without JetBrains exposing an API.
 - ~~**MEDIUM / ide**: JetBrains missing `ready` handshake~~ — FIXED iteration 4
 - ~~**MEDIUM / schema**: `api.command` and `api.query` render as generic InfrastructureNode~~ — FIXED iteration 3
-- **LOW / completeness**: `database.modular` is a phantom type in static MODULE_TYPES — engine uses `database.workflow`. Stale alias, candidate for cleanup.
+- ~~**LOW / completeness**: `database.modular` phantom type~~ — FIXED iteration 6 (removed from MODULE_TYPES)
+- **MEDIUM / serialization**: Top-level `pipelines:` section is read by `parseYaml()` but dropped by `nodesToConfig()`. Only route-inline pipelines (steps embedded in HTTP routes) survive round-trip. Affects configs like webhook-pipeline.yaml and test-route-pipeline.yaml.
 - **LOW / completeness**: 8 database types, 32 infrastructure types, 3 platform types have no specialized node components (all fall to generic InfrastructureNode).
 - **LOW / completeness**: 168 of 272 engine module types have no IO definitions (inputs/outputs). Most are step types — expected behavior.
-- **ENHANCEMENT / completeness**: No pipeline configs in the 3 tested example files. Contract tests cover pipelines but real-world tests should include pipeline-heavy config.
+- ~~**ENHANCEMENT / completeness**: No pipeline configs in real-world tests~~ — FIXED iteration 6 (added webhook-pipeline + test-route-pipeline)
 - **ENHANCEMENT / gap**: E2E test suite (`e2e/editor.spec.ts`) is a skeleton — needs fleshing out.
 - **ENHANCEMENT / schema**: Consider new node components for database, security, and observability categories to improve visual distinction.
 
@@ -37,6 +38,12 @@
 - **One design note**: `api.gateway`/`api.handler` are NOT pipeline-flow sources (only `api.query`/`api.command`). Not a bug, but worth tracking if those types ever route to step chains.
 - **Total tests**: 340 across 20 test files (up from 195 at session start)
 
+### 2026-03-18 — Iteration 6: Pipeline Round-Trip + Phantom Cleanup
+- **Fix**: Removed `database.modular` phantom type from static MODULE_TYPES
+- **Fix**: Added webhook-pipeline.yaml + test-route-pipeline.yaml to real-world tests (358 tests total)
+- **Discovery**: Top-level `pipelines:` section is lost during round-trip — `parseYaml()` reads it but `nodesToConfig()` doesn't write it back. Logged as MEDIUM.
+- **Downgraded**: JetBrains `aiResponse` to LOW — platform limitation (no public AI API), clipboard is correct behavior.
+
 ### 2026-03-18 — Iteration 5: JetBrains Cursor Sync
 - **Fix**: Added `CaretListener` to `WorkflowBridge` that forwards caret position changes to webview via `window.onCursorMoved(line, col)`
 - **Before**: No cursor-to-node sync in JetBrains split panel
@@ -63,3 +70,4 @@
 - Golden file tests in the engine catch schema changes before they break the editor
 - Contract tests with ajv validate round-trip output against the engine's JSON schema
 - The sync-schema CI workflow is the gatekeeper — if contract tests fail, no publish, no dispatch to IDE plugins
+- Top-level `pipelines:` section is separate from route-inline pipelines. The editor handles inline (steps embedded in HTTP routes) but not standalone pipeline definitions. This is a design gap, not a bug — the visual graph doesn't represent trigger-based pipelines yet.

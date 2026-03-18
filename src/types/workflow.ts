@@ -412,17 +412,6 @@ export const MODULE_TYPES: ModuleTypeInfo[] = [
     ],
     ioSignature: { inputs: [{ name: 'key', type: 'string' }], outputs: [{ name: 'value', type: 'any' }] },
   },
-  {
-    type: 'database.modular',
-    label: 'Database',
-    category: 'infrastructure',
-    defaultConfig: { driver: 'postgres' },
-    configFields: [
-      { key: 'driver', label: 'Driver', type: 'select', options: ['postgres', 'mysql', 'sqlite'] },
-      { key: 'dsn', label: 'DSN', type: 'string' },
-    ],
-    ioSignature: { inputs: [{ name: 'query', type: 'SQL' }], outputs: [{ name: 'result', type: 'Rows' }] },
-  },
   // Database
   {
     type: 'database.workflow',
