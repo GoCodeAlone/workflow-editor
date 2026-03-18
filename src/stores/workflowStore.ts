@@ -15,6 +15,7 @@ import { MODULE_TYPE_MAP as STATIC_MODULE_TYPE_MAP } from '../types/workflow.ts'
 import useModuleSchemaStore from './moduleSchemaStore.ts';
 import { nodesToConfig, configToNodes, nodeComponentType, exportToFiles } from '../utils/serialization.ts';
 import { layoutNodes } from '../utils/autoLayout.ts';
+import { exportLayout, importLayout, type LayoutData } from '../utils/layout-sidecar.ts';
 import { autoGroupOrphanedNodes } from '../utils/grouping.ts';
 import { isPipelineFlowConnection } from '../utils/connectionCompatibility.ts';
 import { buildYamlLineMap } from '../utils/yamlLineMap.ts';
@@ -105,6 +106,8 @@ interface WorkflowStore {
   exportToFileMap: () => Map<string | null, string>;
   importFromConfig: (config: WorkflowConfig, sourceMap?: Map<string, string>) => void;
   clearCanvas: () => void;
+  exportLayout: () => LayoutData;
+  importLayoutData: (layout: LayoutData) => void;
 
   // Active workflow record (generic — host provides the shape)
   activeWorkflowRecord: Record<string, unknown> | null;
@@ -267,6 +270,10 @@ const useWorkflowStore = create<WorkflowStore>()(
 
   onNodesChange: (changes) => {
     set({ nodes: applyNodeChanges(changes, get().nodes) });
+    // After applying node changes that include position:
+    if (changes.some(c => c.type === 'position')) {
+      window.postMessage({ type: 'layoutChanged', layout: exportLayout(get().nodes) }, '*');
+    }
   },
 
   onEdgesChange: (changes) => {
@@ -462,6 +469,18 @@ const useWorkflowStore = create<WorkflowStore>()(
   clearCanvas: () => {
     get().pushHistory();
     set({ nodes: [], edges: [], selectedNodeId: null, selectedEdgeId: null, nodeCounter: 0, importedWorkflows: {}, importedTriggers: {}, importedPipelines: {} });
+  },
+
+  exportLayout: (): LayoutData => {
+    return exportLayout(get().nodes);
+  },
+
+  importLayoutData: (layout: LayoutData) => {
+    const nodes = [...get().nodes];
+    const { applied } = importLayout(nodes, layout);
+    if (applied) {
+      set({ nodes });
+    }
   },
 
   // Validation errors (transient, not persisted)
