@@ -11,6 +11,9 @@ const realConfigs = [
   '/Users/jon/workspace/workflow/example/data-pipeline-config.yaml',
   '/Users/jon/workspace/workflow/example/webhook-pipeline.yaml',
   '/Users/jon/workspace/workflow/example/test-route-pipeline.yaml',
+  '/Users/jon/workspace/workflow/example/event-processor-config.yaml',
+  '/Users/jon/workspace/workflow/example/realtime-messaging-modular-config.yaml',
+  '/Users/jon/workspace/workflow/example/advanced-scheduler-workflow.yaml',
 ];
 
 describe('real-world config round-trip', () => {

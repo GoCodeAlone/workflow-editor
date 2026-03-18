@@ -39,6 +39,12 @@
 - **One design note**: `api.gateway`/`api.handler` are NOT pipeline-flow sources (only `api.query`/`api.command`). Not a bug, but worth tracking if those types ever route to step chains.
 - **Total tests**: 340 across 20 test files (up from 195 at session start)
 
+### 2026-03-18 — Iteration 12: Expanded Real-World Round-Trip Coverage
+- **Added**: 3 more example configs to round-trip tests: event-processor, realtime-messaging, advanced-scheduler
+- **Result**: 72/72 real-world tests pass (was 45). Now covers 8 example configs spanning HTTP, events, messaging, pipelines, scheduling
+- **Static MODULE_TYPES analysis**: 75 entries redundant with engine (expected — fallback only), 44 entries are field/IO types not module types. No cleanup needed.
+- **Total tests**: 508 across 22 files
+
 ### 2026-03-18 — Iteration 11: Database Node Component
 - **New**: `DatabaseNode` component with cylinder icon (orange #f97316), shows driver/dsn preview
 - **Wired**: `nodeComponentType()` routes `database.*`, `nosql.*`, `storage.sqlite`, `persistence.store` to `databaseNode`
