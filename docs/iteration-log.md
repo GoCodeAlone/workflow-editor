@@ -2,9 +2,16 @@
 
 ## Known Issues
 
-- **LOW / completeness**: 168 of 272 engine module types have no IO definitions (inputs/outputs). These render in the editor but can't participate in connections. Most are step types — expected behavior, but pipeline category (23 types with IO) could benefit from better node rendering.
-- **ENHANCEMENT / completeness**: No pipeline configs in the 3 tested example files (api-server, event-driven, data-pipeline). Contract tests cover pipelines but real-world round-trip tests should include a pipeline-heavy config.
-- **ENHANCEMENT / gap**: E2E test suite (`e2e/editor.spec.ts`) is a skeleton — needs fleshing out for browser-level validation.
+- **MEDIUM / ide**: JetBrains missing `cursorMoved` — no cursor-to-node sync in split panel (VS Code has it). User can't see which node corresponds to cursor position.
+- **MEDIUM / ide**: JetBrains missing `aiResponse` — AI-assisted design copies to clipboard instead of auto-applying. VS Code dispatches result back to webview.
+- **MEDIUM / ide**: JetBrains missing `ready` handshake — fires initial YAML+schemas on `onLoadEnd` instead of waiting for webview `ready` signal. Potential race condition if webview JS initializes async.
+- **MEDIUM / schema**: `api.command` and `api.query` render as generic InfrastructureNode despite being primary HTTP handler types used for pipeline-flow chains. Should render as `httpRouterNode` like `api.handler` does.
+- **LOW / completeness**: `database.modular` is a phantom type in static MODULE_TYPES — engine uses `database.workflow`. Stale alias, candidate for cleanup.
+- **LOW / completeness**: 8 database types, 32 infrastructure types, 3 platform types have no specialized node components (all fall to generic InfrastructureNode).
+- **LOW / completeness**: 168 of 272 engine module types have no IO definitions (inputs/outputs). Most are step types — expected behavior.
+- **ENHANCEMENT / completeness**: No pipeline configs in the 3 tested example files. Contract tests cover pipelines but real-world tests should include pipeline-heavy config.
+- **ENHANCEMENT / gap**: E2E test suite (`e2e/editor.spec.ts`) is a skeleton — needs fleshing out.
+- **ENHANCEMENT / schema**: Consider new node components for database, security, and observability categories to improve visual distinction.
 
 ## Fixed Issues
 
@@ -29,6 +36,13 @@
 - **No divergence**: Editor loads coercion rules directly from engine export, cannot drift
 - **One design note**: `api.gateway`/`api.handler` are NOT pipeline-flow sources (only `api.query`/`api.command`). Not a bug, but worth tracking if those types ever route to step chains.
 - **Total tests**: 340 across 20 test files (up from 195 at session start)
+
+### 2026-03-18 — Iteration 3: IDE Parity + Node Palette Completeness
+- **QA scenarios**: Scenario D (node palette) + Scenario E (IDE parity)
+- **IDE parity**: 3 gaps in JetBrains — missing `cursorMoved`, `aiResponse`, `ready` handshake. VS Code has no gaps.
+- **Node palette**: 78 static MODULE_TYPES vs 272 engine types. 4 editor-only types (3 conditional.* UI constructs intentional, 1 database.modular stale). 198 engine-only types correctly loaded at runtime.
+- **nodeComponentType() coverage**: step.* types 100% covered via prefix rule. http category 55% (api.command/query/gateway + reverseproxy + static.fileserver fall through). database/infrastructure/platform 0% specialized.
+- **Key finding**: `api.command`/`api.query` are pipeline-flow chain sources in serialization but render as generic InfrastructureNode — visual mismatch.
 
 ## Learnings
 

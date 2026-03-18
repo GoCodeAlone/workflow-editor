@@ -700,7 +700,9 @@ export function nodeComponentType(moduleType: string): string {
   if (moduleType.startsWith('http.middleware.')) return 'middlewareNode';
   if (moduleType === 'http.server') return 'httpNode';
   if (moduleType.startsWith('http.')) return 'httpRouterNode';
-  if (moduleType === 'api.handler') return 'httpRouterNode';
+  if (moduleType === 'api.handler' || moduleType === 'api.command' || moduleType === 'api.query') return 'httpRouterNode';
+  if (moduleType === 'api.gateway') return 'httpRouterNode';
+  if (moduleType === 'static.fileserver' || moduleType === 'reverseproxy' || moduleType === 'http.simple_proxy' || moduleType === 'http.proxy') return 'httpRouterNode';
   if (moduleType.startsWith('messaging.')) return 'messagingNode';
   if (moduleType.startsWith('statemachine.') || moduleType.startsWith('state.')) return 'stateMachineNode';
   if (moduleType === 'scheduler.modular') return 'schedulerNode';

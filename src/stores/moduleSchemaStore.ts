@@ -2,7 +2,6 @@ import { create } from 'zustand';
 import type { ModuleTypeInfo, ConfigFieldDef, ModuleCategory, IOSignature } from '../types/workflow.ts';
 import { MODULE_TYPES, MODULE_TYPE_MAP as STATIC_MODULE_TYPE_MAP } from '../types/workflow.ts';
 import type { PluginSchemaData, ServerModuleSchema as EditorServerModuleSchema } from '../types/editor.ts';
-import { getEngineModuleTypes } from '../generated/load-schemas.ts';
 import { getEngineModuleTypes } from '../generated/load-schemas';
 
 // Shape of a server-side I/O port definition
