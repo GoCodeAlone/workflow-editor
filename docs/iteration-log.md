@@ -4,7 +4,7 @@
 
 - **MEDIUM / ide**: JetBrains missing `cursorMoved` — no cursor-to-node sync in split panel (VS Code has it). User can't see which node corresponds to cursor position.
 - **MEDIUM / ide**: JetBrains missing `aiResponse` — AI-assisted design copies to clipboard instead of auto-applying. VS Code dispatches result back to webview.
-- **MEDIUM / ide**: JetBrains missing `ready` handshake — fires initial YAML+schemas on `onLoadEnd` instead of waiting for webview `ready` signal. Potential race condition if webview JS initializes async.
+- ~~**MEDIUM / ide**: JetBrains missing `ready` handshake~~ — FIXED iteration 4
 - **MEDIUM / schema**: `api.command` and `api.query` render as generic InfrastructureNode despite being primary HTTP handler types used for pipeline-flow chains. Should render as `httpRouterNode` like `api.handler` does.
 - **LOW / completeness**: `database.modular` is a phantom type in static MODULE_TYPES — engine uses `database.workflow`. Stale alias, candidate for cleanup.
 - **LOW / completeness**: 8 database types, 32 infrastructure types, 3 platform types have no specialized node components (all fall to generic InfrastructureNode).
@@ -36,6 +36,12 @@
 - **No divergence**: Editor loads coercion rules directly from engine export, cannot drift
 - **One design note**: `api.gateway`/`api.handler` are NOT pipeline-flow sources (only `api.query`/`api.command`). Not a bug, but worth tracking if those types ever route to step chains.
 - **Total tests**: 340 across 20 test files (up from 195 at session start)
+
+### 2026-03-18 — Iteration 4: JetBrains Ready Handshake
+- **Fix**: Added `readyQuery` JBCefJSQuery + `hostBridge.sendReady()` to JetBrains WorkflowBridge
+- **Before**: `onLoadEnd` immediately fired `sendYamlToEditor()` + schemas — race condition if webview JS not ready
+- **After**: `onLoadEnd` only injects bridge; defers YAML/schemas until webview calls `sendReady()`
+- **Matches**: VS Code's `ready` message pattern in `setupMessageHandling()`
 
 ### 2026-03-18 — Iteration 3: IDE Parity + Node Palette Completeness
 - **QA scenarios**: Scenario D (node palette) + Scenario E (IDE parity)
