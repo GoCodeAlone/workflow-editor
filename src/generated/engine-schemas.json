@@ -2851,6 +2851,54 @@
         }
       ]
     },
+    "step.branch": {
+      "type": "step.branch",
+      "label": "Branch",
+      "category": "pipeline",
+      "description": "Switch/case routing: evaluates a field, executes only the matched branch's sub-steps inline, then jumps to merge_step. Unlike step.conditional, skipped branches never execute.",
+      "inputs": [
+        {
+          "name": "context",
+          "type": "PipelineContext",
+          "description": "Pipeline context containing the field to evaluate"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "result",
+          "type": "StepResult",
+          "description": "Branch result with matched_value and branch name"
+        }
+      ],
+      "configFields": [
+        {
+          "key": "field",
+          "label": "Field",
+          "type": "string",
+          "description": "Dot-path field to evaluate for branch selection",
+          "required": true
+        },
+        {
+          "key": "branches",
+          "label": "Branches",
+          "type": "map",
+          "description": "Map of field values to lists of inline step configs",
+          "required": true
+        },
+        {
+          "key": "default",
+          "label": "Default",
+          "type": "array",
+          "description": "Sub-steps to run when no branch matches"
+        },
+        {
+          "key": "merge_step",
+          "label": "Merge Step",
+          "type": "string",
+          "description": "Step name to jump to after the branch completes (empty = continue sequentially)"
+        }
+      ]
+    },
     "step.build_ui": {
       "type": "step.build_ui",
       "label": "Build UI",
