@@ -9,6 +9,7 @@ import IntegrationNode from './IntegrationNode.tsx';
 import MiddlewareNode from './MiddlewareNode.tsx';
 import InfrastructureNode from './InfrastructureNode.tsx';
 import DatabaseNode from './DatabaseNode.tsx';
+import SecurityNode from './SecurityNode.tsx';
 import GroupNode from './GroupNode.tsx';
 import ConditionalNode from './ConditionalNode.tsx';
 
@@ -26,6 +27,7 @@ export const nodeTypes: NodeTypes = {
   middlewareNode: MiddlewareNode,
   infrastructureNode: InfrastructureNode,
   databaseNode: DatabaseNode,
+  securityNode: SecurityNode,
   conditionalNode: ConditionalNode,
 };
 

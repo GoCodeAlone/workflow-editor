@@ -13,7 +13,7 @@
 - **LOW / completeness**: 168 of 272 engine module types have no IO definitions (inputs/outputs). Most are step types — expected behavior.
 - ~~**ENHANCEMENT / completeness**: No pipeline configs in real-world tests~~ — FIXED iteration 6 (added webhook-pipeline + test-route-pipeline)
 - **ENHANCEMENT / gap**: E2E test suite (`e2e/editor.spec.ts`) is a skeleton — needs fleshing out.
-- **ENHANCEMENT / schema**: Consider new node components for database, security, and observability categories to improve visual distinction.
+- ~~**ENHANCEMENT / schema**: Database and security node components added (iterations 11, 13). Observability still uses InfrastructureNode.~~
 
 ## Fixed Issues
 
@@ -38,6 +38,12 @@
 - **No divergence**: Editor loads coercion rules directly from engine export, cannot drift
 - **One design note**: `api.gateway`/`api.handler` are NOT pipeline-flow sources (only `api.query`/`api.command`). Not a bug, but worth tracking if those types ever route to step chains.
 - **Total tests**: 340 across 20 test files (up from 195 at session start)
+
+### 2026-03-18 — Iteration 13: Security Node Component
+- **New**: `SecurityNode` component with shield+checkmark icon (orange #fb923c), shows provider/engine preview
+- **Wired**: `nodeComponentType()` routes `auth.*`, `security.*`, `policy.*` to `securityNode`
+- **Covers**: auth.m2m, auth.oauth2, auth.token-blacklist, policy.mock, security.field-protection, security.scanner (6 types). step.scan_* types still use integrationNode via step.* prefix — correct.
+- **Total node components**: 13 (was 12)
 
 ### 2026-03-18 — Iteration 12: Expanded Real-World Round-Trip Coverage
 - **Added**: 3 more example configs to round-trip tests: event-processor, realtime-messaging, advanced-scheduler
