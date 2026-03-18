@@ -22,6 +22,14 @@
 - **Drift check**: No drift detected between engine and editor schemas
 - **New test added**: `src/utils/serialization-realworld.test.ts` (27 tests on real configs)
 
+### 2026-03-18 — Iteration 2: Connection Rule Accuracy Audit
+- **QA scenario**: Connection accuracy — edge auto-detection, type compatibility, maxIncoming enforcement
+- **Result**: 118/118 tests pass — all 93 engine coercion rules verified in editor
+- **Edge detection**: `isPipelineFlowConnection` correctly classifies step↔step, api.query/command→step as pipeline-flow
+- **No divergence**: Editor loads coercion rules directly from engine export, cannot drift
+- **One design note**: `api.gateway`/`api.handler` are NOT pipeline-flow sources (only `api.query`/`api.command`). Not a bug, but worth tracking if those types ever route to step chains.
+- **Total tests**: 340 across 20 test files (up from 195 at session start)
+
 ## Learnings
 
 - The engine's `ModuleSchemaRegistry` already has Inputs/Outputs/MaxIncoming/MaxOutgoing — the editor just wasn't using them
