@@ -38,6 +38,13 @@
 - **One design note**: `api.gateway`/`api.handler` are NOT pipeline-flow sources (only `api.query`/`api.command`). Not a bug, but worth tracking if those types ever route to step chains.
 - **Total tests**: 340 across 20 test files (up from 195 at session start)
 
+### 2026-03-18 — Iteration 10: Pass-Through Fields + Drift Check
+- **Fix**: `parseYaml()` now reads `imports`, `requires`, `platform`, `infrastructure`, `sidecars`
+- **Fix**: `nodesToConfig()` passes through all 6 non-visual sections (pipelines, imports, requires, platform, infrastructure, sidecars) from originalConfig
+- **Drift check**: Live engine 272 types / 48 rules matches committed schemas exactly — no drift
+- **Tests**: 33 edge case tests (was 31 — added infrastructure + sidecars)
+- **Total tests**: 481 across 22 files
+
 ### 2026-03-18 — Iteration 9: Serialization Edge Cases
 - **QA**: 31 edge case tests covering pass-through fields, step.conditional, module ordering, complex config values, empty configs, YAML comments, special character names
 - **No bugs found**: All edge cases handled correctly

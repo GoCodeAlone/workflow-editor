@@ -59,43 +59,106 @@ pipelines:
       expect(config.pipelines!['my-pipeline']).toBeDefined();
     });
 
-    it('parseYaml does NOT read imports (not a top-level WorkflowConfig field)', () => {
-      // parseYaml only surfaces: modules, workflows, triggers, pipelines
-      // imports is handled only by resolveImports(), not parseYaml()
+    it('parseYaml reads imports and round-trip preserves them', () => {
       const yaml = `
 imports:
   - ./auth.yaml
-modules: []
+modules:
+  - name: server
+    type: http.server
+    config:
+      address: ":8080"
 workflows: {}
 triggers: {}
 `;
       const config = parseYaml(yaml);
-      // imports is not in WorkflowConfig — it should not appear on config
-      expect((config as unknown as Record<string, unknown>).imports).toBeUndefined();
+      expect(config.imports).toBeDefined();
+      expect(config.imports).toEqual(['./auth.yaml']);
+      const result = fullRoundTrip(yaml);
+      expect(result.imports).toEqual(['./auth.yaml']);
     });
 
-    it('parseYaml does NOT read requires (not a top-level WorkflowConfig field)', () => {
+    it('parseYaml reads requires and round-trip preserves them', () => {
       const yaml = `
 requires:
-  - some-plugin: ">=1.0.0"
-modules: []
+  plugins:
+    - name: messaging
+    - name: pipeline-steps
+modules:
+  - name: server
+    type: http.server
+    config:
+      address: ":8080"
 workflows: {}
 triggers: {}
 `;
       const config = parseYaml(yaml);
-      expect((config as unknown as Record<string, unknown>).requires).toBeUndefined();
+      expect(config.requires).toBeDefined();
+      const result = fullRoundTrip(yaml);
+      expect(result.requires).toBeDefined();
+      expect((result.requires as any).plugins).toHaveLength(2);
     });
 
-    it('parseYaml does NOT read platform (not a top-level WorkflowConfig field)', () => {
+    it('parseYaml reads platform and round-trip preserves it', () => {
       const yaml = `
 platform:
   version: ">=0.3.0"
-modules: []
+modules:
+  - name: server
+    type: http.server
+    config:
+      address: ":8080"
 workflows: {}
 triggers: {}
 `;
       const config = parseYaml(yaml);
-      expect((config as unknown as Record<string, unknown>).platform).toBeUndefined();
+      expect(config.platform).toBeDefined();
+      expect((config.platform as any).version).toBe('>=0.3.0');
+      const result = fullRoundTrip(yaml);
+      expect(result.platform).toBeDefined();
+      expect((result.platform as any).version).toBe('>=0.3.0');
+    });
+
+    it('parseYaml reads infrastructure and round-trip preserves it', () => {
+      const yaml = `
+infrastructure:
+  database:
+    type: postgres
+    size: large
+modules:
+  - name: server
+    type: http.server
+    config:
+      address: ":8080"
+workflows: {}
+triggers: {}
+`;
+      const config = parseYaml(yaml);
+      expect(config.infrastructure).toBeDefined();
+      const result = fullRoundTrip(yaml);
+      expect(result.infrastructure).toBeDefined();
+      expect((result.infrastructure as any).database.type).toBe('postgres');
+    });
+
+    it('parseYaml reads sidecars and round-trip preserves them', () => {
+      const yaml = `
+sidecars:
+  - name: envoy
+    image: envoyproxy/envoy:v1.28
+modules:
+  - name: server
+    type: http.server
+    config:
+      address: ":8080"
+workflows: {}
+triggers: {}
+`;
+      const config = parseYaml(yaml);
+      expect(config.sidecars).toBeDefined();
+      expect(config.sidecars).toHaveLength(1);
+      const result = fullRoundTrip(yaml);
+      expect(result.sidecars).toBeDefined();
+      expect((result.sidecars as any)[0].name).toBe('envoy');
     });
 
     it('pipelines are absent from output when not in originalConfig', () => {

@@ -14,6 +14,11 @@ export interface WorkflowConfig {
   workflows: Record<string, unknown>;
   triggers: Record<string, unknown>;
   pipelines?: Record<string, unknown>;
+  imports?: string[];
+  requires?: Record<string, unknown>;
+  platform?: Record<string, unknown>;
+  infrastructure?: Record<string, unknown>;
+  sidecars?: unknown[];
 }
 
 // Workflow section types for edge extraction

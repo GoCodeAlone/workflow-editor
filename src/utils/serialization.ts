@@ -500,8 +500,24 @@ export function nodesToConfig(
   const triggers: Record<string, unknown> = {};
 
   const result: WorkflowConfig = { modules, workflows, triggers };
+  // Pass through non-visual config sections from the original config
   if (originalConfig?.pipelines && Object.keys(originalConfig.pipelines).length > 0) {
     result.pipelines = originalConfig.pipelines;
+  }
+  if (originalConfig?.imports && originalConfig.imports.length > 0) {
+    result.imports = originalConfig.imports;
+  }
+  if (originalConfig?.requires && Object.keys(originalConfig.requires).length > 0) {
+    result.requires = originalConfig.requires;
+  }
+  if (originalConfig?.platform && Object.keys(originalConfig.platform).length > 0) {
+    result.platform = originalConfig.platform;
+  }
+  if (originalConfig?.infrastructure && Object.keys(originalConfig.infrastructure).length > 0) {
+    result.infrastructure = originalConfig.infrastructure;
+  }
+  if (originalConfig?.sidecars && originalConfig.sidecars.length > 0) {
+    result.sidecars = originalConfig.sidecars;
   }
   return result;
 }
@@ -734,6 +750,21 @@ export function parseYaml(text: string): WorkflowConfig {
     };
     if (parsed.pipelines) {
       config.pipelines = parsed.pipelines as Record<string, unknown>;
+    }
+    if (parsed.imports) {
+      config.imports = parsed.imports as string[];
+    }
+    if (parsed.requires) {
+      config.requires = parsed.requires as Record<string, unknown>;
+    }
+    if (parsed.platform) {
+      config.platform = parsed.platform as Record<string, unknown>;
+    }
+    if (parsed.infrastructure) {
+      config.infrastructure = parsed.infrastructure as Record<string, unknown>;
+    }
+    if (parsed.sidecars) {
+      config.sidecars = parsed.sidecars as unknown[];
     }
     return config;
   } catch {
