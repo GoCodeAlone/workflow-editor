@@ -38,6 +38,14 @@
 - **One design note**: `api.gateway`/`api.handler` are NOT pipeline-flow sources (only `api.query`/`api.command`). Not a bug, but worth tracking if those types ever route to step chains.
 - **Total tests**: 340 across 20 test files (up from 195 at session start)
 
+### 2026-03-18 — Iteration 8: Property Panel Schema Fidelity
+- **QA scenario**: Scenario C — Property panel correctness for 10 module types
+- **Result**: 90/90 tests pass — all configFields, types, required flags, defaults, select options match engine
+- **Types audited**: http.server, http.middleware.cors, database.workflow, static.fileserver, storage.sqlite, observability.otel, actor.pool, auth.jwt, database.partitioned, http.middleware.ratelimit
+- **Field types covered**: string, number, boolean, select, array, json, duration, map
+- **Finding**: `duration` type passes through raw from engine JSON. `moduleSchemaStore.mapFieldType()` converts `duration→string` only for server-fetched schemas. Not a functional issue — editor renders duration fields as text inputs either way.
+- **Total tests**: 448 across 21 test files
+
 ### 2026-03-18 — Iteration 7: Pipeline Pass-Through Fix
 - **Fix**: `nodesToConfig()` now accepts optional `originalConfig` parameter and passes through the `pipelines` section
 - **Before**: Top-level `pipelines:` section was read by `parseYaml()` but lost during `nodesToConfig()` serialization
