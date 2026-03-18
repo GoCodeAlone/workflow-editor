@@ -7,7 +7,7 @@
 - ~~**MEDIUM / ide**: JetBrains missing `ready` handshake~~ — FIXED iteration 4
 - ~~**MEDIUM / schema**: `api.command` and `api.query` render as generic InfrastructureNode~~ — FIXED iteration 3
 - ~~**LOW / completeness**: `database.modular` phantom type~~ — FIXED iteration 6 (removed from MODULE_TYPES)
-- **MEDIUM / serialization**: Top-level `pipelines:` section is read by `parseYaml()` but dropped by `nodesToConfig()`. Only route-inline pipelines (steps embedded in HTTP routes) survive round-trip. Affects configs like webhook-pipeline.yaml and test-route-pipeline.yaml.
+- ~~**MEDIUM / serialization**: Top-level `pipelines:` section dropped during round-trip~~ — FIXED iteration 7 (`nodesToConfig` now accepts `originalConfig` for pass-through)
 - **LOW / completeness**: 8 database types, 32 infrastructure types, 3 platform types have no specialized node components (all fall to generic InfrastructureNode).
 - **LOW / completeness**: 168 of 272 engine module types have no IO definitions (inputs/outputs). Most are step types — expected behavior.
 - ~~**ENHANCEMENT / completeness**: No pipeline configs in real-world tests~~ — FIXED iteration 6 (added webhook-pipeline + test-route-pipeline)
@@ -37,6 +37,12 @@
 - **No divergence**: Editor loads coercion rules directly from engine export, cannot drift
 - **One design note**: `api.gateway`/`api.handler` are NOT pipeline-flow sources (only `api.query`/`api.command`). Not a bug, but worth tracking if those types ever route to step chains.
 - **Total tests**: 340 across 20 test files (up from 195 at session start)
+
+### 2026-03-18 — Iteration 7: Pipeline Pass-Through Fix
+- **Fix**: `nodesToConfig()` now accepts optional `originalConfig` parameter and passes through the `pipelines` section
+- **Before**: Top-level `pipelines:` section was read by `parseYaml()` but lost during `nodesToConfig()` serialization
+- **After**: Pipelines survive round-trip when caller provides the original config (e.g., `nodesToConfig(nodes, edges, moduleTypeMap, parsed)`)
+- **Test**: Real-world tests verify pipeline names preserved for webhook-pipeline.yaml and test-route-pipeline.yaml
 
 ### 2026-03-18 — Iteration 6: Pipeline Round-Trip + Phantom Cleanup
 - **Fix**: Removed `database.modular` phantom type from static MODULE_TYPES

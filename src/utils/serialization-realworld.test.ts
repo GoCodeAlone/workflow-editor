@@ -149,19 +149,18 @@ describe('real-world config round-trip', () => {
       expect(outputSet).toEqual(originalSet);
     });
 
-    it(`${name}: top-level pipelines section round-trip (known gap)`, () => {
+    it(`${name}: top-level pipelines section preserved via pass-through`, () => {
       const yaml = readFileSync(configPath, 'utf-8');
       const parsed = parseYaml(yaml);
-      if (!(parsed as any).pipelines) return; // skip if no pipelines
+      if (!parsed.pipelines) return; // skip if no pipelines
 
-      // Known limitation: nodesToConfig() does not serialize top-level pipelines.
-      // It only handles route-inline pipelines (pipeline steps embedded in HTTP routes).
-      // This test documents the gap — it's expected to skip for pipeline-heavy configs.
       const { nodes, edges } = configToNodes(parsed, moduleTypeMap);
-      const serialized = nodesToConfig(nodes, edges);
+      const serialized = nodesToConfig(nodes, edges, moduleTypeMap, parsed);
 
-      // For now, just verify the round-trip doesn't crash and modules are preserved
-      expect(serialized.modules.length).toBeGreaterThan(0);
+      expect(serialized.pipelines).toBeDefined();
+      expect(Object.keys(serialized.pipelines!).length).toBe(Object.keys(parsed.pipelines!).length);
+      // Pipeline names preserved
+      expect(Object.keys(serialized.pipelines!).sort()).toEqual(Object.keys(parsed.pipelines!).sort());
     });
 
     it(`${name}: no unexpected top-level keys added`, () => {

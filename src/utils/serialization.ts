@@ -211,6 +211,7 @@ export function nodesToConfig(
   nodes: WorkflowNode[],
   edges: Edge[],
   moduleTypeMap: Record<string, ModuleTypeInfo> = STATIC_MODULE_TYPE_MAP,
+  originalConfig?: WorkflowConfig,
 ): WorkflowConfig {
   // Filter out synthesized conditional nodes
   const realNodes = nodes.filter((n) => !n.data.synthesized);
@@ -498,7 +499,11 @@ export function nodesToConfig(
 
   const triggers: Record<string, unknown> = {};
 
-  return { modules, workflows, triggers };
+  const result: WorkflowConfig = { modules, workflows, triggers };
+  if (originalConfig?.pipelines && Object.keys(originalConfig.pipelines).length > 0) {
+    result.pipelines = originalConfig.pipelines;
+  }
+  return result;
 }
 
 export function configToNodes(
