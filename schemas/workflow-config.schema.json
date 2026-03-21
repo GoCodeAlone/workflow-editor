@@ -258,6 +258,7 @@
               "step.oidc_auth_url",
               "step.oidc_callback",
               "step.parallel",
+              "step.pipeline_output",
               "step.platform_apply",
               "step.platform_destroy",
               "step.platform_plan",
@@ -5990,6 +5991,38 @@
               "properties": {
                 "type": {
                   "enum": [
+                    "step.pipeline_output"
+                  ]
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "config": {
+                  "type": "object",
+                  "properties": {
+                    "source": {
+                      "description": "Dot-path to step output (e.g. steps.fetch or steps.fetch.row)",
+                      "type": "string"
+                    },
+                    "values": {
+                      "description": "Template map of key-value pairs to include in output",
+                      "type": "object"
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "required": [
+                "type"
+              ],
+              "properties": {
+                "type": {
+                  "enum": [
                     "step.platform_apply"
                   ]
                 }
@@ -7921,6 +7954,7 @@
                     "step.oidc_auth_url",
                     "step.oidc_callback",
                     "step.parallel",
+                    "step.pipeline_output",
                     "step.platform_apply",
                     "step.platform_destroy",
                     "step.platform_plan",
@@ -10397,6 +10431,38 @@
                           },
                           "steps": {
                             "description": "List of sub-steps to run concurrently. Each must have a unique 'name'.",
+                            "type": "object"
+                          }
+                        },
+                        "additionalProperties": false
+                      }
+                    }
+                  }
+                },
+                {
+                  "if": {
+                    "required": [
+                      "type"
+                    ],
+                    "properties": {
+                      "type": {
+                        "enum": [
+                          "step.pipeline_output"
+                        ]
+                      }
+                    }
+                  },
+                  "then": {
+                    "properties": {
+                      "config": {
+                        "type": "object",
+                        "properties": {
+                          "source": {
+                            "description": "Dot-path to step output (e.g. steps.fetch or steps.fetch.row)",
+                            "type": "string"
+                          },
+                          "values": {
+                            "description": "Template map of key-value pairs to include in output",
                             "type": "object"
                           }
                         },
