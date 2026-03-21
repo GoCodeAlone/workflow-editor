@@ -1,20 +1,24 @@
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'fs';
+import { resolve, dirname } from 'path';
+import { fileURLToPath } from 'url';
 import { configToNodes, nodesToConfig, configToYaml, parseYaml } from './serialization.ts';
 import { getEngineModuleTypes } from '../generated/load-schemas.ts';
 
 const moduleTypeMap = getEngineModuleTypes();
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const fixturesDir = resolve(__dirname, '../../test-fixtures');
 
 const realConfigs = [
-  '/Users/jon/workspace/workflow/example/api-server-config.yaml',
-  '/Users/jon/workspace/workflow/example/event-driven-workflow.yaml',
-  '/Users/jon/workspace/workflow/example/data-pipeline-config.yaml',
-  '/Users/jon/workspace/workflow/example/webhook-pipeline.yaml',
-  '/Users/jon/workspace/workflow/example/test-route-pipeline.yaml',
-  '/Users/jon/workspace/workflow/example/event-processor-config.yaml',
-  '/Users/jon/workspace/workflow/example/realtime-messaging-modular-config.yaml',
-  '/Users/jon/workspace/workflow/example/advanced-scheduler-workflow.yaml',
-];
+  'api-server-config.yaml',
+  'event-driven-workflow.yaml',
+  'data-pipeline-config.yaml',
+  'webhook-pipeline.yaml',
+  'test-route-pipeline.yaml',
+  'event-processor-config.yaml',
+  'realtime-messaging-modular-config.yaml',
+  'advanced-scheduler-workflow.yaml',
+].map(f => resolve(fixturesDir, f));
 
 describe('real-world config round-trip', () => {
   for (const configPath of realConfigs) {
