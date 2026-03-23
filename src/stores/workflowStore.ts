@@ -170,8 +170,11 @@ interface WorkflowStore {
   testMode: boolean;
   testNodes: Node[];
   testEdges: Edge[];
+  selectedTestNodeId: string | null;
   setTestMode: (mode: boolean) => void;
   setTestCanvas: (nodes: Node[], edges: Edge[]) => void;
+  setSelectedTestNode: (id: string | null) => void;
+  updateTestNodeData: (id: string, data: Record<string, unknown>) => void;
   onTestNodesChange: OnNodesChange;
   onTestEdgesChange: OnEdgesChange;
 }
@@ -706,8 +709,17 @@ const useWorkflowStore = create<WorkflowStore>()(
   testMode: false,
   testNodes: [],
   testEdges: [],
+  selectedTestNodeId: null,
   setTestMode: (mode) => set({ testMode: mode }),
   setTestCanvas: (nodes, edges) => set({ testNodes: nodes, testEdges: edges }),
+  setSelectedTestNode: (id) => set({ selectedTestNodeId: id }),
+  updateTestNodeData: (id, data) => {
+    set({
+      testNodes: get().testNodes.map((n) =>
+        n.id === id ? { ...n, data: { ...n.data, ...data } } : n,
+      ),
+    });
+  },
   onTestNodesChange: (changes) => {
     set({ testNodes: applyNodeChanges(changes, get().testNodes) });
   },

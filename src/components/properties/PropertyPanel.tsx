@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import useWorkflowStore from '../../stores/workflowStore.ts';
+import TestPropertyPanel from './TestPropertyPanel.tsx';
 import useModuleSchemaStore from '../../stores/moduleSchemaStore.ts';
 import useFieldEditorRegistry from '../../stores/fieldEditorRegistry.ts';
 import { CATEGORY_COLORS } from '../../types/workflow.ts';
@@ -50,6 +51,9 @@ function resolveInheritedValue(
 }
 
 export default function PropertyPanel() {
+  const testMode = useWorkflowStore((s) => s.testMode);
+  if (testMode) return <TestPropertyPanel />;
+
   const nodes = useWorkflowStore((s) => s.nodes);
   const edges = useWorkflowStore((s) => s.edges);
   const selectedNodeId = useWorkflowStore((s) => s.selectedNodeId);
