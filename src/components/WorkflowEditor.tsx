@@ -13,12 +13,13 @@ import { applyMode } from '../modes/defaultMode.ts';
 import { useEffect, useRef } from 'react';
 
 export function WorkflowEditor(props: WorkflowEditorProps) {
-  const { initialYaml, onSave, onNavigateToSource, onSchemaRequest, onPluginSchemaRequest, embedded, onAIRequest, onChange, onResolveFile, mode } = props;
+  const { initialYaml, onSave, onNavigateToSource, onSchemaRequest, onPluginSchemaRequest, embedded, onAIRequest, onChange, onResolveFile, mode, testResults, onTestRun } = props;
   const importFromConfig = useWorkflowStore((s) => s.importFromConfig);
   const exportToConfig = useWorkflowStore((s) => s.exportToConfig);
   const exportToFileMap = useWorkflowStore((s) => s.exportToFileMap);
   const addToast = useWorkflowStore((s) => s.addToast);
   const sourceMap = useWorkflowStore((s) => s.sourceMap);
+  const setTestResults = useWorkflowStore((s) => s.setTestResults);
   const loadSchemas = useModuleSchemaStore((s) => s.loadSchemas);
   const loadPluginSchemas = useModuleSchemaStore((s) => s.loadPluginSchemas);
   const importingRef = useRef(false);
@@ -67,6 +68,11 @@ export function WorkflowEditor(props: WorkflowEditorProps) {
     return unsub;
   }, [onChange, exportToConfig]);
 
+  // Sync testResults prop into the store
+  useEffect(() => {
+    setTestResults(testResults ?? {});
+  }, [testResults, setTestResults]);
+
   // Apply mode config to registries on mount and when mode changes
   useEffect(() => {
     applyMode(mode);
@@ -112,6 +118,7 @@ export function WorkflowEditor(props: WorkflowEditorProps) {
             showServerControls={false}
             embedded={embedded}
             onAIRequest={onAIRequest}
+            onTestRun={onTestRun}
           />
           <WorkflowCanvas
             onSave={onSave}

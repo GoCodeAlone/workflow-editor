@@ -20,6 +20,40 @@ export interface EditorModeConfig {
 }
 
 /**
+ * Test result for a single step or pipeline node.
+ *
+ * IDE plugin integration (Task 12):
+ * 1. Run `wfctl test --json <file>` to obtain structured test output.
+ * 2. Parse the JSON array into `Record<string, TestResult>` keyed by step name.
+ * 3. Send the map to the editor webview via the bridge message protocol:
+ *    `{ type: 'testResults', results: Record<string, TestResult> }`
+ * 4. The webview calls `onTestRun` / sets `testResults` on the editor to light up
+ *    pass/fail badges on pipeline step nodes.
+ */
+export interface TestResult {
+  status: 'pass' | 'fail' | 'skip' | 'pending';
+  error?: string;
+  duration?: number;
+}
+
+/**
+ * Multi-file workspace descriptor for editors that resolve imports across files.
+ * Pass via the `workspace` prop. When `sourceMap` is provided, nodes show a file
+ * badge on hover indicating which file they originate from.
+ */
+export interface WorkflowWorkspace {
+  rootConfig: string;
+  files: Map<string, WorkflowFileInfo>;
+  /** node name → source file path */
+  sourceMap: Record<string, string>;
+}
+
+export interface WorkflowFileInfo {
+  path: string;
+  type: 'config' | 'partial' | 'test' | 'feature';
+}
+
+/**
  * Props for the top-level WorkflowEditor component.
  * The host environment (IDE webview, browser app) provides these callbacks.
  */
@@ -48,6 +82,13 @@ export interface WorkflowEditorProps {
   mode?: EditorModeConfig;
   /** Called when user clicks AI Design button. Host IDE invokes its built-in AI with the provided context. */
   onAIRequest?: (context: AIRequestContext) => void;
+  /**
+   * Test results keyed by step/node name. When provided, nodes render pass/fail/skip/pending badges.
+   * See TestResult for the bridge message protocol.
+   */
+  testResults?: Record<string, TestResult>;
+  /** Called when user clicks "Run Tests". Host IDE should invoke `wfctl test --json` and update testResults. */
+  onTestRun?: (pipelineName: string) => void;
 }
 
 /** Context sent to the host IDE's AI when user clicks AI Design */

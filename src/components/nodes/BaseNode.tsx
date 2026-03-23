@@ -188,6 +188,9 @@ export default function BaseNode({
   );
   const hasError = nodeErrors.length > 0;
 
+  // Test result for this node (keyed by label)
+  const testResult = useWorkflowStore((s) => s.testResults[label]);
+
   // Cursor→node highlight
   const highlightedNodeId = useWorkflowStore((s) => s.highlightedNodeId);
   const isHighlighted = highlightedNodeId === id;
@@ -203,7 +206,8 @@ export default function BaseNode({
   const isSnapTarget = snapTargetId === id;
 
   const nodeStyle = useMemo(() => {
-    const borderColor = hasError ? '#f38ba8' : isHighlighted ? '#fab387' : isSelected ? '#fff' : color;
+    const isTestFail = testResult?.status === 'fail';
+    const borderColor = hasError ? '#f38ba8' : isTestFail ? '#f38ba8' : isHighlighted ? '#fab387' : isSelected ? '#fff' : color;
     const base: React.CSSProperties = {
       background: '#1e1e2e',
       border: `2px solid ${borderColor}`,
@@ -213,7 +217,8 @@ export default function BaseNode({
       fontFamily: 'system-ui, sans-serif',
       fontSize: 12,
       color: '#cdd6f4',
-      boxShadow: hasError
+      position: 'relative',
+      boxShadow: hasError || isTestFail
         ? `0 0 0 2px rgba(243, 139, 168, 0.3), 0 4px 12px rgba(0,0,0,0.4)`
         : isHighlighted
           ? `0 0 0 3px rgba(250, 179, 135, 0.5), 0 4px 12px rgba(0,0,0,0.4)`
@@ -238,7 +243,7 @@ export default function BaseNode({
     }
 
     return base;
-  }, [isSelected, color, isSource, isCompatible, isIncompatible, isSnapTarget, hasError, isHighlighted]);
+  }, [isSelected, color, isSource, isCompatible, isIncompatible, isSnapTarget, hasError, isHighlighted, testResult]);
 
   const targetHandleStyle = useMemo(() => {
     const base: React.CSSProperties = {
@@ -359,6 +364,30 @@ export default function BaseNode({
             title={nodeErrors.join('\n')}
           >
             {nodeErrors.length}
+          </span>
+        )}
+        {testResult && (
+          <span
+            className={`test-${testResult.status}`}
+            style={{
+              position: 'absolute',
+              top: 4,
+              right: 6,
+              fontSize: 13,
+              lineHeight: 1,
+              cursor: testResult.status === 'fail' ? 'help' : 'default',
+            }}
+            title={
+              testResult.status === 'fail'
+                ? testResult.error ?? 'Test failed'
+                : testResult.status === 'pass'
+                ? testResult.duration !== undefined ? `Passed in ${testResult.duration}ms` : 'Test passed'
+                : testResult.status === 'skip'
+                ? 'Test skipped'
+                : 'Test pending'
+            }
+          >
+            {testResult.status === 'pass' ? '✅' : testResult.status === 'fail' ? '❌' : testResult.status === 'skip' ? '⏭' : '⏳'}
           </span>
         )}
       </div>

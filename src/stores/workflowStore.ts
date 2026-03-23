@@ -127,6 +127,10 @@ interface WorkflowStore {
   addCrossWorkflowLink: (link: CrossWorkflowLink) => void;
   removeCrossWorkflowLink: (linkId: string) => void;
 
+  // Test results (transient, not persisted) — keyed by node/step label
+  testResults: Record<string, import('../types/editor.ts').TestResult>;
+  setTestResults: (results: Record<string, import('../types/editor.ts').TestResult>) => void;
+
   // Validation errors (transient, not persisted)
   validationErrors: Array<{ nodeId?: string; message: string }>;
   setValidationErrors: (errors: Array<{ nodeId?: string; message: string }>) => void;
@@ -482,6 +486,10 @@ const useWorkflowStore = create<WorkflowStore>()(
       set({ nodes });
     }
   },
+
+  // Test results (transient, not persisted)
+  testResults: {},
+  setTestResults: (results) => set({ testResults: results }),
 
   // Validation errors (transient, not persisted)
   validationErrors: [],

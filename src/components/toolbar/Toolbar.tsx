@@ -14,6 +14,7 @@ interface ToolbarProps {
   showServerControls?: boolean;
   embedded?: boolean;
   onAIRequest?: (context: AIRequestContext) => void;
+  onTestRun?: (pipelineName: string) => void;
 }
 
 export default function Toolbar(props: ToolbarProps) {
@@ -320,6 +321,14 @@ export default function Toolbar(props: ToolbarProps) {
         <ToolbarButton label={deployInProgress ? 'Stopping...' : 'Stop'} onClick={handleStopWorkflow} disabled={deployInProgress} variant="danger" />
       )}
       <ToolbarButton label="Validate" onClick={handleValidate} disabled={nodes.length === 0} />
+      {props.onTestRun && (
+        <ToolbarButton
+          label="▶ Run Tests"
+          onClick={() => props.onTestRun!(workflowName ?? '')}
+          disabled={nodes.length === 0}
+          variant="test"
+        />
+      )}
 
       <Separator />
 
@@ -385,7 +394,7 @@ function ToolbarButton({
   label: string;
   onClick: () => void;
   disabled?: boolean;
-  variant?: 'danger' | 'active' | 'deploy';
+  variant?: 'danger' | 'active' | 'deploy' | 'test';
 }) {
   const color = disabled
     ? '#585b70'
@@ -395,6 +404,8 @@ function ToolbarButton({
     ? '#89b4fa'
     : variant === 'deploy'
     ? '#1e1e2e'
+    : variant === 'test'
+    ? '#1e1e2e'
     : '#cdd6f4';
 
   return (
@@ -403,13 +414,13 @@ function ToolbarButton({
       disabled={disabled}
       style={{
         padding: '5px 12px',
-        background: variant === 'deploy' ? '#a6e3a1' : variant === 'active' ? '#313244' : variant === 'danger' ? '#45475a' : '#313244',
-        border: `1px solid ${variant === 'deploy' ? '#a6e3a1' : variant === 'active' ? '#89b4fa' : '#45475a'}`,
+        background: variant === 'deploy' ? '#a6e3a1' : variant === 'test' ? '#89dceb' : variant === 'active' ? '#313244' : variant === 'danger' ? '#45475a' : '#313244',
+        border: `1px solid ${variant === 'deploy' ? '#a6e3a1' : variant === 'test' ? '#89dceb' : variant === 'active' ? '#89b4fa' : '#45475a'}`,
         borderRadius: 4,
         color,
         fontSize: 12,
         cursor: disabled ? 'default' : 'pointer',
-        fontWeight: variant === 'deploy' ? 700 : 500,
+        fontWeight: variant === 'deploy' || variant === 'test' ? 700 : 500,
         opacity: disabled ? 0.5 : 1,
       }}
     >
