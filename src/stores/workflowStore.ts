@@ -18,6 +18,7 @@ import { layoutNodes } from '../utils/autoLayout.ts';
 import { exportLayout, importLayout, type LayoutData } from '../utils/layout-sidecar.ts';
 import { autoGroupOrphanedNodes } from '../utils/grouping.ts';
 import { isPipelineFlowConnection } from '../utils/connectionCompatibility.ts';
+import { detectSequenceChains, type SequenceChain } from '../utils/testSerialization.ts';
 import { buildYamlLineMap } from '../utils/yamlLineMap.ts';
 
 export interface Toast {
@@ -177,6 +178,8 @@ interface WorkflowStore {
   updateTestNodeData: (id: string, data: Record<string, unknown>) => void;
   onTestNodesChange: OnNodesChange;
   onTestEdgesChange: OnEdgesChange;
+  removeTestEdge: (id: string) => void;
+  detectSequences: () => SequenceChain[];
 }
 
 let toastIdCounter = 0;
@@ -725,6 +728,13 @@ const useWorkflowStore = create<WorkflowStore>()(
   },
   onTestEdgesChange: (changes) => {
     set({ testEdges: applyEdgeChanges(changes, get().testEdges) });
+  },
+  removeTestEdge: (id) => {
+    set({ testEdges: get().testEdges.filter((e) => e.id !== id) });
+  },
+  detectSequences: () => {
+    const { testNodes, testEdges } = get();
+    return detectSequenceChains(testNodes, testEdges);
   },
 }),
   {

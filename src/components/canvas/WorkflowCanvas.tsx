@@ -29,8 +29,9 @@ import ConnectionPicklist from './ConnectionPicklist.tsx';
 import DeletableEdge from './DeletableEdge.tsx';
 import EdgeContextMenu from './EdgeContextMenu.tsx';
 import NodeContextMenu from './NodeContextMenu.tsx';
+import SequenceEdge from '../../edges/SequenceEdge.tsx';
 
-const edgeTypes = { deletable: DeletableEdge };
+const edgeTypes = { deletable: DeletableEdge, sequence: SequenceEdge };
 
 interface ContextMenuState {
   type: 'edge' | 'node';
@@ -87,6 +88,11 @@ export default function WorkflowCanvas(props: WorkflowCanvasProps) {
       const edgeData = edge.data as WorkflowEdgeData | undefined;
       const edgeType = edgeData?.edgeType;
       const isSelected = edge.id === selectedEdgeId;
+
+      // Sequence edges use their own custom component — preserve type and skip style registry
+      if (edgeType === 'sequence') {
+        return { ...edge, type: 'sequence' as const };
+      }
 
       if (!edgeType) {
         // Untyped edge — apply selected styling if applicable

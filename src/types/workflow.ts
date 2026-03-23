@@ -85,7 +85,7 @@ export interface ConditionalNodeData {
 }
 
 // Edge type classification
-export type WorkflowEdgeType = 'dependency' | 'http-route' | 'messaging-subscription' | 'statemachine' | 'event' | 'conditional' | 'middleware-chain' | 'pipeline-flow';
+export type WorkflowEdgeType = 'dependency' | 'http-route' | 'messaging-subscription' | 'statemachine' | 'event' | 'conditional' | 'middleware-chain' | 'pipeline-flow' | 'sequence';
 
 export interface WorkflowEdgeData extends Record<string, unknown> {
   edgeType: WorkflowEdgeType;

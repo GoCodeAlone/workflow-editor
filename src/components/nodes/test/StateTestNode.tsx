@@ -34,7 +34,7 @@ export default function StateTestNode({ data }: NodeProps) {
       label={d.label ?? 'State'}
       icon={<StateIcon />}
       color={STATE_COLOR}
-      typeTag={`state: ${d.store}`}
+      typeTag={`Seeds: ${d.store}`}
       detail={detail}
     />
   );

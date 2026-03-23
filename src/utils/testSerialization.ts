@@ -38,18 +38,149 @@ interface TestYamlAssertion {
   state?: Record<string, unknown>;
 }
 
+interface TestYamlSequenceStep {
+  name?: string;
+  pipeline?: string;
+  trigger?: {
+    body?: unknown;
+    headers?: Record<string, string>;
+  };
+  assertions?: TestYamlAssertion[];
+}
+
 interface TestYamlCase {
   description?: string;
   trigger?: TestYamlTrigger;
   mocks?: TestYamlMocks;
-  state?: { seed?: Record<string, unknown> };
+  state?: {
+    seed?: Record<string, unknown>;
+    fixtures?: Array<{ file: string; target: string }>;
+  };
   assertions?: TestYamlAssertion[];
+  sequence?: TestYamlSequenceStep[];
 }
 
 interface TestYamlFile {
   config?: string;
   mocks?: TestYamlMocks;
   tests?: Record<string, TestYamlCase>;
+}
+
+// ──────────────────────────────────────────────
+// Sequence detection types (exported for store use)
+// ──────────────────────────────────────────────
+
+export interface SequenceStep {
+  triggerNodeId: string;
+  triggerNode: Node;
+  assertNodes: Node[];
+  pipelineRefNode?: Node;
+}
+
+export interface SequenceChain {
+  stateNodeId: string;
+  stateNode: Node;
+  /** Ordered execution steps in the chain */
+  steps: SequenceStep[];
+}
+
+// ──────────────────────────────────────────────
+// Sequence detection
+// ──────────────────────────────────────────────
+
+/**
+ * Detect stateful sequence chains in the test canvas.
+ *
+ * A sequence is a stateTest node connected via sequence edges to an ordered
+ * chain of triggerTest nodes. Each triggerTest may have regular (non-sequence)
+ * outgoing edges to assertTest nodes that form that step's assertions.
+ *
+ * Chain shape:
+ *   stateTest --seq--> triggerTest₁ --seq--> triggerTest₂ --seq--> …
+ *   triggerTest₁ ------> assertTest₁ᵃ  (regular edges)
+ *   triggerTest₁ ------> assertTest₁ᵇ
+ */
+export function detectSequenceChains(nodes: Node[], edges: Edge[]): SequenceChain[] {
+  const seqEdges = edges.filter(
+    (e) => (e.data as Record<string, unknown>)?.edgeType === 'sequence',
+  );
+
+  const seqEdgeSet = new Set(seqEdges.map((e) => `${e.source}::${e.target}`));
+
+  // Sequence-only adjacency
+  const seqOut = new Map<string, string[]>();
+  for (const e of seqEdges) {
+    if (!seqOut.has(e.source)) seqOut.set(e.source, []);
+    seqOut.get(e.source)!.push(e.target);
+  }
+
+  // All-edge adjacency (for collecting assertions)
+  const allOut = new Map<string, string[]>();
+  for (const e of edges) {
+    if (!allOut.has(e.source)) allOut.set(e.source, []);
+    allOut.get(e.source)!.push(e.target);
+  }
+
+  const nodeMap = new Map<string, Node>();
+  for (const n of nodes) nodeMap.set(n.id, n);
+
+  const chains: SequenceChain[] = [];
+
+  for (const n of nodes) {
+    if (n.type !== 'stateTest') continue;
+    const firstIds = seqOut.get(n.id) ?? [];
+    if (firstIds.length === 0) continue;
+
+    const steps: SequenceStep[] = [];
+    let currentId = firstIds[0];
+    const visited = new Set<string>([n.id]);
+
+    while (currentId) {
+      if (visited.has(currentId)) break;
+      visited.add(currentId);
+
+      const current = nodeMap.get(currentId);
+      if (!current || current.type !== 'triggerTest') break;
+
+      // Collect assertions: non-sequence outgoing edges that lead to assertTest nodes.
+      // Also follow pipelineRef nodes to collect their downstream assertions.
+      const assertNodes: Node[] = [];
+      let pipelineRefNode: Node | undefined;
+
+      for (const outId of allOut.get(currentId) ?? []) {
+        if (seqEdgeSet.has(`${currentId}::${outId}`)) continue; // skip sequence edges
+        const outNode = nodeMap.get(outId);
+        if (!outNode) continue;
+        if (outNode.type === 'assertTest') {
+          assertNodes.push(outNode);
+        } else if (outNode.type === 'pipelineRef') {
+          pipelineRefNode = outNode;
+          // Also collect assertions downstream of the pipelineRef
+          for (const pid of allOut.get(outId) ?? []) {
+            const pNode = nodeMap.get(pid);
+            if (pNode?.type === 'assertTest') assertNodes.push(pNode);
+          }
+        }
+      }
+
+      steps.push({
+        triggerNodeId: currentId,
+        triggerNode: current,
+        assertNodes,
+        pipelineRefNode,
+      });
+
+      // Follow sequence edge to the next triggerTest
+      const nextSeq = seqOut.get(currentId) ?? [];
+      currentId = nextSeq[0] ?? '';
+    }
+
+    if (steps.length > 0) {
+      chains.push({ stateNodeId: n.id, stateNode: n, steps });
+    }
+  }
+
+  return chains;
 }
 
 // ──────────────────────────────────────────────
@@ -60,12 +191,12 @@ interface TestYamlFile {
  * Convert test canvas nodes + edges to a _test.yaml string.
  *
  * Layout strategy:
- * - Each TriggerTestNode becomes a test case.
+ * - Sequence chains (stateTest + chain of triggerTest) are emitted as sequence: blocks.
+ * - Each remaining TriggerTestNode becomes a standalone test case.
  * - Edges connect: mock → trigger → pipelineRef → assert / state
  * - Global mocks come from MockTestNodes not connected to a specific trigger.
- * - StateTestNodes connected to a trigger become per-test state seeds.
+ * - StateTestNodes connected to a trigger (non-sequence) become per-test state seeds.
  * - AssertTestNodes downstream of a trigger become assertions.
- * - A lone PipelineRefNode referenced by a trigger determines the pipeline name.
  */
 export function serializeTestCanvas(nodes: Node[], edges: Edge[]): string {
   const file: TestYamlFile = { mocks: {}, tests: {} };
@@ -83,32 +214,40 @@ export function serializeTestCanvas(nodes: Node[], edges: Edge[]): string {
   const nodeMap = new Map<string, Node>();
   for (const n of nodes) nodeMap.set(n.id, n);
 
-  // Collect mocks that are connected to nothing (global) vs connected to triggers
-  const connectedMockIds = new Set<string>();
+  // ── Detect sequence chains first ──────────────────
+  const chains = detectSequenceChains(nodes, edges);
 
-  // Find all trigger nodes
-  const triggerNodes = nodes.filter((n) => n.type === 'triggerTest');
-
-  if (triggerNodes.length === 0) {
-    // No triggers — collect global mocks and emit empty tests
-    const globalMocks = collectMocks(nodes.filter((n) => n.type === 'mockTest'));
-    if (Object.keys(globalMocks).length > 0) {
-      file.mocks = { steps: globalMocks };
+  // Collect all node IDs consumed by sequences so we skip them below
+  const sequencedNodeIds = new Set<string>();
+  for (const chain of chains) {
+    sequencedNodeIds.add(chain.stateNodeId);
+    for (const step of chain.steps) {
+      sequencedNodeIds.add(step.triggerNodeId);
+      for (const a of step.assertNodes) sequencedNodeIds.add(a.id);
+      if (step.pipelineRefNode) sequencedNodeIds.add(step.pipelineRefNode.id);
     }
-    return yaml.dump(file, { indent: 2, lineWidth: 120 });
   }
 
-  // Process each trigger as a test case
+  // Serialize each sequence chain
+  for (const chain of chains) {
+    const [testName, testCase] = serializeChain(chain);
+    file.tests![testName] = testCase;
+  }
+
+  // ── Standalone (non-sequence) triggers ────────────
+  const connectedMockIds = new Set<string>();
+
+  const triggerNodes = nodes.filter(
+    (n) => n.type === 'triggerTest' && !sequencedNodeIds.has(n.id),
+  );
+
   for (const trigger of triggerNodes) {
     const d = trigger.data as Record<string, unknown>;
     const testName = slugify((d.label as string) ?? 'test');
     const testCase: TestYamlCase = {};
 
-    // Build trigger
-    const triggerYaml = buildTrigger(d, trigger.id, outEdges, nodeMap);
-    testCase.trigger = triggerYaml;
+    testCase.trigger = buildTrigger(d, trigger.id, outEdges, nodeMap);
 
-    // Find mocks connected to this trigger (incoming from mock nodes)
     const incomingIds = inEdges.get(trigger.id) ?? [];
     const perTestMocks: Record<string, unknown> = {};
     for (const srcId of incomingIds) {
@@ -124,11 +263,10 @@ export function serializeTestCanvas(nodes: Node[], edges: Edge[]): string {
       testCase.mocks = { steps: perTestMocks };
     }
 
-    // Find state nodes connected to trigger
     const stateSeeds: Record<string, unknown> = {};
     for (const srcId of incomingIds) {
       const src = nodeMap.get(srcId);
-      if (src?.type === 'stateTest') {
+      if (src?.type === 'stateTest' && !sequencedNodeIds.has(srcId)) {
         const sd = src.data as Record<string, unknown>;
         const store = (sd.store as string) ?? 'default';
         stateSeeds[store] = sd.seedData ?? {};
@@ -138,28 +276,85 @@ export function serializeTestCanvas(nodes: Node[], edges: Edge[]): string {
       testCase.state = { seed: stateSeeds };
     }
 
-    // Walk downstream from trigger to collect assertions
     const assertions = collectAssertions(trigger.id, outEdges, nodeMap, new Set());
-    if (assertions.length > 0) {
-      testCase.assertions = assertions;
-    }
+    if (assertions.length > 0) testCase.assertions = assertions;
 
     file.tests![testName] = testCase;
   }
 
-  // Global mocks: MockTestNodes not connected to any trigger
-  const unconnectedMocks = nodes.filter((n) => n.type === 'mockTest' && !connectedMockIds.has(n.id));
+  // ── Global mocks ───────────────────────────────────
+  const unconnectedMocks = nodes.filter(
+    (n) => n.type === 'mockTest' && !connectedMockIds.has(n.id),
+  );
   const globalMocks = collectMocks(unconnectedMocks);
   if (Object.keys(globalMocks).length > 0) {
     file.mocks = { steps: globalMocks };
   }
 
-  // Remove empty mocks key
   if (!file.mocks || Object.keys(file.mocks).length === 0) {
     delete file.mocks;
   }
 
+  if (!file.tests || Object.keys(file.tests).length === 0) {
+    delete file.tests;
+  }
+
   return yaml.dump(file, { indent: 2, lineWidth: 120 });
+}
+
+// ──────────────────────────────────────────────
+// Sequence chain serialization helper
+// ──────────────────────────────────────────────
+
+function serializeChain(chain: SequenceChain): [string, TestYamlCase] {
+  const sd = chain.stateNode.data as Record<string, unknown>;
+  const testName = slugify((sd.label as string) ?? 'sequence');
+  const testCase: TestYamlCase = {};
+
+  // State block
+  const store = (sd.store as string) ?? 'default';
+  if (sd.fixture) {
+    testCase.state = {
+      fixtures: [{ file: sd.fixture as string, target: store }],
+    };
+  } else if (sd.seedData) {
+    testCase.state = { seed: { [store]: sd.seedData } };
+  }
+
+  // Sequence steps
+  const sequenceSteps: TestYamlSequenceStep[] = [];
+  for (const step of chain.steps) {
+    const td = step.triggerNode.data as Record<string, unknown>;
+    const stepName = slugify((td.label as string) ?? 'step');
+
+    // Pipeline name: prefer pipelineRef, fall back to triggerNode fields
+    const pipelineName =
+      ((step.pipelineRefNode?.data as Record<string, unknown>)?.pipelineName as string) ??
+      (td.pipelineName as string) ??
+      (td.name as string) ??
+      '';
+
+    const seqStep: TestYamlSequenceStep = { name: stepName };
+    if (pipelineName) seqStep.pipeline = pipelineName;
+
+    const triggerPayload: Record<string, unknown> = {};
+    if (td.body) triggerPayload.body = td.body;
+    if (td.headers && Object.keys(td.headers as object).length > 0) {
+      triggerPayload.headers = td.headers as Record<string, string>;
+    }
+    if (Object.keys(triggerPayload).length > 0) seqStep.trigger = triggerPayload;
+
+    const assertions = step.assertNodes
+      .map((a) => buildAssertion(a.data as Record<string, unknown>))
+      .filter((a): a is TestYamlAssertion => a !== null);
+    if (assertions.length > 0) seqStep.assertions = assertions;
+
+    sequenceSteps.push(seqStep);
+  }
+
+  if (sequenceSteps.length > 0) testCase.sequence = sequenceSteps;
+
+  return [testName, testCase];
 }
 
 // ──────────────────────────────────────────────
@@ -237,7 +432,6 @@ function collectAssertions(
       const assertion = buildAssertion(node.data as Record<string, unknown>);
       if (assertion) assertions.push(assertion);
     } else if (node.type === 'pipelineRef') {
-      // Continue downstream through pipeline refs
       queue.push(...(outEdges.get(id) ?? []));
     }
   }
@@ -320,6 +514,8 @@ function slugify(s: string): string {
  * Parse a _test.yaml string and produce positioned test canvas nodes + edges.
  *
  * Layout: left-to-right per test case, stacked vertically across cases.
+ * Sequence tests produce a StateTestNode → chain of TriggerTestNodes connected
+ * by numbered sequence edges, with AssertTestNodes hanging off each trigger.
  */
 export function deserializeTestYAML(yamlText: string): { nodes: Node[]; edges: Edge[] } {
   const nodes: Node[] = [];
@@ -363,6 +559,96 @@ export function deserializeTestYAML(yamlText: string): { nodes: Node[]; edges: E
   // ── Test cases ──
   const tests = file.tests ?? {};
   for (const [testName, testCase] of Object.entries(tests)) {
+    // ── Sequence case ──────────────────────────────────
+    if (testCase.sequence && testCase.sequence.length > 0) {
+      const rowNodes: Node[] = [];
+      const rowEdges: Edge[] = [];
+      let xCursor = 60;
+
+      // StateTestNode (sequence root)
+      const stateId = makeId('state');
+      const state = testCase.state ?? {};
+      const fixture = state.fixtures?.[0];
+      const store =
+        fixture?.target ??
+        (state.seed ? Object.keys(state.seed)[0] : undefined) ??
+        'default';
+      const seedData = state.seed?.[store];
+
+      rowNodes.push({
+        id: stateId,
+        type: 'stateTest',
+        position: { x: xCursor, y: yOffset },
+        data: {
+          label: testName,
+          store,
+          fixture: fixture?.file,
+          seedData,
+        },
+      });
+      xCursor += X_GAP;
+
+      let prevNodeId = stateId;
+      let stepNumber = 1;
+      let maxAssertRows = 1;
+
+      for (const step of testCase.sequence) {
+        const triggerId = makeId('trigger');
+        rowNodes.push({
+          id: triggerId,
+          type: 'triggerTest',
+          position: { x: xCursor, y: yOffset },
+          data: {
+            label: step.name ?? `step-${stepNumber}`,
+            triggerType: 'pipeline',
+            pipelineName: step.pipeline ?? '',
+            body: step.trigger?.body,
+            headers: step.trigger?.headers,
+          },
+        });
+
+        // Sequence edge: prev → this trigger (numbered)
+        rowEdges.push({
+          id: `e-seq-${prevNodeId}-${triggerId}`,
+          source: prevNodeId,
+          target: triggerId,
+          type: 'sequence',
+          data: { edgeType: 'sequence', stepNumber },
+        });
+
+        xCursor += X_GAP;
+
+        // Assert nodes hanging off this trigger
+        let assertYOffset = yOffset;
+        for (const assertion of step.assertions ?? []) {
+          const assertId = makeId('assert');
+          rowNodes.push({
+            id: assertId,
+            type: 'assertTest',
+            position: { x: xCursor, y: assertYOffset },
+            data: buildAssertNodeData(assertion),
+          });
+          rowEdges.push({
+            id: `e-${triggerId}-${assertId}`,
+            source: triggerId,
+            target: assertId,
+          });
+          assertYOffset += 120;
+        }
+        maxAssertRows = Math.max(maxAssertRows, step.assertions?.length ?? 1);
+
+        prevNodeId = triggerId;
+        stepNumber++;
+        xCursor += X_GAP;
+      }
+
+      nodes.push(...rowNodes);
+      edges.push(...rowEdges);
+      yOffset += Math.max(Y_GAP, maxAssertRows * 120 + 60);
+      continue; // sequence case fully handled
+    }
+
+    // ── Standalone (non-sequence) case ────────────────
     let xCursor = 60;
     const rowNodes: Node[] = [];
     const rowEdges: Edge[] = [];
@@ -410,18 +696,16 @@ export function deserializeTestYAML(yamlText: string): { nodes: Node[]; edges: E
       data: triggerData,
     });
 
-    // Connect state → trigger
     if (stateId) {
       rowEdges.push({ id: `e-${stateId}-${triggerId}`, source: stateId, target: triggerId });
     }
-    // Connect per-test mocks → trigger
     for (const mockId of perTestMockIds) {
       rowEdges.push({ id: `e-${mockId}-${triggerId}`, source: mockId, target: triggerId });
     }
 
     xCursor += X_GAP;
 
-    // PipelineRef node (if trigger references a pipeline)
+    // PipelineRef node
     let pipelineRefId: string | null = null;
     const pipelineName = t.name ?? '';
     if (pipelineName) {

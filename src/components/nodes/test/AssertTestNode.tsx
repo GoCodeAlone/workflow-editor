@@ -43,17 +43,23 @@ export default function AssertTestNode({ data }: NodeProps) {
     ? result.status === 'pass' ? PASS_COLOR : result.status === 'fail' ? FAIL_COLOR : DEFAULT_COLOR
     : DEFAULT_COLOR;
 
-  const expectedStr = d.expected !== undefined
-    ? JSON.stringify(d.expected)
-    : '';
-  const preview = `${d.target}${expectedStr ? ` → ${expectedStr}` : ''}`;
+  const assertType = d.assertType as string;
+  let preview: string;
+  if (assertType === 'state_field' || assertType === 'state') {
+    const parts = [d.stateStore, d.stateKey, d.stateField]
+      .filter((v): v is string => typeof v === 'string' && v.length > 0);
+    preview = parts.length > 0 ? `Checks: ${parts.join('.')}` : 'Checks: state';
+  } else {
+    const expectedStr = d.expected !== undefined ? JSON.stringify(d.expected) : '';
+    preview = `${d.target}${expectedStr ? ` → ${expectedStr}` : ''}`;
+  }
 
   return (
     <TestNodeBase
       label={d.label ?? 'Assert'}
       icon={<AssertIcon color={color} />}
       color={color}
-      typeTag={`assert.${d.assertType}`}
+      typeTag={`assert.${assertType}`}
       preview={preview.length > 50 ? preview.slice(0, 50) + '…' : preview}
       badge={result ? <StatusBadge result={result} /> : undefined}
       hasOutput={false}
