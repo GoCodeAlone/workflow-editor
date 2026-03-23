@@ -165,6 +165,15 @@ interface WorkflowStore {
   // Snap-to-connect state
   snapTargetId: string | null;
   setSnapTargetId: (id: string | null) => void;
+
+  // Test canvas mode
+  testMode: boolean;
+  testNodes: Node[];
+  testEdges: Edge[];
+  setTestMode: (mode: boolean) => void;
+  setTestCanvas: (nodes: Node[], edges: Edge[]) => void;
+  onTestNodesChange: OnNodesChange;
+  onTestEdgesChange: OnEdgesChange;
 }
 
 let toastIdCounter = 0;
@@ -691,6 +700,19 @@ const useWorkflowStore = create<WorkflowStore>()(
     set({
       crossWorkflowLinks: get().crossWorkflowLinks.filter((l) => l.id !== linkId),
     });
+  },
+
+  // Test canvas mode
+  testMode: false,
+  testNodes: [],
+  testEdges: [],
+  setTestMode: (mode) => set({ testMode: mode }),
+  setTestCanvas: (nodes, edges) => set({ testNodes: nodes, testEdges: edges }),
+  onTestNodesChange: (changes) => {
+    set({ testNodes: applyNodeChanges(changes, get().testNodes) });
+  },
+  onTestEdgesChange: (changes) => {
+    set({ testEdges: applyEdgeChanges(changes, get().testEdges) });
   },
 }),
   {
