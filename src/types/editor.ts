@@ -89,6 +89,13 @@ export interface WorkflowEditorProps {
   testResults?: Record<string, TestResult>;
   /** Called when user clicks "Run Tests". Host IDE should invoke `wfctl test --json` and update testResults. */
   onTestRun?: (pipelineName: string) => void;
+  /** Source map from the host: node/pipeline name → source file path.
+   *  Pass alongside a merged `initialYaml` to enable multi-file editing.
+   *  Nodes will show a file badge and saves will be split per file. */
+  sourceMap?: Record<string, string>;
+  /** Called to save changes to a specific imported file.
+   *  When provided and sourceMap is set, the editor calls this for each non-main file on save. */
+  onSaveToFile?: (filePath: string, content: string) => void;
 }
 
 /** Context sent to the host IDE's AI when user clicks AI Design */

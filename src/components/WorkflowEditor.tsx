@@ -13,7 +13,7 @@ import { applyMode } from '../modes/defaultMode.ts';
 import { useEffect, useRef } from 'react';
 
 export function WorkflowEditor(props: WorkflowEditorProps) {
-  const { initialYaml, onSave, onNavigateToSource, onSchemaRequest, onPluginSchemaRequest, embedded, onAIRequest, onChange, onResolveFile, mode, testResults, onTestRun } = props;
+  const { initialYaml, onSave, onNavigateToSource, onSchemaRequest, onPluginSchemaRequest, embedded, onAIRequest, onChange, onResolveFile, mode, testResults, onTestRun, sourceMap: sourceMapProp, onSaveToFile } = props;
   const importFromConfig = useWorkflowStore((s) => s.importFromConfig);
   const exportToConfig = useWorkflowStore((s) => s.exportToConfig);
   const exportToFileMap = useWorkflowStore((s) => s.exportToFileMap);
@@ -46,7 +46,7 @@ export function WorkflowEditor(props: WorkflowEditorProps) {
         importingRef.current = false;
       });
     } else {
-      hasMultiFileRef.current = false;
+      hasMultiFileRef.current = sourceMapProp != null && Object.keys(sourceMapProp).length > 0;
       const { config, error } = parseYamlSafe(initialYaml);
       if (error) {
         addToast(`YAML parse error: ${error}`, 'error');
@@ -54,17 +54,18 @@ export function WorkflowEditor(props: WorkflowEditorProps) {
         const hasPipelines = Object.keys(config.pipelines ?? {}).length > 0;
         const hasModules = config.modules.length > 0;
         const hasWorkflows = Object.keys(config.workflows ?? {}).length > 0;
-        if (!hasModules && !hasWorkflows && hasPipelines) {
+        if (!hasModules && !hasWorkflows && hasPipelines && !sourceMapProp) {
           addToast(
-            'This is a partial config (pipelines only). Open the root config file to see the full module topology.',
+            'Partial config — some modules may be missing. Configure workspace root for full view.',
             'info',
           );
         }
       }
-      importFromConfig(config);
+      const mapFromProp = sourceMapProp ? new Map(Object.entries(sourceMapProp)) : undefined;
+      importFromConfig(config, mapFromProp);
       importingRef.current = false;
     }
-  }, [initialYaml, importFromConfig, exportToConfig, addToast, onResolveFile]);
+  }, [initialYaml, importFromConfig, exportToConfig, addToast, onResolveFile, sourceMapProp]);
 
   // Notify host of store changes via onChange
   useEffect(() => {
@@ -117,12 +118,25 @@ export function WorkflowEditor(props: WorkflowEditorProps) {
         <div style={{ flex: 1, minWidth: 200, position: 'relative', display: 'flex', flexDirection: 'column' }}>
           <ToastContainer />
           <Toolbar
-            onSave={onSave ? async (yamlContent: string) => {
-              if (hasMultiFileRef.current && sourceMap.size > 0) {
+            onSave={(onSave || onSaveToFile) ? async (yamlContent: string) => {
+              if (onSaveToFile && (hasMultiFileRef.current || sourceMap.size > 0)) {
                 const fileMap = exportToFileMap();
-                await onSave(yamlContent, fileMap);
-              } else {
-                await onSave(yamlContent);
+                for (const [path, content] of fileMap.entries()) {
+                  if (path !== null) {
+                    onSaveToFile(path, content);
+                  }
+                }
+                if (onSave) {
+                  const mainContent = fileMap.get(null) ?? yamlContent;
+                  await onSave(mainContent);
+                }
+              } else if (onSave) {
+                if (hasMultiFileRef.current && sourceMap.size > 0) {
+                  const fileMap = exportToFileMap();
+                  await onSave(yamlContent, fileMap);
+                } else {
+                  await onSave(yamlContent);
+                }
               }
             } : undefined}
             showServerControls={false}

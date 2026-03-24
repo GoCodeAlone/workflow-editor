@@ -546,6 +546,7 @@ export function nodesToConfig(
 export function configToNodes(
   config: WorkflowConfig,
   moduleTypeMap: Record<string, ModuleTypeInfo> = STATIC_MODULE_TYPE_MAP,
+  sourceMap?: Map<string, string>,
 ): {
   nodes: WorkflowNode[];
   edges: Edge[];
@@ -559,6 +560,7 @@ export function configToNodes(
     nameToId[mod.name] = id;
 
     const info = moduleTypeMap[mod.type];
+    const sourceFile = sourceMap?.get(mod.name);
 
     nodes.push({
       id,
@@ -568,6 +570,7 @@ export function configToNodes(
         moduleType: mod.type,
         label: mod.name,
         config: mod.config ?? (info ? { ...info.defaultConfig } : {}),
+        ...(sourceFile ? { sourceFile } : {}),
       },
     });
   });
@@ -1073,44 +1076,62 @@ export function exportToFiles(
   sourceMap: Map<string, string>,
 ): Map<string | null, string> {
   const fileModules = new Map<string | null, ModuleConfig[]>();
+  const filePipelines = new Map<string | null, Record<string, unknown>>();
 
   for (const mod of config.modules) {
     const file = sourceMap.get(mod.name) ?? null;
-    if (!fileModules.has(file)) {
-      fileModules.set(file, []);
-    }
+    if (!fileModules.has(file)) fileModules.set(file, []);
     fileModules.get(file)!.push(mod);
+  }
+
+  // Split pipelines by source file
+  if (config.pipelines) {
+    for (const [name, value] of Object.entries(config.pipelines)) {
+      const file = sourceMap.get(name) ?? null;
+      if (!filePipelines.has(file)) filePipelines.set(file, {});
+      filePipelines.get(file)![name] = value;
+    }
   }
 
   const result = new Map<string | null, string>();
 
   // Main file gets its modules + workflows/triggers/pipelines
   const mainModules = fileModules.get(null) ?? [];
-  const mainConfig: Record<string, unknown> = {
-    modules: mainModules,
-  };
+  const mainConfig: Record<string, unknown> = {};
+  if (config.name !== undefined) mainConfig.name = config.name;
+  if (config.version !== undefined) mainConfig.version = config.version;
+  mainConfig.modules = mainModules;
   if (Object.keys(config.workflows).length > 0) {
     mainConfig.workflows = config.workflows;
   }
   if (Object.keys(config.triggers).length > 0) {
     mainConfig.triggers = config.triggers;
   }
-  if (config.pipelines && Object.keys(config.pipelines).length > 0) {
-    mainConfig.pipelines = config.pipelines;
+  const mainPipelines = filePipelines.get(null);
+  if (mainPipelines && Object.keys(mainPipelines).length > 0) {
+    mainConfig.pipelines = mainPipelines;
   }
 
-  // If there are imported files, add imports: directive back
-  const importedFiles = [...fileModules.keys()].filter((k) => k !== null) as string[];
+  // Collect all non-null file paths across modules and pipelines
+  const importedFiles = [
+    ...new Set([
+      ...[...fileModules.keys()].filter((k) => k !== null),
+      ...[...filePipelines.keys()].filter((k) => k !== null),
+    ]),
+  ] as string[];
   if (importedFiles.length > 0) {
     mainConfig.imports = importedFiles;
   }
 
   result.set(null, yaml.dump(mainConfig, { lineWidth: -1, noRefs: true, sortKeys: false }));
 
-  // Each imported file gets only its modules
-  for (const [file, modules] of fileModules.entries()) {
-    if (file === null) continue;
-    const fileConfig: Record<string, unknown> = { modules };
+  // Each imported file gets its modules and/or pipelines
+  for (const file of importedFiles) {
+    const fileConfig: Record<string, unknown> = {};
+    const modules = fileModules.get(file);
+    if (modules && modules.length > 0) fileConfig.modules = modules;
+    const pipelines = filePipelines.get(file);
+    if (pipelines && Object.keys(pipelines).length > 0) fileConfig.pipelines = pipelines;
     result.set(file, yaml.dump(fileConfig, { lineWidth: -1, noRefs: true, sortKeys: false }));
   }
 

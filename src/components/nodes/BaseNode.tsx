@@ -191,6 +191,12 @@ export default function BaseNode({
   // Test result for this node (keyed by label)
   const testResult = useWorkflowStore((s) => s.testResults[label]);
 
+  // Source file badge (multi-file configs)
+  const sourceMap = useWorkflowStore((s) => s.sourceMap);
+  const hasMultipleSourceFiles = useMemo(() => new Set(sourceMap.values()).size > 1, [sourceMap]);
+  const sourceFile = sourceMap.get(label);
+  const sourceFileName = sourceFile ? sourceFile.split('/').pop() : undefined;
+
   // Cursor→node highlight
   const highlightedNodeId = useWorkflowStore((s) => s.highlightedNodeId);
   const isHighlighted = highlightedNodeId === id;
@@ -346,6 +352,25 @@ export default function BaseNode({
         <span style={{ fontWeight: 600, flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
           {label}
         </span>
+        {hasMultipleSourceFiles && sourceFileName && (
+          <span
+            style={{
+              fontSize: 9,
+              color: '#a6adc8',
+              background: '#313244',
+              padding: '1px 4px',
+              borderRadius: 3,
+              maxWidth: 80,
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap',
+              flexShrink: 0,
+            }}
+            title={sourceFile}
+          >
+            {sourceFileName}
+          </span>
+        )}
         {hasError && (
           <span
             style={{

@@ -32,6 +32,8 @@ export interface WorkflowNodeData extends Record<string, unknown> {
   label: string;
   config: Record<string, unknown>;
   synthesized?: boolean;
+  /** Source file path this node originated from (multi-file configs) */
+  sourceFile?: string;
   handlerRoutes?: Array<{
     method: string;
     path: string;
@@ -469,7 +471,7 @@ const useWorkflowStore = create<WorkflowStore>()(
   importFromConfig: (config, sourceMap) => {
     get().pushHistory();
     const moduleTypeMap = useModuleSchemaStore.getState().moduleTypeMap;
-    const { nodes, edges } = configToNodes(config, moduleTypeMap);
+    const { nodes, edges } = configToNodes(config, moduleTypeMap, sourceMap);
     const updates: Partial<WorkflowStore> = {
       nodes,
       edges,
