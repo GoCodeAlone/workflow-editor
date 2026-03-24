@@ -50,6 +50,16 @@ export function WorkflowEditor(props: WorkflowEditorProps) {
       const { config, error } = parseYamlSafe(initialYaml);
       if (error) {
         addToast(`YAML parse error: ${error}`, 'error');
+      } else {
+        const hasPipelines = Object.keys(config.pipelines ?? {}).length > 0;
+        const hasModules = config.modules.length > 0;
+        const hasWorkflows = Object.keys(config.workflows ?? {}).length > 0;
+        if (!hasModules && !hasWorkflows && hasPipelines) {
+          addToast(
+            'This is a partial config (pipelines only). Open the root config file to see the full module topology.',
+            'info',
+          );
+        }
       }
       importFromConfig(config);
       importingRef.current = false;
