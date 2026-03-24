@@ -10,6 +10,8 @@ export interface ModuleConfig {
 }
 
 export interface WorkflowConfig {
+  name?: string;
+  version?: string;
   modules: ModuleConfig[];
   workflows: Record<string, unknown>;
   triggers: Record<string, unknown>;
@@ -19,6 +21,7 @@ export interface WorkflowConfig {
   platform?: Record<string, unknown>;
   infrastructure?: Record<string, unknown>;
   sidecars?: unknown[];
+  _originalKeys?: string[];
 }
 
 // Workflow section types for edge extraction

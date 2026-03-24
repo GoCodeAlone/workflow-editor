@@ -499,7 +499,25 @@ export function nodesToConfig(
 
   const triggers: Record<string, unknown> = {};
 
-  const result: WorkflowConfig = { modules, workflows, triggers };
+  const originalKeys = originalConfig?._originalKeys;
+  const hadModules = !originalKeys || originalKeys.includes('modules') || modules.length > 0;
+  const hadWorkflows = !originalKeys || originalKeys.includes('workflows') || Object.keys(workflows).length > 0;
+  const hadTriggers = !originalKeys || originalKeys.includes('triggers') || Object.keys(triggers).length > 0;
+
+  const result: WorkflowConfig = {
+    ...(hadModules ? { modules } : {}),
+    ...(hadWorkflows ? { workflows } : {}),
+    ...(hadTriggers ? { triggers } : {}),
+  } as WorkflowConfig;
+
+  // Pass through name/version from original config
+  if (originalConfig?.name !== undefined) {
+    result.name = originalConfig.name;
+  }
+  if (originalConfig?.version !== undefined) {
+    result.version = originalConfig.version;
+  }
+
   // Pass through non-visual config sections from the original config
   if (originalConfig?.pipelines && Object.keys(originalConfig.pipelines).length > 0) {
     result.pipelines = originalConfig.pipelines;
@@ -518,6 +536,9 @@ export function nodesToConfig(
   }
   if (originalConfig?.sidecars && originalConfig.sidecars.length > 0) {
     result.sidecars = originalConfig.sidecars;
+  }
+  if (originalKeys) {
+    result._originalKeys = originalKeys;
   }
   return result;
 }
@@ -736,20 +757,53 @@ export function nodeComponentType(moduleType: string): string {
 }
 
 export function configToYaml(config: WorkflowConfig): string {
-  return yaml.dump(config, { lineWidth: -1, noRefs: true, sortKeys: false });
+  // Strip internal tracking fields and omit empty top-level arrays/objects
+  // that were not present in the original YAML
+  const originalKeys = config._originalKeys;
+  const out: Record<string, unknown> = {};
+
+  // Field order: name, version, imports, requires, modules, workflows, triggers, pipelines, platform, infrastructure, sidecars
+  if (config.name !== undefined) out.name = config.name;
+  if (config.version !== undefined) out.version = config.version;
+  if (config.imports && config.imports.length > 0) out.imports = config.imports;
+  if (config.requires && Object.keys(config.requires).length > 0) out.requires = config.requires;
+
+  const includeModules = !originalKeys || originalKeys.includes('modules') || (config.modules?.length ?? 0) > 0;
+  if (includeModules && config.modules !== undefined) out.modules = config.modules;
+
+  const includeWorkflows = !originalKeys || originalKeys.includes('workflows') || Object.keys(config.workflows ?? {}).length > 0;
+  if (includeWorkflows && config.workflows !== undefined) out.workflows = config.workflows;
+
+  const includeTriggers = !originalKeys || originalKeys.includes('triggers') || Object.keys(config.triggers ?? {}).length > 0;
+  if (includeTriggers && config.triggers !== undefined) out.triggers = config.triggers;
+
+  if (config.pipelines && Object.keys(config.pipelines).length > 0) out.pipelines = config.pipelines;
+  if (config.platform && Object.keys(config.platform).length > 0) out.platform = config.platform;
+  if (config.infrastructure && Object.keys(config.infrastructure).length > 0) out.infrastructure = config.infrastructure;
+  if (config.sidecars && config.sidecars.length > 0) out.sidecars = config.sidecars;
+
+  return yaml.dump(out, { lineWidth: -1, noRefs: true, sortKeys: false });
 }
 
 export function parseYaml(text: string): WorkflowConfig {
   try {
     const parsed = yaml.load(text) as Record<string, unknown>;
     if (!parsed || typeof parsed !== 'object') {
-      return { modules: [], workflows: {}, triggers: {} };
+      return { modules: [], workflows: {}, triggers: {}, _originalKeys: [] };
     }
+    const _originalKeys = Object.keys(parsed);
     const config: WorkflowConfig = {
       modules: (parsed.modules ?? []) as ModuleConfig[],
       workflows: (parsed.workflows ?? {}) as Record<string, unknown>,
       triggers: (parsed.triggers ?? {}) as Record<string, unknown>,
+      _originalKeys,
     };
+    if (parsed.name !== undefined) {
+      config.name = parsed.name as string;
+    }
+    if (parsed.version !== undefined) {
+      config.version = String(parsed.version);
+    }
     if (parsed.pipelines) {
       config.pipelines = parsed.pipelines as Record<string, unknown>;
     }
@@ -770,7 +824,7 @@ export function parseYaml(text: string): WorkflowConfig {
     }
     return config;
   } catch {
-    return { modules: [], workflows: {}, triggers: {} };
+    return { modules: [], workflows: {}, triggers: {}, _originalKeys: [] };
   }
 }
 
@@ -778,19 +832,27 @@ export function parseYamlSafe(text: string): { config: WorkflowConfig; error?: s
   try {
     const parsed = yaml.load(text) as Record<string, unknown>;
     if (!parsed || typeof parsed !== 'object') {
-      return { config: { modules: [], workflows: {}, triggers: {} }, error: 'YAML parsed to non-object value' };
+      return { config: { modules: [], workflows: {}, triggers: {}, _originalKeys: [] }, error: 'YAML parsed to non-object value' };
     }
+    const _originalKeys = Object.keys(parsed);
     const config: WorkflowConfig = {
       modules: (parsed.modules ?? []) as ModuleConfig[],
       workflows: (parsed.workflows ?? {}) as Record<string, unknown>,
       triggers: (parsed.triggers ?? {}) as Record<string, unknown>,
+      _originalKeys,
     };
+    if (parsed.name !== undefined) {
+      config.name = parsed.name as string;
+    }
+    if (parsed.version !== undefined) {
+      config.version = String(parsed.version);
+    }
     if (parsed.pipelines) {
       config.pipelines = parsed.pipelines as Record<string, unknown>;
     }
     return { config };
   } catch (e) {
-    return { config: { modules: [], workflows: {}, triggers: {} }, error: (e as Error).message };
+    return { config: { modules: [], workflows: {}, triggers: {}, _originalKeys: [] }, error: (e as Error).message };
   }
 }
 
