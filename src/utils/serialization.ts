@@ -720,6 +720,48 @@ export function configToNodes(
     }
   }
 
+  // Pipeline-only partial config: render pipeline steps as synthesized nodes for visual preview.
+  // Applies when there are no modules (i.e. the file only has pipelines:).
+  // Nodes are marked synthesized so they are not exported back as modules —
+  // the actual pipeline data is preserved separately via importedPipelines.
+  if (config.modules.length === 0 && config.pipelines && Object.keys(config.pipelines).length > 0) {
+    let pipelineStepCounter = 0;
+    for (const [pipelineName, pipelineValue] of Object.entries(config.pipelines)) {
+      const pipeline = pipelineValue as { steps?: Array<{ name: string; type: string; config?: Record<string, unknown> }> };
+      if (!pipeline?.steps || pipeline.steps.length === 0) continue;
+
+      const pipelineSourceFile = sourceMap?.get(pipelineName);
+      let prevNodeId: string | null = null;
+
+      for (let si = 0; si < pipeline.steps.length; si++) {
+        const step = pipeline.steps[si];
+        pipelineStepCounter++;
+        const stepModuleType = step.type.startsWith('step.') ? step.type : `step.${step.type}`;
+        const stepNodeId = `pipeline_view_${pipelineStepCounter}`;
+        const stepInfo = moduleTypeMap[stepModuleType];
+
+        const stepNode: WorkflowNode = {
+          id: stepNodeId,
+          type: nodeComponentType(stepModuleType),
+          position: { x: 0, y: 0 },
+          data: {
+            moduleType: stepModuleType,
+            label: step.name,
+            config: step.config ?? (stepInfo ? { ...stepInfo.defaultConfig } : {}),
+            synthesized: true,
+            ...(pipelineSourceFile ? { sourceFile: pipelineSourceFile } : {}),
+          },
+        };
+        nodes.push(stepNode);
+
+        if (prevNodeId !== null) {
+          edges.push(makeEdge(prevNodeId, stepNodeId, 'pipeline-flow', undefined, undefined, si + 1));
+        }
+        prevNodeId = stepNodeId;
+      }
+    }
+  }
+
   // Workflow edges
   const workflowEdges = extractWorkflowEdges(config.workflows, nameToId);
   // Deduplicate: don't add workflow edge if an identical source-target already exists
