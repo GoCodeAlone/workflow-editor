@@ -3,3 +3,7 @@ dist/
 *.tsbuildinfo
 data/
 test-results/
+*.tgz
+*.tar.gz
+*.zip
+*.gz
