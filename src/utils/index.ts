@@ -10,6 +10,7 @@ export {
   nodesToMultiConfig,
   resolveImports,
   exportToFiles,
+  exportMainFileYaml,
   hasFileReferences,
 } from './serialization';
 export { layoutNodes } from './autoLayout';

@@ -24,7 +24,7 @@ describe('partial config with sourceMap renders all nodes', () => {
     const sourceMap = new Map([
       ['http-server', 'config/modules.yaml'],
       ['router', 'config/modules.yaml'],
-      ['auth-register', 'pipelines/auth.yaml'],
+      ['pipeline:auth-register', 'pipelines/auth.yaml'],
     ]);
 
     const { nodes } = configToNodes(config, MODULE_TYPE_MAP, sourceMap);
@@ -107,7 +107,7 @@ describe('exportToFiles splits config by sourceMap', () => {
       },
     };
     const sourceMap = new Map([
-      ['auth-register', 'pipelines/auth.yaml'],
+      ['pipeline:auth-register', 'pipelines/auth.yaml'],
       // user-update has no entry -> goes to main
     ]);
 
@@ -245,70 +245,24 @@ describe('name and version preserved in multi-file export', () => {
 // resolveImports — complex multi-file fixture scenarios
 // ---------------------------------------------------------------------------
 
-// Fixture files mirroring test-fixtures/multifile/
-const FIXTURE_MAIN = `
-application:
-  name: my-platform
-  version: 2.0.0
-  workflows:
-    - file: base.yaml
-    - file: api.yaml
-`.trim();
+import { readFileSync } from 'fs';
+import { resolve as resolveFsPath } from 'path';
 
-const FIXTURE_BASE = `
-# Base infrastructure — embeds the database layer
-imports:
-  - database.yaml
+/**
+ * Load one of the multifile fixture files from test-fixtures/multifile/.
+ * Using on-disk fixtures avoids duplicating YAML content in the test file.
+ */
+function loadFixture(name: string): string {
+  return readFileSync(
+    resolveFsPath(__dirname, '../../test-fixtures/multifile', name),
+    'utf-8',
+  );
+}
 
-modules:
-  - name: cache
-    type: nosql.redis
-    config:
-      host: localhost
-      port: 6379
-`.trim();
-
-const FIXTURE_DATABASE = `
-modules:
-  - name: db
-    type: database.postgres
-    config:
-      host: localhost
-      port: 5432
-      database: myapp
-`.trim();
-
-const FIXTURE_API = `
-modules:
-  - name: http-server
-    type: http.server
-    config:
-      port: 8080
-  - name: router
-    type: http.router
-    config: {}
-
-workflows:
-  http:
-    server: http-server
-    router: router
-    routes:
-      - method: POST
-        path: /api/users
-        handler: user-create
-
-pipelines:
-  user-create:
-    steps:
-      - name: validate
-        type: step.validate
-      - name: insert
-        type: step.db_exec
-  user-get:
-    steps:
-      - name: fetch
-        type: step.db_exec
-`.trim();
+const FIXTURE_MAIN = loadFixture('main.yaml');
+const FIXTURE_BASE = loadFixture('base.yaml');
+const FIXTURE_DATABASE = loadFixture('database.yaml');
+const FIXTURE_API = loadFixture('api.yaml');
 
 /** Build a simple in-memory resolver from a path→content map. */
 function makeResolver(files: Record<string, string>) {
@@ -342,8 +296,8 @@ describe('resolveImports — complex nested multi-file scenario', () => {
 
   it('tracks pipelines in sourceMap so they round-trip to their source file', async () => {
     const { sourceMap } = await resolveImports(FIXTURE_MAIN, resolver);
-    expect(sourceMap.get('user-create')).toBe('api.yaml');
-    expect(sourceMap.get('user-get')).toBe('api.yaml');
+    expect(sourceMap.get('pipeline:user-create')).toBe('api.yaml');
+    expect(sourceMap.get('pipeline:user-get')).toBe('api.yaml');
   });
 
   it('merges workflows from imported files', async () => {
@@ -536,6 +490,6 @@ pipelines:
       makeResolver({ 'feature-a.yaml': featureAYaml }),
     );
     expect(sourceMap.get('svc-a')).toBe('feature-a.yaml');
-    expect(sourceMap.get('pipeline-a')).toBe('feature-a.yaml');
+    expect(sourceMap.get('pipeline:pipeline-a')).toBe('feature-a.yaml');
   });
 });
