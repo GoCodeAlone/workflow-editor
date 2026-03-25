@@ -1,0 +1,10 @@
+# Base infrastructure — embeds the database layer
+imports:
+  - database.yaml
+
+modules:
+  - name: cache
+    type: nosql.redis
+    config:
+      host: localhost
+      port: 6379

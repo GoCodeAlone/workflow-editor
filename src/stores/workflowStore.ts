@@ -13,7 +13,7 @@ import {
 import type { WorkflowConfig, WorkflowTab, CrossWorkflowLink } from '../types/workflow.ts';
 import { MODULE_TYPE_MAP as STATIC_MODULE_TYPE_MAP } from '../types/workflow.ts';
 import useModuleSchemaStore from './moduleSchemaStore.ts';
-import { nodesToConfig, configToNodes, nodeComponentType, exportToFiles } from '../utils/serialization.ts';
+import { nodesToConfig, configToNodes, nodeComponentType, exportToFiles, exportMainFileYaml } from '../utils/serialization.ts';
 import { layoutNodes } from '../utils/autoLayout.ts';
 import { exportLayout, importLayout, type LayoutData } from '../utils/layout-sidecar.ts';
 import { autoGroupOrphanedNodes } from '../utils/grouping.ts';
@@ -107,6 +107,8 @@ interface WorkflowStore {
 
   exportToConfig: () => WorkflowConfig;
   exportToFileMap: () => Map<string | null, string>;
+  /** Cheaply produce only the main-file YAML (null key) without serialising all imported files. */
+  exportMainFileYaml: () => string;
   importFromConfig: (config: WorkflowConfig, sourceMap?: Map<string, string>) => void;
   clearCanvas: () => void;
   exportLayout: () => LayoutData;
@@ -466,6 +468,12 @@ const useWorkflowStore = create<WorkflowStore>()(
     const config = get().exportToConfig();
     const { sourceMap } = get();
     return exportToFiles(config, sourceMap);
+  },
+
+  exportMainFileYaml: () => {
+    const config = get().exportToConfig();
+    const { sourceMap } = get();
+    return exportMainFileYaml(config, sourceMap);
   },
 
   importFromConfig: (config, sourceMap) => {

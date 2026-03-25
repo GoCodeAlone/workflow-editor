@@ -1,0 +1,6 @@
+application:
+  name: my-platform
+  version: 2.0.0
+  workflows:
+    - file: base.yaml
+    - file: api.yaml

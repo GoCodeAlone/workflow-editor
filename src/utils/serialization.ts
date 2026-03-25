@@ -730,7 +730,7 @@ export function configToNodes(
       const pipeline = pipelineValue as { steps?: Array<{ name: string; type: string; config?: Record<string, unknown> }> };
       if (!pipeline?.steps || pipeline.steps.length === 0) continue;
 
-      const pipelineSourceFile = sourceMap?.get(pipelineName);
+      const pipelineSourceFile = sourceMap?.get(pipelineKey(pipelineName));
       let prevNodeId: string | null = null;
 
       for (let si = 0; si < pipeline.steps.length; si++) {
@@ -956,10 +956,53 @@ export function extractStateMachineBranches(
 }
 
 /**
+ * Resolve a relative path against a base file path.
+ * Examples:
+ *   resolvePath('base.yaml', 'database.yaml')         => 'database.yaml'
+ *   resolvePath('services/base.yaml', '../db.yaml')   => 'db.yaml'
+ *   resolvePath('services/base.yaml', 'cache.yaml')   => 'services/cache.yaml'
+ */
+function resolvePath(basePath: string, relPath: string): string {
+  if (relPath.startsWith('/')) return relPath;
+  const baseDir = basePath.includes('/') ? basePath.substring(0, basePath.lastIndexOf('/') + 1) : '';
+  const combined = baseDir + relPath;
+  const parts = combined.split('/');
+  const resolved: string[] = [];
+  for (const part of parts) {
+    if (part === '..') {
+      // Only go up if there is a segment to remove; otherwise keep the '..' to avoid
+      // silently discarding path components that exceed the base directory depth.
+      if (resolved.length > 0) {
+        resolved.pop();
+      } else {
+        resolved.push(part);
+      }
+    } else if (part !== '.') {
+      resolved.push(part);
+    }
+  }
+  return resolved.join('/');
+}
+
+/**
+ * Namespace prefix used to key pipeline names in sourceMap, preventing collision
+ * with module names that happen to share the same string.
+ */
+const PIPELINE_KEY_PREFIX = 'pipeline:';
+
+/** Return the sourceMap key for a pipeline name. */
+function pipelineKey(name: string): string {
+  return `${PIPELINE_KEY_PREFIX}${name}`;
+}
+
+/**
  * Given a parsed YAML config, detect `imports:` array and `application.workflows[].file:` entries.
  * For each reference, call the resolver to get file contents, parse them, and merge into the config.
- * Track which modules came from which source file.
- * Returns { config: merged WorkflowConfig, sourceMap: Map<string, string> } where sourceMap maps module name to source file path.
+ * Track which modules and pipelines came from which source file.
+ * Supports nested file references: imported files may themselves declare `imports:` or
+ * `application.workflows[].file:` entries, which are resolved recursively (depth-first).
+ * Returns { config: merged WorkflowConfig, sourceMap: Map<string, string> } where sourceMap maps
+ * module name or `pipeline:<name>` to source file path.
  */
 export async function resolveImports(
   yamlText: string,
@@ -979,7 +1022,6 @@ export async function resolveImports(
 
   const mainModules = (parsed.modules ?? []) as ModuleConfig[];
   const mainModuleNames = new Set(mainModules.map((m) => m.name));
-  // Track main file modules in sourceMap as having no source (they belong to the main file)
 
   let mergedModules = [...mainModules];
   let mergedWorkflows = { ...((parsed.workflows ?? {}) as Record<string, unknown>) };
@@ -987,49 +1029,134 @@ export async function resolveImports(
   let mergedPipelines = parsed.pipelines ? { ...(parsed.pipelines as Record<string, unknown>) } : undefined;
   const errors: string[] = [];
 
-  // Handle `imports:` directive — main file wins on duplicate module names
+  // `inProgress`: paths currently being fetched/parsed (cycle detection during recursion).
+  // `completed`:  paths that have been successfully loaded and merged (deduplication).
+  // Keeping them separate ensures a file that failed to load is not silently skipped
+  // when later referenced via a stricter call site (e.g. application.workflows[].file:).
+  const inProgress = new Set<string>();
+  const completed = new Set<string>();
+
+  /**
+   * Load and recursively merge a single file.
+   * @param resolvedPath  The path passed to the resolver (already resolved against parent).
+   * @param strictConflicts  When true, duplicate module/workflow/pipeline names are errors
+   *                         (used for `application.workflows[].file:` references).
+   *                         When false, duplicates are silently skipped ("first-wins").
+   */
+  async function mergeFile(resolvedPath: string, strictConflicts: boolean): Promise<void> {
+    if (inProgress.has(resolvedPath)) return; // cycle — currently being processed up the call stack
+    if (completed.has(resolvedPath)) return;  // already fully merged
+
+    inProgress.add(resolvedPath);
+
+    const content = await resolver(resolvedPath);
+    if (content === null) {
+      errors.push(strictConflicts ? `Workflow file not found: ${resolvedPath}` : `Import not found: ${resolvedPath}`);
+      inProgress.delete(resolvedPath);
+      return;
+    }
+
+    let fileParsed: Record<string, unknown>;
+    try {
+      fileParsed = yaml.load(content) as Record<string, unknown>;
+      if (!fileParsed || typeof fileParsed !== 'object') {
+        inProgress.delete(resolvedPath);
+        return;
+      }
+    } catch (e) {
+      errors.push(`Error parsing ${resolvedPath}: ${(e as Error).message}`);
+      inProgress.delete(resolvedPath);
+      return;
+    }
+
+    // Recursively process this file's own `imports:` entries first (depth-first).
+    // Sub-imports use "first-wins, no error" semantics.
+    const subImports = fileParsed.imports as string[] | undefined;
+    if (Array.isArray(subImports)) {
+      for (const subImportPath of subImports) {
+        await mergeFile(resolvePath(resolvedPath, subImportPath), false);
+      }
+    }
+
+    // Also recurse into any application.workflows[].file: entries in the sub-file.
+    // These are always strict (conflicts are errors), matching top-level behaviour.
+    const subApp = fileParsed.application as Record<string, unknown> | undefined;
+    if (subApp && Array.isArray(subApp.workflows)) {
+      for (const entry of subApp.workflows as Array<Record<string, unknown>>) {
+        if (typeof entry.file === 'string') {
+          await mergeFile(resolvePath(resolvedPath, entry.file), true);
+        }
+      }
+    }
+
+    // Merge modules (tracked in sourceMap by module name)
+    const fileModules = (fileParsed.modules ?? []) as ModuleConfig[];
+    for (const mod of fileModules) {
+      if (mainModuleNames.has(mod.name)) {
+        if (strictConflicts) {
+          errors.push(`Conflict: module "${mod.name}" in ${resolvedPath} conflicts with existing module`);
+        }
+        continue;
+      }
+      mergedModules.push(mod);
+      sourceMap.set(mod.name, resolvedPath);
+      mainModuleNames.add(mod.name);
+    }
+
+    // Merge workflows
+    const fileWorkflows = (fileParsed.workflows ?? {}) as Record<string, unknown>;
+    for (const [key, value] of Object.entries(fileWorkflows)) {
+      if (key in mergedWorkflows) {
+        if (strictConflicts) {
+          errors.push(`Conflict: workflow "${key}" in ${resolvedPath} conflicts with existing workflow`);
+        }
+        continue;
+      }
+      mergedWorkflows[key] = value;
+    }
+
+    // Merge triggers
+    const fileTriggers = (fileParsed.triggers ?? {}) as Record<string, unknown>;
+    for (const [key, value] of Object.entries(fileTriggers)) {
+      if (key in mergedTriggers) {
+        if (strictConflicts) {
+          errors.push(`Conflict: trigger "${key}" in ${resolvedPath} conflicts with existing trigger`);
+        }
+        continue;
+      }
+      mergedTriggers[key] = value;
+    }
+
+    // Merge pipelines (tracked in sourceMap under namespaced keys so they never
+    // collide with module names that share the same string).
+    if (fileParsed.pipelines) {
+      if (!mergedPipelines) mergedPipelines = {};
+      const filePipelines = fileParsed.pipelines as Record<string, unknown>;
+      for (const [key, value] of Object.entries(filePipelines)) {
+        if (key in mergedPipelines) {
+          if (strictConflicts) {
+            errors.push(`Conflict: pipeline "${key}" in ${resolvedPath} conflicts with existing pipeline`);
+          }
+          continue;
+        }
+        mergedPipelines[key] = value;
+        sourceMap.set(pipelineKey(key), resolvedPath);
+      }
+    }
+
+    completed.add(resolvedPath);
+    inProgress.delete(resolvedPath);
+  }
+
+  // Handle `imports:` directive — main file wins on duplicate names (no conflict errors)
   const imports = parsed.imports as string[] | undefined;
   if (Array.isArray(imports)) {
     for (const importPath of imports) {
-      const content = await resolver(importPath);
-      if (content === null) {
-        errors.push(`Import not found: ${importPath}`);
-        continue;
-      }
-      try {
-        const importedParsed = yaml.load(content) as Record<string, unknown>;
-        if (!importedParsed || typeof importedParsed !== 'object') continue;
-
-        const importedModules = (importedParsed.modules ?? []) as ModuleConfig[];
-        for (const mod of importedModules) {
-          if (!mainModuleNames.has(mod.name)) {
-            mergedModules.push(mod);
-            sourceMap.set(mod.name, importPath);
-            mainModuleNames.add(mod.name);
-          }
-          // Main wins on duplicates — skip if already present
-        }
-
-        // Merge workflows/triggers (imported ones don't override main)
-        const importedWorkflows = (importedParsed.workflows ?? {}) as Record<string, unknown>;
-        for (const [key, value] of Object.entries(importedWorkflows)) {
-          if (!(key in mergedWorkflows)) {
-            mergedWorkflows[key] = value;
-          }
-        }
-        const importedTriggers = (importedParsed.triggers ?? {}) as Record<string, unknown>;
-        for (const [key, value] of Object.entries(importedTriggers)) {
-          if (!(key in mergedTriggers)) {
-            mergedTriggers[key] = value;
-          }
-        }
-      } catch (e) {
-        errors.push(`Error parsing ${importPath}: ${(e as Error).message}`);
-      }
+      await mergeFile(importPath, false);
     }
   }
 
-  // Handle `application.workflows[].file:` directive
+  // Handle `application.workflows[].file:` directive — conflicts are reported as errors
   const application = parsed.application as Record<string, unknown> | undefined;
   if (application && typeof application === 'object') {
     const appWorkflows = (application.workflows ?? []) as Array<Record<string, unknown>>;
@@ -1037,56 +1164,7 @@ export async function resolveImports(
       for (const entry of appWorkflows) {
         const filePath = entry.file as string | undefined;
         if (!filePath) continue;
-        const content = await resolver(filePath);
-        if (content === null) {
-          errors.push(`Workflow file not found: ${filePath}`);
-          continue;
-        }
-        try {
-          const fileParsed = yaml.load(content) as Record<string, unknown>;
-          if (!fileParsed || typeof fileParsed !== 'object') continue;
-
-          const fileModules = (fileParsed.modules ?? []) as ModuleConfig[];
-          for (const mod of fileModules) {
-            if (mainModuleNames.has(mod.name)) {
-              errors.push(`Conflict: module "${mod.name}" in ${filePath} conflicts with existing module`);
-              continue;
-            }
-            mergedModules.push(mod);
-            sourceMap.set(mod.name, filePath);
-            mainModuleNames.add(mod.name);
-          }
-
-          const fileWorkflows = (fileParsed.workflows ?? {}) as Record<string, unknown>;
-          for (const [key, value] of Object.entries(fileWorkflows)) {
-            if (key in mergedWorkflows) {
-              errors.push(`Conflict: workflow "${key}" in ${filePath} conflicts with existing workflow`);
-              continue;
-            }
-            mergedWorkflows[key] = value;
-          }
-
-          const fileTriggers = (fileParsed.triggers ?? {}) as Record<string, unknown>;
-          for (const [key, value] of Object.entries(fileTriggers)) {
-            if (key in mergedTriggers) {
-              errors.push(`Conflict: trigger "${key}" in ${filePath} conflicts with existing trigger`);
-              continue;
-            }
-            mergedTriggers[key] = value;
-          }
-
-          if (fileParsed.pipelines) {
-            if (!mergedPipelines) mergedPipelines = {};
-            const filePipelines = fileParsed.pipelines as Record<string, unknown>;
-            for (const [key, value] of Object.entries(filePipelines)) {
-              if (!(key in mergedPipelines)) {
-                mergedPipelines[key] = value;
-              }
-            }
-          }
-        } catch (e) {
-          errors.push(`Error parsing ${filePath}: ${(e as Error).message}`);
-        }
+        await mergeFile(filePath, true);
       }
     }
   }
@@ -1099,6 +1177,12 @@ export async function resolveImports(
   if (mergedPipelines) {
     config.pipelines = mergedPipelines;
   }
+  // Preserve name/version from the main file — check both top-level fields and the
+  // application: section (common in application.workflows[].file: configs).
+  const configName = (parsed.name ?? application?.name) as string | undefined;
+  const configVersion = (parsed.version ?? application?.version) as string | undefined;
+  if (configName) config.name = configName;
+  if (configVersion) config.version = configVersion;
 
   return {
     config,
@@ -1126,10 +1210,11 @@ export function exportToFiles(
     fileModules.get(file)!.push(mod);
   }
 
-  // Split pipelines by source file
+  // Split pipelines by source file; pipeline names are stored under the
+  // namespaced key `pipeline:<name>` to avoid collisions with module names.
   if (config.pipelines) {
     for (const [name, value] of Object.entries(config.pipelines)) {
-      const file = sourceMap.get(name) ?? null;
+      const file = sourceMap.get(pipelineKey(name)) ?? null;
       if (!filePipelines.has(file)) filePipelines.set(file, {});
       filePipelines.get(file)![name] = value;
     }
@@ -1137,7 +1222,60 @@ export function exportToFiles(
 
   const result = new Map<string | null, string>();
 
-  // Main file gets its modules + workflows/triggers/pipelines
+  // Compute the main-file content and collect the list of imported file paths.
+  const { yaml: mainYaml, importedFiles } = buildMainFileContent(config, fileModules, filePipelines);
+  result.set(null, mainYaml);
+
+  // Each imported file gets its modules and/or pipelines
+  for (const file of importedFiles) {
+    const fileConfig: Record<string, unknown> = {};
+    const modules = fileModules.get(file);
+    if (modules && modules.length > 0) fileConfig.modules = modules;
+    const pipelines = filePipelines.get(file);
+    if (pipelines && Object.keys(pipelines).length > 0) fileConfig.pipelines = pipelines;
+    result.set(file, yaml.dump(fileConfig, { lineWidth: -1, noRefs: true, sortKeys: false }));
+  }
+
+  return result;
+}
+
+/**
+ * Produce only the main-file YAML (the `null` entry) without serialising the
+ * content of every imported file. Use this for cheap `onChange` notifications
+ * in multi-file mode where only the main file needs to be communicated.
+ */
+export function exportMainFileYaml(
+  config: WorkflowConfig,
+  sourceMap: Map<string, string>,
+): string {
+  const fileModules = new Map<string | null, ModuleConfig[]>();
+  const filePipelines = new Map<string | null, Record<string, unknown>>();
+
+  for (const mod of config.modules) {
+    const file = sourceMap.get(mod.name) ?? null;
+    if (!fileModules.has(file)) fileModules.set(file, []);
+    fileModules.get(file)!.push(mod);
+  }
+
+  if (config.pipelines) {
+    for (const [name, value] of Object.entries(config.pipelines)) {
+      const file = sourceMap.get(pipelineKey(name)) ?? null;
+      if (!filePipelines.has(file)) filePipelines.set(file, {});
+      filePipelines.get(file)![name] = value;
+    }
+  }
+
+  return buildMainFileContent(config, fileModules, filePipelines).yaml;
+}
+
+/**
+ * Internal helper: build the main-file YAML string and collect imported file paths.
+ */
+function buildMainFileContent(
+  config: WorkflowConfig,
+  fileModules: Map<string | null, ModuleConfig[]>,
+  filePipelines: Map<string | null, Record<string, unknown>>,
+): { yaml: string; importedFiles: string[] } {
   const mainModules = fileModules.get(null) ?? [];
   const mainConfig: Record<string, unknown> = {};
   if (config.name !== undefined) mainConfig.name = config.name;
@@ -1165,19 +1303,7 @@ export function exportToFiles(
     mainConfig.imports = importedFiles;
   }
 
-  result.set(null, yaml.dump(mainConfig, { lineWidth: -1, noRefs: true, sortKeys: false }));
-
-  // Each imported file gets its modules and/or pipelines
-  for (const file of importedFiles) {
-    const fileConfig: Record<string, unknown> = {};
-    const modules = fileModules.get(file);
-    if (modules && modules.length > 0) fileConfig.modules = modules;
-    const pipelines = filePipelines.get(file);
-    if (pipelines && Object.keys(pipelines).length > 0) fileConfig.pipelines = pipelines;
-    result.set(file, yaml.dump(fileConfig, { lineWidth: -1, noRefs: true, sortKeys: false }));
-  }
-
-  return result;
+  return { yaml: yaml.dump(mainConfig, { lineWidth: -1, noRefs: true, sortKeys: false }), importedFiles };
 }
 
 /**
