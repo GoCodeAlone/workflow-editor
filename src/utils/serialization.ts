@@ -956,10 +956,42 @@ export function extractStateMachineBranches(
 }
 
 /**
+ * Resolve a relative path against a base file path.
+ * Examples:
+ *   resolvePath('base.yaml', 'database.yaml')         => 'database.yaml'
+ *   resolvePath('services/base.yaml', '../db.yaml')   => 'db.yaml'
+ *   resolvePath('services/base.yaml', 'cache.yaml')   => 'services/cache.yaml'
+ */
+function resolvePath(basePath: string, relPath: string): string {
+  if (relPath.startsWith('/')) return relPath;
+  const baseDir = basePath.includes('/') ? basePath.substring(0, basePath.lastIndexOf('/') + 1) : '';
+  const combined = baseDir + relPath;
+  const parts = combined.split('/');
+  const resolved: string[] = [];
+  for (const part of parts) {
+    if (part === '..') {
+      // Only go up if there is a segment to remove; otherwise keep the '..' to avoid
+      // silently discarding path components that exceed the base directory depth.
+      if (resolved.length > 0) {
+        resolved.pop();
+      } else {
+        resolved.push(part);
+      }
+    } else if (part !== '.') {
+      resolved.push(part);
+    }
+  }
+  return resolved.join('/');
+}
+
+/**
  * Given a parsed YAML config, detect `imports:` array and `application.workflows[].file:` entries.
  * For each reference, call the resolver to get file contents, parse them, and merge into the config.
- * Track which modules came from which source file.
- * Returns { config: merged WorkflowConfig, sourceMap: Map<string, string> } where sourceMap maps module name to source file path.
+ * Track which modules and pipelines came from which source file.
+ * Supports nested file references: imported files may themselves declare `imports:` or
+ * `application.workflows[].file:` entries, which are resolved recursively (depth-first).
+ * Returns { config: merged WorkflowConfig, sourceMap: Map<string, string> } where sourceMap maps
+ * module/pipeline name to source file path.
  */
 export async function resolveImports(
   yamlText: string,
@@ -979,57 +1011,124 @@ export async function resolveImports(
 
   const mainModules = (parsed.modules ?? []) as ModuleConfig[];
   const mainModuleNames = new Set(mainModules.map((m) => m.name));
-  // Track main file modules in sourceMap as having no source (they belong to the main file)
 
   let mergedModules = [...mainModules];
   let mergedWorkflows = { ...((parsed.workflows ?? {}) as Record<string, unknown>) };
   let mergedTriggers = { ...((parsed.triggers ?? {}) as Record<string, unknown>) };
   let mergedPipelines = parsed.pipelines ? { ...(parsed.pipelines as Record<string, unknown>) } : undefined;
   const errors: string[] = [];
+  const visited = new Set<string>(); // prevent infinite cycles
 
-  // Handle `imports:` directive — main file wins on duplicate module names
-  const imports = parsed.imports as string[] | undefined;
-  if (Array.isArray(imports)) {
-    for (const importPath of imports) {
-      const content = await resolver(importPath);
-      if (content === null) {
-        errors.push(`Import not found: ${importPath}`);
+  /**
+   * Load and recursively merge a single file.
+   * @param resolvedPath  The path passed to the resolver (already resolved against parent).
+   * @param strictConflicts  When true, duplicate module/workflow names are reported as errors
+   *                         (used for `application.workflows[].file:` entries).
+   *                         When false, duplicates are silently skipped ("first-wins").
+   */
+  async function mergeFile(resolvedPath: string, strictConflicts: boolean): Promise<void> {
+    if (visited.has(resolvedPath)) return;
+    visited.add(resolvedPath);
+
+    const content = await resolver(resolvedPath);
+    if (content === null) {
+      errors.push(strictConflicts ? `Workflow file not found: ${resolvedPath}` : `Import not found: ${resolvedPath}`);
+      return;
+    }
+
+    let fileParsed: Record<string, unknown>;
+    try {
+      fileParsed = yaml.load(content) as Record<string, unknown>;
+      if (!fileParsed || typeof fileParsed !== 'object') return;
+    } catch (e) {
+      errors.push(`Error parsing ${resolvedPath}: ${(e as Error).message}`);
+      return;
+    }
+
+    // Recursively process this file's own `imports:` entries first (depth-first).
+    // Sub-imports always use "first-wins, no error" semantics regardless of how the
+    // parent was referenced.
+    const subImports = fileParsed.imports as string[] | undefined;
+    if (Array.isArray(subImports)) {
+      for (const subImportPath of subImports) {
+        await mergeFile(resolvePath(resolvedPath, subImportPath), false);
+      }
+    }
+
+    // Also recurse into any application.workflows[].file: entries in the sub-file.
+    const subApp = fileParsed.application as Record<string, unknown> | undefined;
+    if (subApp && Array.isArray(subApp.workflows)) {
+      for (const entry of subApp.workflows as Array<Record<string, unknown>>) {
+        if (typeof entry.file === 'string') {
+          await mergeFile(resolvePath(resolvedPath, entry.file), false);
+        }
+      }
+    }
+
+    // Merge modules (tracked in sourceMap)
+    const fileModules = (fileParsed.modules ?? []) as ModuleConfig[];
+    for (const mod of fileModules) {
+      if (mainModuleNames.has(mod.name)) {
+        if (strictConflicts) {
+          errors.push(`Conflict: module "${mod.name}" in ${resolvedPath} conflicts with existing module`);
+        }
         continue;
       }
-      try {
-        const importedParsed = yaml.load(content) as Record<string, unknown>;
-        if (!importedParsed || typeof importedParsed !== 'object') continue;
+      mergedModules.push(mod);
+      sourceMap.set(mod.name, resolvedPath);
+      mainModuleNames.add(mod.name);
+    }
 
-        const importedModules = (importedParsed.modules ?? []) as ModuleConfig[];
-        for (const mod of importedModules) {
-          if (!mainModuleNames.has(mod.name)) {
-            mergedModules.push(mod);
-            sourceMap.set(mod.name, importPath);
-            mainModuleNames.add(mod.name);
-          }
-          // Main wins on duplicates — skip if already present
+    // Merge workflows
+    const fileWorkflows = (fileParsed.workflows ?? {}) as Record<string, unknown>;
+    for (const [key, value] of Object.entries(fileWorkflows)) {
+      if (key in mergedWorkflows) {
+        if (strictConflicts) {
+          errors.push(`Conflict: workflow "${key}" in ${resolvedPath} conflicts with existing workflow`);
         }
+        continue;
+      }
+      mergedWorkflows[key] = value;
+    }
 
-        // Merge workflows/triggers (imported ones don't override main)
-        const importedWorkflows = (importedParsed.workflows ?? {}) as Record<string, unknown>;
-        for (const [key, value] of Object.entries(importedWorkflows)) {
-          if (!(key in mergedWorkflows)) {
-            mergedWorkflows[key] = value;
-          }
+    // Merge triggers
+    const fileTriggers = (fileParsed.triggers ?? {}) as Record<string, unknown>;
+    for (const [key, value] of Object.entries(fileTriggers)) {
+      if (key in mergedTriggers) {
+        if (strictConflicts) {
+          errors.push(`Conflict: trigger "${key}" in ${resolvedPath} conflicts with existing trigger`);
         }
-        const importedTriggers = (importedParsed.triggers ?? {}) as Record<string, unknown>;
-        for (const [key, value] of Object.entries(importedTriggers)) {
-          if (!(key in mergedTriggers)) {
-            mergedTriggers[key] = value;
+        continue;
+      }
+      mergedTriggers[key] = value;
+    }
+
+    // Merge pipelines (tracked in sourceMap so they round-trip to their source file)
+    if (fileParsed.pipelines) {
+      if (!mergedPipelines) mergedPipelines = {};
+      const filePipelines = fileParsed.pipelines as Record<string, unknown>;
+      for (const [key, value] of Object.entries(filePipelines)) {
+        if (key in mergedPipelines) {
+          if (strictConflicts) {
+            errors.push(`Conflict: pipeline "${key}" in ${resolvedPath} conflicts with existing pipeline`);
           }
+          continue;
         }
-      } catch (e) {
-        errors.push(`Error parsing ${importPath}: ${(e as Error).message}`);
+        mergedPipelines[key] = value;
+        sourceMap.set(key, resolvedPath);
       }
     }
   }
 
-  // Handle `application.workflows[].file:` directive
+  // Handle `imports:` directive — main file wins on duplicate names (no conflict errors)
+  const imports = parsed.imports as string[] | undefined;
+  if (Array.isArray(imports)) {
+    for (const importPath of imports) {
+      await mergeFile(importPath, false);
+    }
+  }
+
+  // Handle `application.workflows[].file:` directive — conflicts are reported as errors
   const application = parsed.application as Record<string, unknown> | undefined;
   if (application && typeof application === 'object') {
     const appWorkflows = (application.workflows ?? []) as Array<Record<string, unknown>>;
@@ -1037,56 +1136,7 @@ export async function resolveImports(
       for (const entry of appWorkflows) {
         const filePath = entry.file as string | undefined;
         if (!filePath) continue;
-        const content = await resolver(filePath);
-        if (content === null) {
-          errors.push(`Workflow file not found: ${filePath}`);
-          continue;
-        }
-        try {
-          const fileParsed = yaml.load(content) as Record<string, unknown>;
-          if (!fileParsed || typeof fileParsed !== 'object') continue;
-
-          const fileModules = (fileParsed.modules ?? []) as ModuleConfig[];
-          for (const mod of fileModules) {
-            if (mainModuleNames.has(mod.name)) {
-              errors.push(`Conflict: module "${mod.name}" in ${filePath} conflicts with existing module`);
-              continue;
-            }
-            mergedModules.push(mod);
-            sourceMap.set(mod.name, filePath);
-            mainModuleNames.add(mod.name);
-          }
-
-          const fileWorkflows = (fileParsed.workflows ?? {}) as Record<string, unknown>;
-          for (const [key, value] of Object.entries(fileWorkflows)) {
-            if (key in mergedWorkflows) {
-              errors.push(`Conflict: workflow "${key}" in ${filePath} conflicts with existing workflow`);
-              continue;
-            }
-            mergedWorkflows[key] = value;
-          }
-
-          const fileTriggers = (fileParsed.triggers ?? {}) as Record<string, unknown>;
-          for (const [key, value] of Object.entries(fileTriggers)) {
-            if (key in mergedTriggers) {
-              errors.push(`Conflict: trigger "${key}" in ${filePath} conflicts with existing trigger`);
-              continue;
-            }
-            mergedTriggers[key] = value;
-          }
-
-          if (fileParsed.pipelines) {
-            if (!mergedPipelines) mergedPipelines = {};
-            const filePipelines = fileParsed.pipelines as Record<string, unknown>;
-            for (const [key, value] of Object.entries(filePipelines)) {
-              if (!(key in mergedPipelines)) {
-                mergedPipelines[key] = value;
-              }
-            }
-          }
-        } catch (e) {
-          errors.push(`Error parsing ${filePath}: ${(e as Error).message}`);
-        }
+        await mergeFile(filePath, true);
       }
     }
   }
@@ -1099,6 +1149,12 @@ export async function resolveImports(
   if (mergedPipelines) {
     config.pipelines = mergedPipelines;
   }
+  // Preserve name/version from the main file — check both top-level fields and the
+  // application: section (common in application.workflows[].file: configs).
+  const configName = (parsed.name ?? application?.name) as string | undefined;
+  const configVersion = (parsed.version ?? application?.version) as string | undefined;
+  if (configName) config.name = configName;
+  if (configVersion) config.version = configVersion;
 
   return {
     config,

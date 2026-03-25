@@ -72,12 +72,18 @@ export function WorkflowEditor(props: WorkflowEditorProps) {
     if (!onChange) return;
     const unsub = useWorkflowStore.subscribe(() => {
       if (importingRef.current) return;
-      const config = exportToConfig();
-      const yaml = configToYaml(config);
-      onChange(yaml);
+      if (hasMultiFileRef.current) {
+        // In multi-file mode emit only the main file content (with imports: references)
+        // rather than the fully merged YAML, to prevent the host from inlining all files.
+        const fileMap = exportToFileMap();
+        onChange(fileMap.get(null) ?? configToYaml(exportToConfig()));
+      } else {
+        const config = exportToConfig();
+        onChange(configToYaml(config));
+      }
     });
     return unsub;
-  }, [onChange, exportToConfig]);
+  }, [onChange, exportToConfig, exportToFileMap]);
 
   // Sync testResults prop into the store
   useEffect(() => {

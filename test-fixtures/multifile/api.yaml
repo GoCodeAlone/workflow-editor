@@ -1,0 +1,32 @@
+modules:
+  - name: http-server
+    type: http.server
+    config:
+      port: 8080
+  - name: router
+    type: http.router
+    config: {}
+
+workflows:
+  http:
+    server: http-server
+    router: router
+    routes:
+      - method: POST
+        path: /api/users
+        handler: user-create
+      - method: GET
+        path: /api/users/:id
+        handler: user-get
+
+pipelines:
+  user-create:
+    steps:
+      - name: validate
+        type: step.validate
+      - name: insert
+        type: step.db_exec
+  user-get:
+    steps:
+      - name: fetch
+        type: step.db_exec
