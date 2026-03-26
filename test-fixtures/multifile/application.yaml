@@ -1,0 +1,6 @@
+application:
+  name: my-app
+  version: 1.0.0
+  workflows:
+    - file: base.yaml
+    - file: forms.yaml

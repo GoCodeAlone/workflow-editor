@@ -1,0 +1,83 @@
+pipelines:
+  list-forms:
+    steps:
+      - name: parse
+        type: step.request_parse
+      - name: auth
+        type: step.auth_validate
+      - name: authz
+        type: step.authz_check_casbin
+      - name: resolve_tenant
+        type: step.set
+      - name: fetch
+        type: step.db_query
+      - name: respond
+        type: step.json_response
+
+  get-form:
+    steps:
+      - name: parse
+        type: step.request_parse
+      - name: auth
+        type: step.auth_validate
+      - name: authz
+        type: step.authz_check_casbin
+      - name: resolve_tenant
+        type: step.set
+      - name: fetch
+        type: step.db_query
+      - name: found
+        type: step.json_response
+      - name: not_found
+        type: step.json_response
+
+  create-form:
+    steps:
+      - name: parse
+        type: step.request_parse
+      - name: auth
+        type: step.auth_validate
+      - name: authz
+        type: step.authz_check_casbin
+      - name: resolve_tenant
+        type: step.set
+      - name: validate
+        type: step.validate
+      - name: insert
+        type: step.db_exec
+      - name: respond
+        type: step.json_response
+
+  update-form:
+    steps:
+      - name: parse
+        type: step.request_parse
+      - name: auth
+        type: step.auth_validate
+      - name: authz
+        type: step.authz_check_casbin
+      - name: resolve_tenant
+        type: step.set
+      - name: validate
+        type: step.validate
+      - name: update
+        type: step.db_exec
+      - name: respond
+        type: step.json_response
+
+  create-form-submission:
+    steps:
+      - name: parse
+        type: step.request_parse
+      - name: auth
+        type: step.auth_validate
+      - name: authz
+        type: step.authz_check_casbin
+      - name: resolve_tenant
+        type: step.set
+      - name: validate
+        type: step.validate
+      - name: lookup_form
+        type: step.db_query
+      - name: check_form
+        type: step.branch

@@ -34,6 +34,10 @@ export interface WorkflowNodeData extends Record<string, unknown> {
   synthesized?: boolean;
   /** Source file path this node originated from (multi-file configs) */
   sourceFile?: string;
+  /** Pipeline name this step node belongs to (pipeline-only partial configs) */
+  pipelineName?: string;
+  /** Handler node ID for route-attached pipeline step nodes; resolved to the handler's current label at render time to avoid stale copies */
+  pipelineHandlerId?: string;
   handlerRoutes?: Array<{
     method: string;
     path: string;

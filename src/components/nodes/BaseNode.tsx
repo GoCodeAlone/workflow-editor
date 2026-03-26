@@ -191,6 +191,22 @@ export default function BaseNode({
   // Test result for this node (keyed by label)
   const testResult = useWorkflowStore((s) => s.testResults[label]);
 
+  // Pipeline name for step nodes (shows which pipeline a step belongs to).
+  // Short-circuits for non-step.* modules to avoid an O(n) scan on every store update.
+  const pipelineName = useWorkflowStore((s) => {
+    if (!moduleType.startsWith('step.')) {
+      return undefined;
+    }
+    const node = s.nodes.find((n) => n.id === id);
+    const handlerId = node?.data.pipelineHandlerId as string | undefined;
+    if (handlerId) {
+      // Resolve current label of the handler node (stable reference avoids stale copies on rename)
+      const handlerNode = s.nodes.find((n) => n.id === handlerId);
+      return handlerNode?.data.label;
+    }
+    return node?.data.pipelineName as string | undefined;
+  });
+
   // Source file badge (multi-file configs)
   const sourceMap = useWorkflowStore((s) => s.sourceMap);
   const hasMultipleSourceFiles = useMemo(() => new Set(sourceMap.values()).size > 1, [sourceMap]);
@@ -416,6 +432,31 @@ export default function BaseNode({
           </span>
         )}
       </div>
+
+      {pipelineName && (
+        <div
+          style={{
+            borderBottom: `1px solid ${color}20`,
+            padding: '2px 10px',
+            background: `${color}10`,
+          }}
+        >
+          <span
+            style={{
+              fontSize: 9,
+              color: '#a6adc8',
+              fontStyle: 'italic',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap',
+              display: 'block',
+            }}
+            title={`Pipeline: ${pipelineName}`}
+          >
+            {pipelineName}
+          </span>
+        </div>
+      )}
 
       <div style={{ padding: '6px 10px' }}>
         {ioSig && ioSig.inputs.length > 0 && (
