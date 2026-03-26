@@ -1,0 +1,9 @@
+application:
+  name: layered-app
+  version: 1.0.0
+
+imports:
+  - layers/infrastructure.yaml
+  - layers/middleware.yaml
+  - layers/services.yaml
+  - layers/api.yaml

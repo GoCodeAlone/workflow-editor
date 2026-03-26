@@ -1,0 +1,23 @@
+modules:
+  - name: http-server
+    type: http.server
+    config:
+      port: 8080
+  - name: router
+    type: http.router
+    config: {}
+
+workflows:
+  http:
+    server: http-server
+    router: router
+    routes:
+      - method: GET
+        path: /api/users
+        handler: user-service
+      - method: POST
+        path: /api/orders
+        handler: order-service
+      - method: GET
+        path: /api/products
+        handler: product-service

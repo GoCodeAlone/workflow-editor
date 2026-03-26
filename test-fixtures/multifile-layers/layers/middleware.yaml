@@ -1,0 +1,23 @@
+pipelines:
+  auth-middleware:
+    steps:
+      - name: extract-token
+        type: step.request_parse
+      - name: validate-token
+        type: step.auth_validate
+      - name: attach-user
+        type: step.set
+  rate-limit:
+    steps:
+      - name: check-limit
+        type: step.branch
+      - name: increment
+        type: step.set
+      - name: reject
+        type: step.json_response
+  cors:
+    steps:
+      - name: check-origin
+        type: step.branch
+      - name: set-headers
+        type: step.set

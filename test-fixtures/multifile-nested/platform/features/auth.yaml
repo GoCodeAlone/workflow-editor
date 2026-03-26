@@ -1,0 +1,27 @@
+modules:
+  - name: auth-service
+    type: http.server
+    config:
+      port: 9001
+
+pipelines:
+  login:
+    steps:
+      - name: parse
+        type: step.request_parse
+      - name: validate
+        type: step.validate
+      - name: authenticate
+        type: step.auth_validate
+      - name: respond
+        type: step.json_response
+  register:
+    steps:
+      - name: parse
+        type: step.request_parse
+      - name: validate
+        type: step.validate
+      - name: insert
+        type: step.db_exec
+      - name: respond
+        type: step.json_response
