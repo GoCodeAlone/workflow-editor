@@ -709,7 +709,9 @@ export function configToNodes(
             moduleType: stepModuleType,
             label: step.name,
             config: step.config ?? (stepInfo ? { ...stepInfo.defaultConfig } : {}),
-            pipelineName: node.data.label,
+            // Store a stable reference to the handler node so the label can be resolved
+            // at render time, preventing stale copies when the handler is renamed.
+            pipelineHandlerId: node.id,
           },
         };
         nodes.push(stepNode);

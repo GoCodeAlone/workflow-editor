@@ -600,3 +600,152 @@ describe('multi-pipeline layout — pipelines produce separate edge chains', () 
     }
   });
 });
+
+// ---------------------------------------------------------------------------
+// Route-attached pipeline steps (api.query / api.command handler chains)
+// ---------------------------------------------------------------------------
+
+describe('route-attached pipeline steps — pipelineHandlerId for stable rename-safety', () => {
+  it('step nodes attached to api.command handler carry pipelineHandlerId pointing to the handler node', () => {
+    const config: WorkflowConfig = {
+      modules: [
+        { name: 'router', type: 'http.router', config: {} },
+        { name: 'create-user', type: 'api.command', config: {} },
+      ],
+      workflows: {
+        http: {
+          router: 'router',
+          routes: [
+            {
+              method: 'POST',
+              path: '/users',
+              handler: 'create-user',
+              pipeline: {
+                steps: [
+                  { name: 'validate', type: 'step.validate' },
+                  { name: 'insert', type: 'step.db_exec' },
+                ],
+              },
+            },
+          ],
+        },
+      },
+      triggers: {},
+    };
+
+    const { nodes } = configToNodes(config, MODULE_TYPE_MAP);
+
+    const handlerNode = nodes.find((n) => n.data.label === 'create-user');
+    expect(handlerNode).toBeDefined();
+
+    const stepNodes = nodes.filter((n) => n.data.pipelineHandlerId !== undefined);
+    expect(stepNodes).toHaveLength(2);
+
+    for (const step of stepNodes) {
+      expect(step.data.pipelineHandlerId).toBe(handlerNode!.id);
+    }
+  });
+
+  it('step nodes attached to api.query handler carry pipelineHandlerId', () => {
+    const config: WorkflowConfig = {
+      modules: [
+        { name: 'router', type: 'http.router', config: {} },
+        { name: 'get-user', type: 'api.query', config: {} },
+      ],
+      workflows: {
+        http: {
+          router: 'router',
+          routes: [
+            {
+              method: 'GET',
+              path: '/users/:id',
+              handler: 'get-user',
+              pipeline: {
+                steps: [
+                  { name: 'fetch', type: 'step.db_query' },
+                ],
+              },
+            },
+          ],
+        },
+      },
+      triggers: {},
+    };
+
+    const { nodes } = configToNodes(config, MODULE_TYPE_MAP);
+
+    const handlerNode = nodes.find((n) => n.data.label === 'get-user');
+    const stepNode = nodes.find((n) => n.data.label === 'fetch');
+    expect(handlerNode).toBeDefined();
+    expect(stepNode?.data.pipelineHandlerId).toBe(handlerNode!.id);
+  });
+
+  it('pipelineHandlerId is not set for synthesized pipeline-only step nodes (uses pipelineName instead)', () => {
+    const config: WorkflowConfig = {
+      modules: [],
+      workflows: {},
+      triggers: {},
+      pipelines: {
+        'my-pipeline': {
+          steps: [
+            { name: 'parse', type: 'step.request_parse' },
+            { name: 'respond', type: 'step.json_response' },
+          ],
+        },
+      },
+    };
+
+    const { nodes } = configToNodes(config, MODULE_TYPE_MAP);
+
+    for (const node of nodes) {
+      expect(node.data.pipelineHandlerId).toBeUndefined();
+      expect(node.data.pipelineName).toBe('my-pipeline');
+    }
+  });
+
+  it('multiple handlers each attach their own pipelineHandlerId to their steps', () => {
+    const config: WorkflowConfig = {
+      modules: [
+        { name: 'router', type: 'http.router', config: {} },
+        { name: 'handler-a', type: 'api.command', config: {} },
+        { name: 'handler-b', type: 'api.command', config: {} },
+      ],
+      workflows: {
+        http: {
+          router: 'router',
+          routes: [
+            {
+              method: 'POST',
+              path: '/a',
+              handler: 'handler-a',
+              pipeline: {
+                steps: [{ name: 'step-a', type: 'step.set' }],
+              },
+            },
+            {
+              method: 'POST',
+              path: '/b',
+              handler: 'handler-b',
+              pipeline: {
+                steps: [{ name: 'step-b', type: 'step.set' }],
+              },
+            },
+          ],
+        },
+      },
+      triggers: {},
+    };
+
+    const { nodes } = configToNodes(config, MODULE_TYPE_MAP);
+
+    const handlerA = nodes.find((n) => n.data.label === 'handler-a');
+    const handlerB = nodes.find((n) => n.data.label === 'handler-b');
+    const stepA = nodes.find((n) => n.data.label === 'step-a');
+    const stepB = nodes.find((n) => n.data.label === 'step-b');
+
+    expect(stepA?.data.pipelineHandlerId).toBe(handlerA!.id);
+    expect(stepB?.data.pipelineHandlerId).toBe(handlerB!.id);
+    // They must reference different handler IDs
+    expect(stepA?.data.pipelineHandlerId).not.toBe(stepB?.data.pipelineHandlerId);
+  });
+});
