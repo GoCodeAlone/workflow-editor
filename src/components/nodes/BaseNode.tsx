@@ -191,6 +191,12 @@ export default function BaseNode({
   // Test result for this node (keyed by label)
   const testResult = useWorkflowStore((s) => s.testResults[label]);
 
+  // Pipeline name for step nodes (shows which pipeline a step belongs to)
+  const pipelineName = useWorkflowStore((s) => {
+    const node = s.nodes.find((n) => n.id === id);
+    return node?.data.pipelineName as string | undefined;
+  });
+
   // Source file badge (multi-file configs)
   const sourceMap = useWorkflowStore((s) => s.sourceMap);
   const hasMultipleSourceFiles = useMemo(() => new Set(sourceMap.values()).size > 1, [sourceMap]);
@@ -416,6 +422,31 @@ export default function BaseNode({
           </span>
         )}
       </div>
+
+      {pipelineName && (
+        <div
+          style={{
+            borderBottom: `1px solid ${color}20`,
+            padding: '2px 10px',
+            background: `${color}10`,
+          }}
+        >
+          <span
+            style={{
+              fontSize: 9,
+              color: '#a6adc8',
+              fontStyle: 'italic',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap',
+              display: 'block',
+            }}
+            title={`Pipeline: ${pipelineName}`}
+          >
+            {pipelineName}
+          </span>
+        </div>
+      )}
 
       <div style={{ padding: '6px 10px' }}>
         {ioSig && ioSig.inputs.length > 0 && (

@@ -709,6 +709,7 @@ export function configToNodes(
             moduleType: stepModuleType,
             label: step.name,
             config: step.config ?? (stepInfo ? { ...stepInfo.defaultConfig } : {}),
+            pipelineName: node.data.label,
           },
         };
         nodes.push(stepNode);
@@ -749,6 +750,7 @@ export function configToNodes(
             label: step.name,
             config: step.config ?? (stepInfo ? { ...stepInfo.defaultConfig } : {}),
             synthesized: true,
+            pipelineName,
             ...(pipelineSourceFile ? { sourceFile: pipelineSourceFile } : {}),
           },
         };
