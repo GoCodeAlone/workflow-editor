@@ -1,4 +1,4 @@
-# Multi-File Config Validation & YAML Side-Pane — Implementation Plan (Phases 1-3)
+# Multi-File Config Validation & YAML Side-Pane — Implementation Plan
 
 > **For Claude:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task.
 
