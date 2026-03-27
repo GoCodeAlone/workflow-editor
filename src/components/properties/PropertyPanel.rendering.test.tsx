@@ -41,7 +41,9 @@ const FIELD_TYPE_WIDGET: Record<string, string> = {
   // array, map, json, sql, filepath, duration have custom components — skip
 };
 
-// Representative types: one per field type combination (all 11 required by spec)
+// Representative types: one per field type combination.
+// conditional.switch and conditional.expression are editor-only and absent from
+// engine-schemas.json — their coverage is in the special-editors describe below.
 const renderTestTypes = [
   'http.server',               // string (address)
   'database.workflow',         // select (driver), string (dsn)
@@ -49,9 +51,7 @@ const renderTestTypes = [
   'http.middleware.cors',      // array fields
   'http.middleware.ratelimit', // number fields
   'storage.sqlite',            // string + number + boolean
-  'cache.modular',             // no configFields — trivially passes widget tests
-  'conditional.switch',        // no configFields — renders Switch Cases editor
-  'conditional.expression',    // no configFields — renders Output Labels editor
+  'cache.modular',             // no configFields — trivially passes
   'http.router',               // no configFields — renders Middleware Chain editor
   'api.query',                 // inheritFrom field + Routes editor
 ];
@@ -61,41 +61,42 @@ describe('PropertyPanel rendering — field widgets', () => {
     resetStore();
   });
 
-  for (const moduleType of renderTestTypes) {
-    const schema = engineSchemas[moduleType];
-    if (!schema) continue;
-    const fields = schema.configFields ?? [];
+  describe.each(renderTestTypes)('%s', (moduleType) => {
+    it('renders all config field labels', () => {
+      const schema = engineSchemas[moduleType];
+      expect(schema, `${moduleType} missing from engine-schemas.json`).toBeDefined();
+      const fields = schema.configFields ?? [];
 
-    describe(`${moduleType}`, () => {
-      it('renders all config field labels', () => {
-        selectNodeOfType(moduleType);
-        render(<PropertyPanel />);
+      selectNodeOfType(moduleType);
+      render(<PropertyPanel />);
 
-        for (const field of fields) {
-          const label = screen.queryByText(field.label);
-          expect(label, `Missing label "${field.label}" for ${moduleType}.${field.key}`).toBeTruthy();
-        }
-      });
-
-      it('renders correct widget type per field', () => {
-        selectNodeOfType(moduleType);
-        render(<PropertyPanel />);
-
-        for (const field of fields) {
-          const expectedWidget = FIELD_TYPE_WIDGET[field.type];
-          if (!expectedWidget) continue;
-          if (field.sensitive) continue; // sensitive fields render as password inputs
-
-          const labelEl = screen.getByText(field.label);
-          // label > span > span(field.label): walk up to the <label> element
-          const labelContainer = labelEl.closest('label') as HTMLElement | null;
-          if (!labelContainer) continue;
-          const widget = within(labelContainer).queryByRole(expectedWidget);
-          expect(widget, `Expected ${expectedWidget} widget for ${moduleType}.${field.key} (type: ${field.type})`).toBeTruthy();
-        }
-      });
+      for (const field of fields) {
+        const label = screen.queryByText(field.label);
+        expect(label, `Missing label "${field.label}" for ${moduleType}.${field.key}`).toBeTruthy();
+      }
     });
-  }
+
+    it('renders correct widget type per field', () => {
+      const schema = engineSchemas[moduleType];
+      expect(schema, `${moduleType} missing from engine-schemas.json`).toBeDefined();
+      const fields = schema.configFields ?? [];
+
+      selectNodeOfType(moduleType);
+      render(<PropertyPanel />);
+
+      for (const field of fields) {
+        const expectedWidget = FIELD_TYPE_WIDGET[field.type];
+        if (!expectedWidget) continue;
+        if (field.sensitive) continue; // sensitive fields render as password inputs
+
+        const labelEl = screen.getByText(field.label);
+        const labelContainer = labelEl.closest('label') as HTMLElement | null;
+        if (!labelContainer) continue;
+        const widget = within(labelContainer).queryByRole(expectedWidget);
+        expect(widget, `Expected ${expectedWidget} widget for ${moduleType}.${field.key} (type: ${field.type})`).toBeTruthy();
+      }
+    });
+  });
 });
 
 describe('PropertyPanel rendering — special editors', () => {
