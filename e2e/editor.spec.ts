@@ -171,16 +171,17 @@ test.describe('breadcrumb navigation', () => {
     await page.goto('/?scenario=multifile-groups');
     await page.waitForSelector('.react-flow__viewport', { timeout: 10_000 });
     await expect(page.locator('.react-flow__node').first()).toBeVisible();
-    // Click auth-server node to set breadcrumb to show auth.yaml
-    const authNode = page.locator('.react-flow__node').filter({ hasText: 'auth-server' }).first();
-    await authNode.click();
-    await expect(page.locator('.breadcrumb-bar')).toContainText('auth.yaml');
-    // Click the first clickable breadcrumb segment (root file)
+    // Click billing-service to set currentFile to billing.yaml
+    const billingNode = page.locator('.react-flow__node').filter({ hasText: 'billing-service' }).first();
+    await billingNode.click();
+    await expect(page.locator('.breadcrumb-bar')).toContainText('billing.yaml');
+    // Click the root breadcrumb segment (auth.yaml)
     const breadcrumb = page.locator('.breadcrumb-bar');
-    const clickableSegment = breadcrumb.locator('span[style*="cursor: pointer"]').first();
-    await expect(clickableSegment).toBeVisible();
-    await clickableSegment.click();
-    // Breadcrumb click was handled without error
+    const rootSegment = breadcrumb.locator('span[style*="cursor: pointer"]').first();
+    await expect(rootSegment).toBeVisible();
+    await rootSegment.click();
+    // onNavigateToSource was called with the root file path
+    await expect(page.locator('body')).toHaveAttribute('data-last-navigation', 'auth.yaml');
   });
 });
 

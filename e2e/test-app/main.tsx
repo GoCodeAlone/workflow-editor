@@ -85,6 +85,11 @@ function App() {
         <WorkflowEditor
           initialYaml={MULTIFILE_YAML}
           sourceMap={MULTIFILE_SOURCE_MAP}
+          onNavigateToSource={(pathOrLine) => {
+            if (typeof pathOrLine === 'string') {
+              document.body.dataset.lastNavigation = pathOrLine;
+            }
+          }}
         />
       </div>
     );
