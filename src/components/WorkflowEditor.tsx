@@ -8,6 +8,7 @@ import { useWorkflowStore } from '../stores/workflowStore.ts';
 import { useModuleSchemaStore } from '../stores/moduleSchemaStore.ts';
 import useUILayoutStore from '../stores/uiLayoutStore.ts';
 import ToastContainer from './ToastContainer.tsx';
+import { BreadcrumbBar } from './navigation/BreadcrumbBar.tsx';
 import { parseYamlSafe, configToYaml, resolveImports, hasFileReferences } from '../utils/serialization.ts';
 import { applyMode } from '../modes/defaultMode.ts';
 import { buildYamlLineMap, buildMultiFileLineMap } from '../utils/yamlLineMap.ts';
@@ -177,6 +178,23 @@ export function WorkflowEditor(props: WorkflowEditorProps) {
     };
   }, [showYamlPane, yamlFiles, nodes, setSelectedNode]);
 
+  // Derive rootFile from the first entry in storeSourceMap
+  const rootFile = useMemo(() => {
+    const first = storeSourceMap.values().next();
+    return first.done ? null : first.value;
+  }, [storeSourceMap]);
+
+  // Derive currentFile from the selected node's sourceMap entry
+  const selectedNode = useMemo(() => nodes.find((n) => n.id === selectedNodeId), [nodes, selectedNodeId]);
+  const selectedNodeLabel = selectedNode?.data?.label as string | undefined;
+  const currentFile = useMemo(
+    () => (selectedNodeLabel ? storeSourceMap.get(selectedNodeLabel) ?? null : null),
+    [selectedNodeLabel, storeSourceMap],
+  );
+
+  // Derive currentSection from the selected node's pipelineName if available
+  const currentSection = selectedNode?.data?.pipelineName as string | undefined;
+
   return (
     <ReactFlowProvider>
       <div style={{ display: 'flex', height: '100%', width: '100%', overflow: 'hidden' }}>
@@ -187,6 +205,14 @@ export function WorkflowEditor(props: WorkflowEditorProps) {
         )}
         <div style={{ flex: 1, minWidth: 200, position: 'relative', display: 'flex', flexDirection: 'column' }}>
           <ToastContainer />
+          <BreadcrumbBar
+            rootFile={rootFile}
+            currentFile={currentFile}
+            currentSection={currentSection}
+            onNavigate={(filePath, _section) => {
+              if (onNavigateToSource) onNavigateToSource(filePath, 1, 0);
+            }}
+          />
           <Toolbar
             onSave={(onSave || onSaveToFile) ? async (yamlContent: string) => {
               if (onSaveToFile && (hasMultiFileRef.current || sourceMap.size > 0)) {
