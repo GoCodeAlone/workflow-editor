@@ -36,7 +36,14 @@ jobs:
         run: wfctl editor-schemas --output src/generated/engine-schemas.json
 
       - name: Export DSL reference
-        run: wfctl dsl-reference > src/generated/dsl-reference.json
+        run: |
+          WORKFLOW_VERSION="${{ github.event.client_payload.version }}"
+          git clone --depth 1 --filter=blob:none --sparse https://github.com/GoCodeAlone/workflow.git /tmp/workflow-ref --branch "${WORKFLOW_VERSION}" || \
+            git clone --depth 1 --filter=blob:none --sparse https://github.com/GoCodeAlone/workflow.git /tmp/workflow-ref
+          cd /tmp/workflow-ref && git sparse-checkout set docs
+          cd -
+          wfctl dsl-reference --reference /tmp/workflow-ref/docs/dsl-reference.md > src/generated/dsl-reference.json
+          rm -rf /tmp/workflow-ref
 
       - name: Bump version
         run: |
