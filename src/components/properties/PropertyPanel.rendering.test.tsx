@@ -41,7 +41,7 @@ const FIELD_TYPE_WIDGET: Record<string, string> = {
   // array, map, json, sql, filepath, duration have custom components — skip
 };
 
-// Representative types: one per field type combination
+// Representative types: one per field type combination (all 11 required by spec)
 const renderTestTypes = [
   'http.server',               // string (address)
   'database.workflow',         // select (driver), string (dsn)
@@ -49,6 +49,11 @@ const renderTestTypes = [
   'http.middleware.cors',      // array fields
   'http.middleware.ratelimit', // number fields
   'storage.sqlite',            // string + number + boolean
+  'cache.modular',             // no configFields — trivially passes widget tests
+  'conditional.switch',        // no configFields — renders Switch Cases editor
+  'conditional.expression',    // no configFields — renders Output Labels editor
+  'http.router',               // no configFields — renders Middleware Chain editor
+  'api.query',                 // inheritFrom field + Routes editor
 ];
 
 describe('PropertyPanel rendering — field widgets', () => {
@@ -135,7 +140,7 @@ describe('PropertyPanel rendering — zero configFields', () => {
     .map(([t]) => t);
 
   if (emptyTypes.length > 0) {
-    it(`${emptyTypes[0]}: renders name input and type badge with no field labels`, () => {
+    it(`${emptyTypes[0]}: renders name input, type badge, and delete button with no config fields`, () => {
       selectNodeOfType(emptyTypes[0]);
       render(<PropertyPanel />);
 
@@ -145,6 +150,9 @@ describe('PropertyPanel rendering — zero configFields', () => {
 
       // Type badge exists
       expect(screen.getByText(emptyTypes[0])).toBeInTheDocument();
+
+      // Delete button exists
+      expect(screen.getByText('Delete Node')).toBeInTheDocument();
 
       // No configField labels from this type's (empty) schema
       const schema = engineSchemas[emptyTypes[0]];
@@ -159,30 +167,34 @@ describe('PropertyPanel rendering — inheritance', () => {
     resetStore();
   });
 
-  it('inherited field shows "inherited from" indicator when dependency edge exists', () => {
+  it('api.query delegate field shows "inherited from" indicator when dependency edge exists', () => {
+    // api.query has: delegate field with inheritFrom='dependency.name'
+    // When a dependency edge source→api.query exists, resolveInheritedValue returns the
+    // source node's label. PropertyPanel renders "inherited from <sourceName>".
     act(() => {
-      useWorkflowStore.getState().addNode('http.server', { x: 0, y: 0 });
-      useWorkflowStore.getState().addNode('http.router', { x: 200, y: 0 });
+      useWorkflowStore.getState().addNode('database.workflow', { x: 0, y: 0 });
+      useWorkflowStore.getState().addNode('api.query', { x: 200, y: 0 });
     });
     const nodes = useWorkflowStore.getState().nodes;
+    const sourceNode = nodes[0]; // database.workflow — the dependency source
+    const targetNode = nodes[1]; // api.query — selected node
     act(() => {
       useWorkflowStore.setState((s) => ({
         edges: [
           ...s.edges,
           {
             id: 'e-dep-test',
-            source: nodes[0].id,
-            target: nodes[1].id,
+            source: sourceNode.id,
+            target: targetNode.id,
             data: { edgeType: 'dependency' },
           },
         ],
       }));
-      useWorkflowStore.getState().setSelectedNode(nodes[1].id);
+      useWorkflowStore.getState().setSelectedNode(targetNode.id);
     });
     render(<PropertyPanel />);
-    // If any field has inheritFrom, "inherited from" should appear
-    // (http.router may not have inheritFrom fields — just assert no crash)
-    expect(screen.getByText('Properties')).toBeInTheDocument();
+    // The "inherited from <sourceName>" indicator should be visible for the delegate field
+    expect(screen.getByText(`inherited from ${sourceNode.data.label}`)).toBeInTheDocument();
   });
 });
 

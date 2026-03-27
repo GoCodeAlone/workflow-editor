@@ -44,6 +44,7 @@ describe('JSON field tech debt audit', () => {
         console.log(`  ${type}.${field}`);
       }
     }
-    // No hard assertion — this test exists to log and track the issue
+    // Track current count — should only decrease as fields gain defaults or are converted
+    expect(missingDefaults.length).toBeLessThanOrEqual(58);
   });
 });
