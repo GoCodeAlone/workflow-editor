@@ -22,6 +22,8 @@ import useModuleSchemaStore from '../../stores/moduleSchemaStore.ts';
 import useUILayoutStore from '../../stores/uiLayoutStore.ts';
 import { configToYaml } from '../../utils/serialization.ts';
 import type { WorkflowEdgeData } from '../../types/workflow.ts';
+import type { MultiFileYamlLineMap } from '../../utils/yamlLineMap.ts';
+import { resolveNodeSourceLocation } from '../../utils/navigation.ts';
 import { computeContainerView } from '../../utils/grouping.ts';
 import { computeFileGroups } from '../../utils/fileGroups.ts';
 import { isTypeCompatible, getOutputTypes, getInputTypes, getCompatibleNodes, canAcceptIncoming, canAcceptOutgoing } from '../../utils/connectionCompatibility.ts';
@@ -43,7 +45,9 @@ interface ContextMenuState {
 
 interface WorkflowCanvasProps {
   onSave?: (yaml: string) => Promise<void>;
-  onNavigateToSource?: (line: number, col: number) => void;
+  onNavigateToSource?: (...args: [number, number] | [string | null, number, number]) => void;
+  lineMap?: MultiFileYamlLineMap;
+  sourceMap?: Map<string, string>;
 }
 
 export default function WorkflowCanvas(props: WorkflowCanvasProps) {
@@ -217,6 +221,20 @@ export default function WorkflowCanvas(props: WorkflowCanvasProps) {
       onConnect(connection);
     },
     [onConnect]
+  );
+
+  const handleNodeClick = useCallback(
+    (_event: React.MouseEvent, node: RFNode) => {
+      if (!props.onNavigateToSource || !props.lineMap) return;
+      const workflowNode = nodes.find((n) => n.id === node.id);
+      if (!workflowNode) return;
+      const sm = props.sourceMap ?? new Map<string, string>();
+      const loc = resolveNodeSourceLocation(workflowNode, props.lineMap, sm);
+      if (loc) {
+        props.onNavigateToSource(loc.filePath, loc.line, loc.col);
+      }
+    },
+    [nodes, props.onNavigateToSource, props.lineMap, props.sourceMap]
   );
 
   const handleNodeDoubleClick = useCallback(
@@ -553,6 +571,7 @@ export default function WorkflowCanvas(props: WorkflowCanvasProps) {
         onEdgeContextMenu={handleEdgeContextMenu}
         onNodeContextMenu={handleNodeContextMenu}
         onPaneClick={handlePaneClick}
+        onNodeClick={handleNodeClick}
         onNodeDoubleClick={handleNodeDoubleClick}
         nodeTypes={nodeTypes}
         edgeTypes={edgeTypes}

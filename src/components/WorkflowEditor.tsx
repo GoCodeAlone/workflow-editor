@@ -10,7 +10,7 @@ import useUILayoutStore from '../stores/uiLayoutStore.ts';
 import ToastContainer from './ToastContainer.tsx';
 import { parseYamlSafe, configToYaml, resolveImports, hasFileReferences } from '../utils/serialization.ts';
 import { applyMode } from '../modes/defaultMode.ts';
-import { buildYamlLineMap } from '../utils/yamlLineMap.ts';
+import { buildYamlLineMap, buildMultiFileLineMap } from '../utils/yamlLineMap.ts';
 import { YamlSidePane } from './yaml/YamlSidePane.tsx';
 import { useEffect, useRef, useState, useMemo } from 'react';
 
@@ -150,6 +150,15 @@ export function WorkflowEditor(props: WorkflowEditorProps) {
     return buildYamlLineMap(fileContent)[label];
   }, [showYamlPane, selectedNodeId, nodes, yamlFiles, activeYamlFile]);
 
+  // Multi-file line map for node click → navigate to source
+  const multiFileLineMap = useMemo(() => {
+    if (!onNavigateToSource) return undefined;
+    const fileMap = exportToFileMap();
+    if (fileMap.size === 0) return undefined;
+    return buildMultiFileLineMap(fileMap);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [onNavigateToSource, nodes, exportToFileMap]);
+
   // When a YAML line is clicked, select the corresponding node on canvas
   const setSelectedNode = useWorkflowStore((s) => s.setSelectedNode);
   const handleYamlLineClick = useMemo(() => {
@@ -208,6 +217,8 @@ export function WorkflowEditor(props: WorkflowEditorProps) {
           <WorkflowCanvas
             onSave={onSave}
             onNavigateToSource={onNavigateToSource}
+            lineMap={multiFileLineMap}
+            sourceMap={storeSourceMap}
           />
         </div>
         {!propertyPanelCollapsed && (
