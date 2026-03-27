@@ -1,0 +1,45 @@
+modules:
+  - name: billing-db
+    type: database.postgres
+    config:
+      host: localhost
+      port: 5432
+      database: billing
+  - name: stripe
+    type: integration.http_client
+    config:
+      base_url: https://api.stripe.com
+  - name: charge-handler
+    type: api.command
+    config:
+      pipeline: charge
+  - name: refund-handler
+    type: api.command
+    config:
+      pipeline: refund
+
+pipelines:
+  charge:
+    steps:
+      - name: parse
+        type: step.request_parse
+      - name: validate
+        type: step.validate
+      - name: create-charge
+        type: step.http_request
+      - name: record
+        type: step.db_exec
+      - name: respond
+        type: step.json_response
+  refund:
+    steps:
+      - name: parse
+        type: step.request_parse
+      - name: validate
+        type: step.validate
+      - name: process-refund
+        type: step.http_request
+      - name: record
+        type: step.db_exec
+      - name: respond
+        type: step.json_response

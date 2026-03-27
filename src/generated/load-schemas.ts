@@ -1,5 +1,5 @@
 import engineData from './engine-schemas.json';
-import type { ModuleTypeInfo, IOPort } from '../types/workflow';
+import type { ModuleTypeInfo, IOPort, ConfigFieldDef } from '../types/workflow';
 
 interface EngineModuleSchema {
   type: string;
@@ -8,14 +8,24 @@ interface EngineModuleSchema {
   description?: string;
   inputs?: { name: string; type: string; description?: string }[];
   outputs?: { name: string; type: string; description?: string }[];
-  configFields: any[];
+  configFields: ConfigFieldDef[];
   defaultConfig?: Record<string, unknown>;
   maxIncoming?: number | null;
   maxOutgoing?: number | null;
 }
 
+interface EngineStepSchema {
+  type: string;
+  plugin?: string;
+  description: string;
+  configFields: ConfigFieldDef[];
+  outputs?: { key: string; type: string; description?: string }[];
+  readKeys?: string[];
+}
+
 interface EngineSchemas {
   moduleSchemas: Record<string, EngineModuleSchema>;
+  stepSchemas: Record<string, EngineStepSchema>;
   coercionRules: Record<string, string[]>;
 }
 
@@ -48,4 +58,26 @@ export function getEngineModuleTypes(): Record<string, ModuleTypeInfo> {
 
 export function getEngineCoercionRules(): Record<string, string[]> {
   return data.coercionRules;
+}
+
+export interface StepTypeInfo {
+  type: string;
+  plugin?: string;
+  description: string;
+  configFields: ConfigFieldDef[];
+  outputs: { key: string; type: string; description?: string }[];
+}
+
+export function getEngineStepTypes(): Record<string, StepTypeInfo> {
+  const result: Record<string, StepTypeInfo> = {};
+  for (const [type, schema] of Object.entries(data.stepSchemas ?? {})) {
+    result[type] = {
+      type: schema.type,
+      plugin: schema.plugin,
+      description: schema.description,
+      configFields: schema.configFields ?? [],
+      outputs: schema.outputs ?? [],
+    };
+  }
+  return result;
 }

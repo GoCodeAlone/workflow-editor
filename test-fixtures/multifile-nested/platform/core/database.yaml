@@ -1,0 +1,14 @@
+modules:
+  - name: primary-db
+    type: database.postgres
+    config:
+      host: localhost
+      port: 5432
+      database: platform
+  - name: replica-db
+    type: database.postgres
+    config:
+      host: replica.localhost
+      port: 5432
+      database: platform
+      read_only: true

@@ -1,0 +1,35 @@
+modules:
+  - name: email-svc
+    type: integration.http_client
+    config:
+      base_url: https://api.sendgrid.com
+  - name: sms-svc
+    type: integration.http_client
+    config:
+      base_url: https://api.twilio.com
+  - name: send-email-handler
+    type: api.command
+    config:
+      pipeline: send-email
+
+pipelines:
+  send-email:
+    steps:
+      - name: parse
+        type: step.request_parse
+      - name: validate
+        type: step.validate
+      - name: send
+        type: step.http_request
+      - name: respond
+        type: step.json_response
+  send-sms:
+    steps:
+      - name: parse
+        type: step.request_parse
+      - name: validate
+        type: step.validate
+      - name: send
+        type: step.http_request
+      - name: respond
+        type: step.json_response

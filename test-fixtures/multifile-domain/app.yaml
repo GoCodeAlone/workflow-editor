@@ -1,0 +1,30 @@
+application:
+  name: my-platform
+  version: 3.0.0
+
+imports:
+  - domains/auth.yaml
+  - domains/billing.yaml
+  - domains/notifications.yaml
+  - shared/infra.yaml
+
+workflows:
+  http:
+    server: http-server
+    router: router
+    routes:
+      - method: POST
+        path: /api/auth/login
+        handler: login-handler
+      - method: POST
+        path: /api/auth/register
+        handler: register-handler
+      - method: POST
+        path: /api/billing/charge
+        handler: charge-handler
+      - method: POST
+        path: /api/billing/refund
+        handler: refund-handler
+      - method: POST
+        path: /api/notify/email
+        handler: send-email-handler

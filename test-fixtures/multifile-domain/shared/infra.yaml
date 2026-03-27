@@ -1,0 +1,12 @@
+modules:
+  - name: http-server
+    type: http.server
+    config:
+      port: 8080
+  - name: router
+    type: http.router
+    config: {}
+  - name: logger
+    type: observability.logger
+    config:
+      level: info

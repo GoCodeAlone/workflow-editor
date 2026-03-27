@@ -1,0 +1,31 @@
+pipelines:
+  user-service:
+    steps:
+      - name: parse
+        type: step.request_parse
+      - name: validate
+        type: step.validate
+      - name: query
+        type: step.db_query
+      - name: respond
+        type: step.json_response
+  order-service:
+    steps:
+      - name: parse
+        type: step.request_parse
+      - name: validate
+        type: step.validate
+      - name: create-order
+        type: step.db_exec
+      - name: publish-event
+        type: step.publish
+      - name: respond
+        type: step.json_response
+  product-service:
+    steps:
+      - name: parse
+        type: step.request_parse
+      - name: query
+        type: step.db_query
+      - name: respond
+        type: step.json_response

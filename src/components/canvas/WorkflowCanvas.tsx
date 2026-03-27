@@ -13,6 +13,7 @@ import {
   type OnConnectStart,
   type OnConnectEnd,
   type IsValidConnection,
+  type OnNodesChange,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import useNodeTypeRegistry from '../../stores/nodeTypeRegistry.ts';
@@ -22,7 +23,10 @@ import useModuleSchemaStore from '../../stores/moduleSchemaStore.ts';
 import useUILayoutStore from '../../stores/uiLayoutStore.ts';
 import { configToYaml } from '../../utils/serialization.ts';
 import type { WorkflowEdgeData } from '../../types/workflow.ts';
+import type { MultiFileYamlLineMap } from '../../utils/yamlLineMap.ts';
+import { resolveNodeSourceLocation } from '../../utils/navigation.ts';
 import { computeContainerView } from '../../utils/grouping.ts';
+import { computeFileGroups } from '../../utils/fileGroups.ts';
 import { isTypeCompatible, getOutputTypes, getInputTypes, getCompatibleNodes, canAcceptIncoming, canAcceptOutgoing } from '../../utils/connectionCompatibility.ts';
 import { findSnapCandidate } from '../../utils/snapToConnect.ts';
 import ConnectionPicklist from './ConnectionPicklist.tsx';
@@ -42,7 +46,9 @@ interface ContextMenuState {
 
 interface WorkflowCanvasProps {
   onSave?: (yaml: string) => Promise<void>;
-  onNavigateToSource?: (line: number, col: number) => void;
+  onNavigateToSource?: (...args: [number, number] | [string | null, number, number]) => void;
+  lineMap?: MultiFileYamlLineMap;
+  sourceMap?: Map<string, string>;
 }
 
 export default function WorkflowCanvas(props: WorkflowCanvasProps) {
@@ -78,6 +84,7 @@ export default function WorkflowCanvas(props: WorkflowCanvasProps) {
 
   const propertyPanelCollapsed = useUILayoutStore((s) => s.propertyPanelCollapsed);
   const setPropertyPanelCollapsed = useUILayoutStore((s) => s.setPropertyPanelCollapsed);
+  const storeSourceMap = useWorkflowStore((s) => s.sourceMap);
 
   const { screenToFlowPosition, getViewport } = useReactFlow();
   const wrapperRef = useRef<HTMLDivElement>(null);
@@ -149,11 +156,47 @@ export default function WorkflowCanvas(props: WorkflowCanvasProps) {
   }, [edges, selectedEdgeId, getEdgeStyle]);
 
   const { nodes: displayNodes, edges: displayEdges } = useMemo(() => {
+    let baseNodes = nodes;
+    let baseEdges = styledEdges;
+
     if (viewLevel === 'container' && nodes.length > 0) {
-      return computeContainerView(nodes, styledEdges);
+      const containerView = computeContainerView(nodes, styledEdges);
+      baseNodes = containerView.nodes;
+      baseEdges = containerView.edges;
     }
-    return { nodes, edges: styledEdges };
-  }, [viewLevel, nodes, styledEdges]);
+
+    // Prepend file group overlay nodes when multiple source files are present
+    const fileGroups = computeFileGroups(nodes, storeSourceMap);
+    if (fileGroups.length > 0) {
+      const groupOverlays: RFNode[] = fileGroups.map((group) => ({
+        id: `__file-group__${group.filePath}`,
+        type: 'fileGroup',
+        position: { x: group.bounds.x, y: group.bounds.y },
+        width: group.bounds.width,
+        height: group.bounds.height,
+        style: {
+          width: group.bounds.width,
+          height: group.bounds.height,
+          pointerEvents: 'none' as const,
+        },
+        zIndex: -1,
+        data: {
+          label: group.filePath.split('/').pop() ?? group.filePath,
+          filePath: group.filePath,
+          color: group.color,
+          onNavigate: props.onNavigateToSource
+            ? (filePath: string) => props.onNavigateToSource!(filePath, 1, 0)
+            : undefined,
+        },
+        selectable: false,
+        draggable: false,
+        focusable: false,
+      }));
+      return { nodes: [...groupOverlays, ...baseNodes], edges: baseEdges };
+    }
+
+    return { nodes: baseNodes, edges: baseEdges };
+  }, [viewLevel, nodes, styledEdges, storeSourceMap]);
 
   const handleDragOver = useCallback((event: DragEvent) => {
     event.preventDefault();
@@ -184,6 +227,20 @@ export default function WorkflowCanvas(props: WorkflowCanvasProps) {
       onConnect(connection);
     },
     [onConnect]
+  );
+
+  const handleNodeClick = useCallback(
+    (_event: React.MouseEvent, node: RFNode) => {
+      if (!props.onNavigateToSource || !props.lineMap) return;
+      const workflowNode = nodes.find((n) => n.id === node.id);
+      if (!workflowNode) return;
+      const sm = props.sourceMap ?? new Map<string, string>();
+      const loc = resolveNodeSourceLocation(workflowNode, props.lineMap, sm);
+      if (loc) {
+        props.onNavigateToSource(loc.filePath, loc.line, loc.col);
+      }
+    },
+    [nodes, props.onNavigateToSource, props.lineMap, props.sourceMap]
   );
 
   const handleNodeDoubleClick = useCallback(
@@ -508,7 +565,7 @@ export default function WorkflowCanvas(props: WorkflowCanvasProps) {
       <ReactFlow
         nodes={displayNodes}
         edges={displayEdges}
-        onNodesChange={onNodesChange}
+        onNodesChange={onNodesChange as OnNodesChange<RFNode>}
         onEdgesChange={onEdgesChange}
         onConnect={handleConnect}
         onConnectStart={handleConnectStart}
@@ -520,6 +577,7 @@ export default function WorkflowCanvas(props: WorkflowCanvasProps) {
         onEdgeContextMenu={handleEdgeContextMenu}
         onNodeContextMenu={handleNodeContextMenu}
         onPaneClick={handlePaneClick}
+        onNodeClick={handleNodeClick}
         onNodeDoubleClick={handleNodeDoubleClick}
         nodeTypes={nodeTypes}
         edgeTypes={edgeTypes}

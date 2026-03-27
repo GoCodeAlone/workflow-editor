@@ -1,0 +1,31 @@
+modules:
+  - name: payment-gateway
+    type: integration.http_client
+    config:
+      base_url: https://api.stripe.com
+
+pipelines:
+  charge:
+    steps:
+      - name: parse
+        type: step.request_parse
+      - name: validate
+        type: step.validate
+      - name: process
+        type: step.http_request
+      - name: record
+        type: step.db_exec
+      - name: respond
+        type: step.json_response
+  refund:
+    steps:
+      - name: parse
+        type: step.request_parse
+      - name: validate
+        type: step.validate
+      - name: process
+        type: step.http_request
+      - name: record
+        type: step.db_exec
+      - name: respond
+        type: step.json_response

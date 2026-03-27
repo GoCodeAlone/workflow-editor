@@ -35,6 +35,9 @@ jobs:
       - name: Export editor schemas
         run: wfctl editor-schemas --output src/generated/engine-schemas.json
 
+      - name: Export DSL reference
+        run: wfctl dsl-reference > src/generated/dsl-reference.json
+
       - name: Bump version
         run: |
           WORKFLOW_VERSION="${{ github.event.client_payload.version }}"

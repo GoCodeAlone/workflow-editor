@@ -66,8 +66,11 @@ export interface WorkflowEditorProps {
    *  If multi-file resolution is active, fileMap contains relative-path → YAML for each file.
    *  The null key in fileMap represents the main/open file. */
   onSave?: (yaml: string, fileMap?: Map<string | null, string>) => Promise<void>;
-  /** Called when user clicks a node — host should navigate to the YAML line */
-  onNavigateToSource?: (line: number, col: number) => void;
+  /** Called when user clicks a node — host should navigate to the YAML line.
+   *  Backward-compatible overload: (line, col) for single-file; (filePath, line, col) for multi-file. */
+  onNavigateToSource?: (...args: [number, number] | [string | null, number, number]) => void;
+  /** Called when the editor requests focus on a specific node by id (e.g. from IDE → editor direction). */
+  onNodeFocusRequest?: (nodeId: string) => void;
   /** Called when editor needs schema data (module types, step types) */
   onSchemaRequest?: () => Promise<ModuleSchemaData | null>;
   /** Called when editor needs plugin schemas */
@@ -96,6 +99,11 @@ export interface WorkflowEditorProps {
   /** Called to save changes to a specific imported file.
    *  When provided and sourceMap is set, the editor calls this for each non-main file on save. */
   onSaveToFile?: (filePath: string, content: string) => void;
+  /** When true, renders a YAML side-pane to the right of the canvas showing file contents.
+   *  Node selection highlights the corresponding line range in the active file tab. */
+  showYamlPane?: boolean;
+  /** When true, renders the DSL Reference pane to the right of the canvas. */
+  showDslReference?: boolean;
 }
 
 /** Context sent to the host IDE's AI when user clicks AI Design */

@@ -1,0 +1,35 @@
+modules:
+  - name: http-server
+    type: http.server
+    config:
+      port: 8080
+  - name: router
+    type: http.router
+    config: {}
+  - name: user-handler
+    type: api.query
+    config:
+      pipeline: user-service
+  - name: order-handler
+    type: api.command
+    config:
+      pipeline: order-service
+  - name: product-handler
+    type: api.query
+    config:
+      pipeline: product-service
+
+workflows:
+  http:
+    server: http-server
+    router: router
+    routes:
+      - method: GET
+        path: /api/users
+        handler: user-handler
+      - method: POST
+        path: /api/orders
+        handler: order-handler
+      - method: GET
+        path: /api/products
+        handler: product-handler

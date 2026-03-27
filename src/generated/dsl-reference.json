@@ -1,0 +1,227 @@
+{
+  "sections": [
+    {
+      "id": "application",
+      "title": "Application",
+      "description": "The top-level application block defines the identity and requirements of your workflow application. It sets the name, version, and declares any required external capabilities.",
+      "requiredFields": [
+        { "name": "name", "type": "string", "description": "Unique application identifier" }
+      ],
+      "optionalFields": [
+        { "name": "version", "type": "string", "description": "Application version string (e.g. '1.0.0')" },
+        { "name": "requires", "type": "string[]", "description": "List of required capabilities or feature flags" }
+      ],
+      "example": "name: my-app\nversion: \"1.0.0\"\nrequires:\n  - messaging\n  - database",
+      "relationships": [
+        "The application name is used as a namespace for module resolution",
+        "Required capabilities must be satisfied by the platform configuration"
+      ],
+      "parent": null
+    },
+    {
+      "id": "modules",
+      "title": "Modules",
+      "description": "Modules are the building blocks of a workflow application. Each module represents a runtime service component such as an HTTP server, database connection, message broker, or pipeline step.",
+      "requiredFields": [
+        { "name": "name", "type": "string", "description": "Unique identifier for this module instance" },
+        { "name": "type", "type": "string", "description": "Module type from the registry (e.g. 'http.server', 'database.workflow')" }
+      ],
+      "optionalFields": [
+        { "name": "config", "type": "map", "description": "Type-specific configuration key-value pairs" },
+        { "name": "dependsOn", "type": "string[]", "description": "Module names this module depends on — controls initialization order" },
+        { "name": "branches", "type": "map", "description": "Conditional routing to other modules" }
+      ],
+      "example": "modules:\n  - name: api-server\n    type: http.server\n    config:\n      address: \":8080\"\n  - name: db\n    type: database.workflow\n    config:\n      driver: postgres\n      dsn: \"${DATABASE_URL}\"\n    dependsOn:\n      - api-server",
+      "relationships": [
+        "Modules are referenced by workflows.http.routes[].handler",
+        "Modules can reference pipelines via their config",
+        "Module names must be unique across all imported files"
+      ],
+      "parent": null
+    },
+    {
+      "id": "workflows",
+      "title": "Workflows",
+      "description": "The workflows section groups all event-driven entrypoints into your application. It contains sub-sections for HTTP, messaging, state machine, and event-based workflows.",
+      "requiredFields": [],
+      "optionalFields": [
+        { "name": "http", "type": "map", "description": "HTTP server and router configuration" },
+        { "name": "messaging", "type": "map", "description": "Message broker subscriptions and topics" },
+        { "name": "statemachine", "type": "map", "description": "State machine engine definitions and transitions" },
+        { "name": "events", "type": "map", "description": "Event processor handlers and adapters" }
+      ],
+      "example": "workflows:\n  http:\n    server: api-server\n    router: api-router\n    routes:\n      - method: GET\n        path: /health\n        handler: health-check",
+      "relationships": [
+        "Workflow handlers reference module names defined in the modules section",
+        "Routes can inline pipeline definitions or reference named pipelines"
+      ],
+      "parent": null
+    },
+    {
+      "id": "workflows-http",
+      "title": "Workflows > HTTP",
+      "description": "HTTP workflow configuration defines an HTTP server, router, route table, and optional middleware chains. Routes map HTTP methods and paths to handler modules or inline pipelines.",
+      "requiredFields": [
+        { "name": "server", "type": "string", "description": "Name of the http.server module to bind routes to" }
+      ],
+      "optionalFields": [
+        { "name": "router", "type": "string", "description": "Name of the http.router module" },
+        { "name": "routes", "type": "RouteConfig[]", "description": "List of route definitions (method, path, handler/pipeline)" },
+        { "name": "middleware", "type": "string[]", "description": "Ordered list of middleware module names applied to all routes" }
+      ],
+      "example": "workflows:\n  http:\n    server: api-server\n    router: api-router\n    middleware:\n      - auth-middleware\n    routes:\n      - method: POST\n        path: /users\n        pipeline:\n          steps:\n            - name: validate\n              type: step.validate\n            - name: create-user\n              type: step.db_query",
+      "relationships": [
+        "server must reference a module of type http.server",
+        "router must reference a module of type http.router",
+        "middleware entries must reference modules of a middleware-compatible type"
+      ],
+      "parent": "workflows"
+    },
+    {
+      "id": "workflows-messaging",
+      "title": "Workflows > Messaging",
+      "description": "Messaging workflows connect your application to message brokers. Define subscriptions that trigger pipelines when messages arrive on configured topics.",
+      "requiredFields": [
+        { "name": "broker", "type": "string", "description": "Name of the messaging broker module" }
+      ],
+      "optionalFields": [
+        { "name": "subscriptions", "type": "Subscription[]", "description": "List of topic subscriptions with pipeline handlers" },
+        { "name": "topics", "type": "TopicConfig[]", "description": "Topic definitions for publishing" }
+      ],
+      "example": "workflows:\n  messaging:\n    broker: kafka-broker\n    subscriptions:\n      - topic: user-events\n        group: user-processor\n        pipeline:\n          steps:\n            - name: process\n              type: step.transform",
+      "relationships": [
+        "broker must reference a module of a messaging broker type",
+        "Subscription pipelines follow the same step schema as HTTP route pipelines"
+      ],
+      "parent": "workflows"
+    },
+    {
+      "id": "workflows-statemachine",
+      "title": "Workflows > State Machine",
+      "description": "State machine workflows define finite state automata with named states and transition conditions. The engine processes events and drives state transitions.",
+      "requiredFields": [
+        { "name": "engine", "type": "string", "description": "Name of the state machine engine module" }
+      ],
+      "optionalFields": [
+        { "name": "definitions", "type": "StateMachineDefinition[]", "description": "Named state machine definitions with states and transitions" }
+      ],
+      "example": "workflows:\n  statemachine:\n    engine: order-sm\n    definitions:\n      - name: order-lifecycle\n        initial: pending\n        states:\n          - name: pending\n            on:\n              CONFIRM: confirmed\n          - name: confirmed\n            on:\n              SHIP: shipped",
+      "relationships": [
+        "engine must reference a module of type statemachine.engine",
+        "State names must be unique within a definition"
+      ],
+      "parent": "workflows"
+    },
+    {
+      "id": "workflows-events",
+      "title": "Workflows > Events",
+      "description": "Event workflows respond to domain events via an event processor module. Handlers map event types to pipeline handlers.",
+      "requiredFields": [
+        { "name": "processor", "type": "string", "description": "Name of the event processor module" }
+      ],
+      "optionalFields": [
+        { "name": "handlers", "type": "EventHandler[]", "description": "List of event type to pipeline mappings" },
+        { "name": "adapters", "type": "string[]", "description": "Adapter module names for event source integration" }
+      ],
+      "example": "workflows:\n  events:\n    processor: event-bus\n    handlers:\n      - event: user.created\n        pipeline:\n          steps:\n            - name: send-welcome\n              type: step.http_request",
+      "relationships": [
+        "processor must reference a module of type events.processor",
+        "Event names are matched against the processor's configured event schema"
+      ],
+      "parent": "workflows"
+    },
+    {
+      "id": "pipelines",
+      "title": "Pipelines",
+      "description": "Pipelines are named sequences of steps that process data through transformations, queries, HTTP calls, and flow control. They can be defined inline in workflows or as named top-level reusable pipelines.",
+      "requiredFields": [
+        { "name": "steps", "type": "Step[]", "description": "Ordered list of pipeline steps" }
+      ],
+      "optionalFields": [
+        { "name": "timeout", "type": "string", "description": "Maximum duration for the entire pipeline (e.g. '30s')" },
+        { "name": "retry", "type": "RetryConfig", "description": "Retry policy for transient failures" }
+      ],
+      "example": "pipelines:\n  create-user:\n    steps:\n      - name: validate-input\n        type: step.validate\n        config:\n          schema: user-schema\n      - name: insert-record\n        type: step.db_query\n        config:\n          query: \"INSERT INTO users ...\"\n      - name: publish-event\n        type: step.publish\n        config:\n          topic: user-events",
+      "relationships": [
+        "Named pipelines can be referenced by workflows using 'pipeline: ref: <name>'",
+        "Steps can use template expressions like '{{ .input.field }}' to reference previous step outputs",
+        "Steps of type step.branch enable conditional flow control"
+      ],
+      "parent": null
+    },
+    {
+      "id": "triggers",
+      "title": "Triggers",
+      "description": "Triggers define how external events initiate pipeline execution. Supported trigger types include HTTP (inline), cron schedules, and domain events.",
+      "requiredFields": [
+        { "name": "type", "type": "string", "description": "Trigger type: 'http', 'cron', or 'event'" }
+      ],
+      "optionalFields": [
+        { "name": "schedule", "type": "string", "description": "Cron expression for scheduled triggers (e.g. '0 * * * *')" },
+        { "name": "event", "type": "string", "description": "Event name to listen for (event triggers)" },
+        { "name": "pipeline", "type": "PipelineRef", "description": "Pipeline to execute when triggered" }
+      ],
+      "example": "triggers:\n  - type: cron\n    schedule: \"0 9 * * MON-FRI\"\n    pipeline:\n      ref: daily-report\n  - type: event\n    event: user.signup\n    pipeline:\n      ref: welcome-flow",
+      "relationships": [
+        "Cron triggers run in the UTC timezone by default",
+        "Referenced pipelines must be defined in the top-level pipelines section"
+      ],
+      "parent": null
+    },
+    {
+      "id": "imports",
+      "title": "Imports",
+      "description": "Imports allow splitting a large workflow configuration across multiple YAML files. Imported files are merged at runtime, enabling modular organization of modules, pipelines, and workflows.",
+      "requiredFields": [
+        { "name": "file", "type": "string", "description": "Relative path to the imported YAML file" }
+      ],
+      "optionalFields": [
+        { "name": "alias", "type": "string", "description": "Optional namespace alias for imported resources" }
+      ],
+      "example": "imports:\n  - file: ./services/auth.yaml\n  - file: ./services/payments.yaml\n  - file: ./pipelines/notifications.yaml",
+      "relationships": [
+        "Imported files are resolved relative to the importing file's directory",
+        "Module names must remain unique across all imported files",
+        "Circular imports are not supported"
+      ],
+      "parent": null
+    },
+    {
+      "id": "config-providers",
+      "title": "Config Providers",
+      "description": "Config providers supply configuration values to modules at startup. They support static defaults, environment variables, and external file sources. Multiple providers are merged in order.",
+      "requiredFields": [
+        { "name": "type", "type": "string", "description": "Provider type: 'defaults', 'env', or 'file'" }
+      ],
+      "optionalFields": [
+        { "name": "values", "type": "map", "description": "Static key-value pairs (type: defaults)" },
+        { "name": "prefix", "type": "string", "description": "Environment variable prefix to strip (type: env)" },
+        { "name": "path", "type": "string", "description": "Path to the config file (type: file)" },
+        { "name": "format", "type": "string", "description": "File format: 'yaml', 'json', 'toml' (type: file)" }
+      ],
+      "example": "configProviders:\n  - type: defaults\n    values:\n      port: 8080\n      logLevel: info\n  - type: env\n    prefix: APP_\n  - type: file\n    path: ./config.local.yaml\n    format: yaml",
+      "relationships": [
+        "Later providers override values from earlier providers",
+        "Environment variable names are uppercased and dots replaced with underscores"
+      ],
+      "parent": null
+    },
+    {
+      "id": "platform",
+      "title": "Platform / Infrastructure / Sidecars",
+      "description": "Infrastructure-as-code sections declare the deployment environment for your workflow application. These sections are consumed by the platform layer to provision resources, configure networking, and attach sidecar services.",
+      "requiredFields": [],
+      "optionalFields": [
+        { "name": "platform", "type": "PlatformConfig", "description": "Target runtime platform configuration" },
+        { "name": "infrastructure", "type": "InfrastructureConfig", "description": "Cloud resources (databases, queues, storage) to provision" },
+        { "name": "sidecars", "type": "SidecarConfig[]", "description": "Auxiliary containers to run alongside the application" }
+      ],
+      "example": "platform:\n  type: kubernetes\n  namespace: production\n  replicas: 3\n\ninfrastructure:\n  postgres:\n    type: rds\n    size: db.t3.medium\n\nsidecars:\n  - name: metrics-exporter\n    image: prom/node-exporter:latest",
+      "relationships": [
+        "Platform configuration is environment-specific and typically sourced via config providers",
+        "Infrastructure resources are referenced by modules via their names"
+      ],
+      "parent": null
+    }
+  ]
+}

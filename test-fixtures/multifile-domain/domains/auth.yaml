@@ -1,0 +1,42 @@
+modules:
+  - name: auth-db
+    type: database.postgres
+    config:
+      host: localhost
+      port: 5432
+      database: auth
+  - name: auth-cache
+    type: nosql.redis
+    config:
+      host: localhost
+      port: 6379
+  - name: login-handler
+    type: api.query
+    config:
+      pipeline: login
+  - name: register-handler
+    type: api.command
+    config:
+      pipeline: register
+
+pipelines:
+  login:
+    steps:
+      - name: parse
+        type: step.request_parse
+      - name: validate
+        type: step.validate
+      - name: authenticate
+        type: step.auth_validate
+      - name: respond
+        type: step.json_response
+  register:
+    steps:
+      - name: parse
+        type: step.request_parse
+      - name: validate
+        type: step.validate
+      - name: insert
+        type: step.db_exec
+      - name: respond
+        type: step.json_response

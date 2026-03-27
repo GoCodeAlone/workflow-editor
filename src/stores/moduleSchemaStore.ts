@@ -1,6 +1,5 @@
 import { create } from 'zustand';
 import type { ModuleTypeInfo, ConfigFieldDef, ModuleCategory, IOSignature } from '../types/workflow.ts';
-import { MODULE_TYPES, MODULE_TYPE_MAP as STATIC_MODULE_TYPE_MAP } from '../types/workflow.ts';
 import type { PluginSchemaData, ServerModuleSchema as EditorServerModuleSchema } from '../types/editor.ts';
 import { getEngineModuleTypes } from '../generated/load-schemas';
 
@@ -55,9 +54,9 @@ interface ModuleSchemaState {
   loading: boolean;
   /** Server-provided schemas keyed by module type */
   serverSchemas: Record<string, ServerModuleSchema>;
-  /** Merged MODULE_TYPES array (server schemas take priority for configFields) */
+  /** Module types array (server schemas take priority for configFields) */
   moduleTypes: ModuleTypeInfo[];
-  /** Merged MODULE_TYPE_MAP */
+  /** Module type map keyed by type string */
   moduleTypeMap: Record<string, ModuleTypeInfo>;
   /** Available services from the engine */
   services: ServiceInfo[];
@@ -143,10 +142,10 @@ function normalizeCategory(cat: string): ModuleCategory {
   return 'infrastructure';
 }
 
-/** Merge server schemas with static MODULE_TYPES.
+/** Merge engine schemas with live server schemas.
  * Server schemas take priority for: configFields, defaultConfig, label, category, description.
- * Static definitions are preserved for: ioSignature, conditional types.
- * Server-only types (not in static) are added as new entries.
+ * Engine definitions are preserved for: ioSignature, conditional types.
+ * Server-only types (not in engine schemas) are added as new entries.
  */
 function mergeSchemas(
   staticTypes: ModuleTypeInfo[],
@@ -214,13 +213,7 @@ function editorSchemaToModuleTypeInfo(
   };
 }
 
-// Engine schemas are primary, static MODULE_TYPES fills gaps
-const engineTypes = getEngineModuleTypes();
-const initial: Record<string, ModuleTypeInfo> = { ...STATIC_MODULE_TYPE_MAP };
-for (const [type, info] of Object.entries(engineTypes)) {
-  initial[type] = info;
-}
-const initialModuleTypeMap = initial;
+const initialModuleTypeMap = getEngineModuleTypes();
 const initialModuleTypes = Object.values(initialModuleTypeMap);
 
 const useModuleSchemaStore = create<ModuleSchemaState>((set, get) => ({
@@ -248,7 +241,7 @@ const useModuleSchemaStore = create<ModuleSchemaState>((set, get) => ({
         return;
       }
       const schemas: Record<string, ServerModuleSchema> = await res.json();
-      const merged = mergeSchemas(MODULE_TYPES, schemas);
+      const merged = mergeSchemas(initialModuleTypes, schemas);
       const mergedMap = Object.fromEntries(merged.map((t) => [t.type, t]));
       set({
         serverSchemas: schemas,
@@ -289,7 +282,7 @@ const useModuleSchemaStore = create<ModuleSchemaState>((set, get) => ({
   },
 
   loadSchemas: (schemas) => {
-    const merged = mergeSchemas(MODULE_TYPES, schemas);
+    const merged = mergeSchemas(initialModuleTypes, schemas);
     const mergedMap = Object.fromEntries(merged.map((t) => [t.type, t]));
     set({
       serverSchemas: schemas,
