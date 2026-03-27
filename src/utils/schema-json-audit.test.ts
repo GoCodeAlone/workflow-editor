@@ -14,20 +14,14 @@ describe('JSON field tech debt audit', () => {
     }
   }
 
-  it('tracks all json-typed fields (currently 60)', () => {
-    // This test documents the current state. Update the count as fields are
-    // converted to typed schemas in the workflow engine.
-    console.log(`JSON-typed fields: ${jsonFields.length}`);
-    for (const { type, field } of jsonFields) {
-      console.log(`  TECH DEBT: ${type}.${field} uses json textarea`);
+  it('zero json-typed fields remain', () => {
+    // All fields have been converted to typed schemas. Any new json field is a regression.
+    if (jsonFields.length > 0) {
+      for (const { type, field } of jsonFields) {
+        console.log(`  REGRESSION: ${type}.${field} uses json textarea`);
+      }
     }
-    // When STRICT_SCHEMA env var is set, fail on any json fields
-    if (process.env.STRICT_SCHEMA === 'true') {
-      expect(jsonFields.length).toBe(0);
-    } else {
-      // Document current count — should only decrease over time
-      expect(jsonFields.length).toBeLessThanOrEqual(60);
-    }
+    expect(jsonFields.length).toBe(0);
   });
 
   it('json fields have a defaultValue to help users', () => {
@@ -36,15 +30,6 @@ describe('JSON field tech debt audit', () => {
       const fieldDef = schema.configFields.find((f: any) => f.key === field);
       return fieldDef.defaultValue === undefined || fieldDef.defaultValue === null;
     });
-
-    // Log fields missing defaults — these are the worst UX (empty textarea, no hint)
-    if (missingDefaults.length > 0) {
-      console.log(`JSON fields WITHOUT defaults (worst UX): ${missingDefaults.length}`);
-      for (const { type, field } of missingDefaults) {
-        console.log(`  ${type}.${field}`);
-      }
-    }
-    // Track current count — should only decrease as fields gain defaults or are converted
-    expect(missingDefaults.length).toBeLessThanOrEqual(58);
+    expect(missingDefaults.length).toBe(0);
   });
 });
