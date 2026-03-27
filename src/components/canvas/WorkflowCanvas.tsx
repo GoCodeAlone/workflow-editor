@@ -13,6 +13,7 @@ import {
   type OnConnectStart,
   type OnConnectEnd,
   type IsValidConnection,
+  type OnNodesChange,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import useNodeTypeRegistry from '../../stores/nodeTypeRegistry.ts';
@@ -564,7 +565,7 @@ export default function WorkflowCanvas(props: WorkflowCanvasProps) {
       <ReactFlow
         nodes={displayNodes}
         edges={displayEdges}
-        onNodesChange={onNodesChange}
+        onNodesChange={onNodesChange as OnNodesChange<RFNode>}
         onEdgesChange={onEdgesChange}
         onConnect={handleConnect}
         onConnectStart={handleConnectStart}
