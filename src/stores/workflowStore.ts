@@ -11,7 +11,7 @@ import {
   addEdge as rfAddEdge,
 } from '@xyflow/react';
 import type { WorkflowConfig, WorkflowTab, CrossWorkflowLink } from '../types/workflow.ts';
-import { MODULE_TYPE_MAP as STATIC_MODULE_TYPE_MAP } from '../types/workflow.ts';
+import { MODULE_TYPE_MAP } from '../types/workflow.ts';
 import useModuleSchemaStore from './moduleSchemaStore.ts';
 import { nodesToConfig, configToNodes, nodeComponentType, exportToFiles, exportMainFileYaml } from '../utils/serialization.ts';
 import { layoutNodes } from '../utils/autoLayout.ts';
@@ -349,7 +349,7 @@ const useWorkflowStore = create<WorkflowStore>()(
 
   addNode: (moduleType, position) => {
     const schemaMap = useModuleSchemaStore.getState().moduleTypeMap;
-    const info = schemaMap[moduleType] ?? STATIC_MODULE_TYPE_MAP[moduleType];
+    const info = schemaMap[moduleType] ?? MODULE_TYPE_MAP[moduleType];
     if (!info) return;
 
     get().pushHistory();

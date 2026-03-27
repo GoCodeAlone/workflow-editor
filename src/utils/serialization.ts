@@ -13,7 +13,7 @@ import type {
   WorkflowTab,
   ModuleTypeInfo,
 } from '../types/workflow.ts';
-import { MODULE_TYPE_MAP as STATIC_MODULE_TYPE_MAP } from '../types/workflow.ts';
+import { MODULE_TYPE_MAP } from '../types/workflow.ts';
 import { layoutNodes } from './autoLayout.ts';
 
 function makeEdge(
@@ -210,7 +210,7 @@ function buildPipelineChains(pipelineFlowEdges: Edge[], nodes: WorkflowNode[]): 
 export function nodesToConfig(
   nodes: WorkflowNode[],
   edges: Edge[],
-  moduleTypeMap: Record<string, ModuleTypeInfo> = STATIC_MODULE_TYPE_MAP,
+  moduleTypeMap: Record<string, ModuleTypeInfo> = MODULE_TYPE_MAP,
   originalConfig?: WorkflowConfig,
 ): WorkflowConfig {
   // Filter out synthesized conditional nodes
@@ -545,7 +545,7 @@ export function nodesToConfig(
 
 export function configToNodes(
   config: WorkflowConfig,
-  moduleTypeMap: Record<string, ModuleTypeInfo> = STATIC_MODULE_TYPE_MAP,
+  moduleTypeMap: Record<string, ModuleTypeInfo> = MODULE_TYPE_MAP,
   sourceMap?: Map<string, string>,
 ): {
   nodes: WorkflowNode[];
@@ -1332,7 +1332,7 @@ export function hasFileReferences(yamlText: string): boolean {
 // Multi-workflow export: all tabs as a single YAML with `workflows` top-level array
 export function nodesToMultiConfig(
   tabs: WorkflowTab[],
-  moduleTypeMap: Record<string, ModuleTypeInfo> = STATIC_MODULE_TYPE_MAP,
+  moduleTypeMap: Record<string, ModuleTypeInfo> = MODULE_TYPE_MAP,
 ): string {
   const multiConfig = {
     workflows: tabs.map((tab) => {
@@ -1360,7 +1360,7 @@ interface MultiWorkflowEntry {
 
 export function multiConfigToTabs(
   yamlContent: string,
-  moduleTypeMap: Record<string, ModuleTypeInfo> = STATIC_MODULE_TYPE_MAP,
+  moduleTypeMap: Record<string, ModuleTypeInfo> = MODULE_TYPE_MAP,
 ): WorkflowTab[] {
   const parsed = yaml.load(yamlContent) as { workflows?: MultiWorkflowEntry[] };
   const entries = parsed?.workflows ?? [];

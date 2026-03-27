@@ -1,6 +1,6 @@
 import type { Edge } from '@xyflow/react';
 import type { WorkflowNode } from '../stores/workflowStore.ts';
-import { MODULE_TYPE_MAP as STATIC_MODULE_TYPE_MAP, CATEGORY_COLORS, type ModuleCategory, type ModuleTypeInfo } from '../types/workflow.ts';
+import { MODULE_TYPE_MAP, CATEGORY_COLORS, type ModuleCategory, type ModuleTypeInfo } from '../types/workflow.ts';
 
 /**
  * Transform nodes/edges into container view:
@@ -12,7 +12,7 @@ import { MODULE_TYPE_MAP as STATIC_MODULE_TYPE_MAP, CATEGORY_COLORS, type Module
 export function computeContainerView(
   nodes: WorkflowNode[],
   edges: Edge[],
-  moduleTypeMap: Record<string, ModuleTypeInfo> = STATIC_MODULE_TYPE_MAP,
+  moduleTypeMap: Record<string, ModuleTypeInfo> = MODULE_TYPE_MAP,
 ): { nodes: WorkflowNode[]; edges: Edge[] } {
   // Group nodes by category
   const groups: Record<string, WorkflowNode[]> = {};
@@ -118,7 +118,7 @@ export function computeComponentView(
 export function autoGroupOrphanedNodes(
   nodes: WorkflowNode[],
   edges: Edge[],
-  moduleTypeMap: Record<string, ModuleTypeInfo> = STATIC_MODULE_TYPE_MAP,
+  moduleTypeMap: Record<string, ModuleTypeInfo> = MODULE_TYPE_MAP,
 ): { nodes: WorkflowNode[]; edges: Edge[] } {
   // Find connected node IDs
   const connectedNodes = new Set<string>();
