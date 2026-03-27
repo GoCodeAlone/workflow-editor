@@ -171,12 +171,14 @@ export default function WorkflowCanvas(props: WorkflowCanvasProps) {
         id: `__file-group__${group.filePath}`,
         type: 'fileGroup',
         position: { x: group.bounds.x, y: group.bounds.y },
+        width: group.bounds.width,
+        height: group.bounds.height,
         style: {
           width: group.bounds.width,
           height: group.bounds.height,
           pointerEvents: 'none' as const,
-          zIndex: -1,
         },
+        zIndex: -1,
         data: {
           label: group.filePath.split('/').pop() ?? group.filePath,
           filePath: group.filePath,
