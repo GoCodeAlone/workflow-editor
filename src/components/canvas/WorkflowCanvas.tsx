@@ -23,6 +23,7 @@ import useUILayoutStore from '../../stores/uiLayoutStore.ts';
 import { configToYaml } from '../../utils/serialization.ts';
 import type { WorkflowEdgeData } from '../../types/workflow.ts';
 import { computeContainerView } from '../../utils/grouping.ts';
+import { computeFileGroups } from '../../utils/fileGroups.ts';
 import { isTypeCompatible, getOutputTypes, getInputTypes, getCompatibleNodes, canAcceptIncoming, canAcceptOutgoing } from '../../utils/connectionCompatibility.ts';
 import { findSnapCandidate } from '../../utils/snapToConnect.ts';
 import ConnectionPicklist from './ConnectionPicklist.tsx';
@@ -78,6 +79,7 @@ export default function WorkflowCanvas(props: WorkflowCanvasProps) {
 
   const propertyPanelCollapsed = useUILayoutStore((s) => s.propertyPanelCollapsed);
   const setPropertyPanelCollapsed = useUILayoutStore((s) => s.setPropertyPanelCollapsed);
+  const storeSourceMap = useWorkflowStore((s) => s.sourceMap);
 
   const { screenToFlowPosition, getViewport } = useReactFlow();
   const wrapperRef = useRef<HTMLDivElement>(null);
@@ -149,11 +151,42 @@ export default function WorkflowCanvas(props: WorkflowCanvasProps) {
   }, [edges, selectedEdgeId, getEdgeStyle]);
 
   const { nodes: displayNodes, edges: displayEdges } = useMemo(() => {
+    let baseNodes = nodes;
+    let baseEdges = styledEdges;
+
     if (viewLevel === 'container' && nodes.length > 0) {
-      return computeContainerView(nodes, styledEdges);
+      const containerView = computeContainerView(nodes, styledEdges);
+      baseNodes = containerView.nodes;
+      baseEdges = containerView.edges;
     }
-    return { nodes, edges: styledEdges };
-  }, [viewLevel, nodes, styledEdges]);
+
+    // Prepend file group overlay nodes when multiple source files are present
+    const fileGroups = computeFileGroups(nodes, storeSourceMap);
+    if (fileGroups.length > 0) {
+      const groupOverlays: RFNode[] = fileGroups.map((group) => ({
+        id: `__file-group__${group.filePath}`,
+        type: 'fileGroup',
+        position: { x: group.bounds.x, y: group.bounds.y },
+        style: {
+          width: group.bounds.width,
+          height: group.bounds.height,
+          pointerEvents: 'none' as const,
+          zIndex: -1,
+        },
+        data: {
+          label: group.filePath.split('/').pop() ?? group.filePath,
+          filePath: group.filePath,
+          color: group.color,
+        },
+        selectable: false,
+        draggable: false,
+        focusable: false,
+      }));
+      return { nodes: [...groupOverlays, ...baseNodes], edges: baseEdges };
+    }
+
+    return { nodes: baseNodes, edges: baseEdges };
+  }, [viewLevel, nodes, styledEdges, storeSourceMap]);
 
   const handleDragOver = useCallback((event: DragEvent) => {
     event.preventDefault();

@@ -13,11 +13,13 @@ import SecurityNode from './SecurityNode.tsx';
 import ObservabilityNode from './ObservabilityNode.tsx';
 import GroupNode from './GroupNode.tsx';
 import ConditionalNode from './ConditionalNode.tsx';
+import FileGroupNode from './FileGroupNode.tsx';
 
 // All HTTP-type nodes use the same general component but with different configs
 // We register them by the category key used in workflowStore's nodeComponentType()
 export const nodeTypes: NodeTypes = {
   groupNode: GroupNode,
+  fileGroup: FileGroupNode,
   httpNode: HTTPServerNode,
   httpRouterNode: HTTPRouterNode,
   messagingNode: MessagingBrokerNode,
