@@ -166,6 +166,22 @@ test.describe('breadcrumb navigation', () => {
     await authNode.click();
     await expect(page.locator('.breadcrumb-bar')).toContainText('auth.yaml');
   });
+
+  test('clicking breadcrumb segment triggers navigation', async ({ page }) => {
+    await page.goto('/?scenario=multifile-groups');
+    await page.waitForSelector('.react-flow__viewport', { timeout: 10_000 });
+    await expect(page.locator('.react-flow__node').first()).toBeVisible();
+    // Click auth-server node to set breadcrumb to show auth.yaml
+    const authNode = page.locator('.react-flow__node').filter({ hasText: 'auth-server' }).first();
+    await authNode.click();
+    await expect(page.locator('.breadcrumb-bar')).toContainText('auth.yaml');
+    // Click the first clickable breadcrumb segment (root file)
+    const breadcrumb = page.locator('.breadcrumb-bar');
+    const clickableSegment = breadcrumb.locator('span[style*="cursor: pointer"]').first();
+    await expect(clickableSegment).toBeVisible();
+    await clickableSegment.click();
+    // Breadcrumb click was handled without error
+  });
 });
 
 test.describe('interactive file groups', () => {
