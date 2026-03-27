@@ -40,7 +40,7 @@ test.describe('multi-file file group boundaries', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/?scenario=multifile-groups');
     await page.waitForSelector('.react-flow__viewport', { timeout: 10_000 });
-    await page.waitForTimeout(500);
+    await expect(page.locator('.react-flow__node').first()).toBeVisible();
   });
 
   test('renders file group overlay nodes for each source file', async ({ page }) => {
@@ -70,7 +70,7 @@ test.describe('YAML side-pane', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/?scenario=yaml-pane');
     await page.waitForSelector('.react-flow__viewport', { timeout: 10_000 });
-    await page.waitForTimeout(500);
+    await expect(page.locator('.react-flow__node').first()).toBeVisible();
   });
 
   test('renders file tabs for each source file', async ({ page }) => {
@@ -105,14 +105,13 @@ test.describe('node selection highlights YAML in side-pane', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/?scenario=yaml-pane');
     await page.waitForSelector('.react-flow__viewport', { timeout: 10_000 });
-    await page.waitForTimeout(500);
+    await expect(page.locator('.react-flow__node').first()).toBeVisible();
   });
 
   test('clicking a node switches to its source file tab', async ({ page }) => {
     const billingNode = page.locator('.react-flow__node').filter({ hasText: 'billing-service' }).first();
     await expect(billingNode).toBeVisible();
     await billingNode.click();
-    await page.waitForTimeout(200);
     const billingTab = page.locator('.yaml-tab').filter({ hasText: 'billing.yaml' });
     await expect(billingTab).toHaveClass(/yaml-tab-active/);
   });
@@ -121,7 +120,7 @@ test.describe('node selection highlights YAML in side-pane', () => {
     const authNode = page.locator('.react-flow__node').filter({ hasText: 'auth-server' }).first();
     await expect(authNode).toBeVisible();
     await authNode.click();
-    await page.waitForTimeout(200);
+    await expect(page.locator('.yaml-line-highlighted').first()).toBeVisible();
     const count = await page.locator('.yaml-line-highlighted').count();
     expect(count).toBeGreaterThan(0);
   });
@@ -131,18 +130,18 @@ test.describe('YAML line click selects canvas node', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/?scenario=yaml-pane');
     await page.waitForSelector('.react-flow__viewport', { timeout: 10_000 });
-    await page.waitForTimeout(500);
+    await expect(page.locator('.react-flow__node').first()).toBeVisible();
   });
 
   test('clicking a YAML line activates corresponding node selection (highlights YAML range)', async ({ page }) => {
     const authTab = page.locator('.yaml-tab').filter({ hasText: 'auth.yaml' });
     await authTab.click();
-    await page.waitForTimeout(200);
+    await expect(authTab).toHaveClass(/yaml-tab-active/);
 
     const nodeLine = page.locator('.yaml-line code').filter({ hasText: 'auth-server' }).first();
     await expect(nodeLine).toBeVisible();
     await nodeLine.click();
-    await page.waitForTimeout(300);
+    await expect(page.locator('.yaml-line-highlighted').first()).toBeVisible();
 
     await expect(page.locator('.yaml-tab-active').filter({ hasText: 'auth.yaml' })).toBeVisible();
     const highlightCount = await page.locator('.yaml-line-highlighted').count();
