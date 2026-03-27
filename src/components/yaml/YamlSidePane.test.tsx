@@ -71,6 +71,25 @@ describe('YamlSidePane', () => {
     expect(onLineClick).toHaveBeenCalledWith(null, 1);
   });
 
+  it('scrolls to highlighted lines when highlightRange changes', () => {
+    const scrollIntoViewMock = vi.fn();
+    // Install mock before render so all elements created get it
+    HTMLElement.prototype.scrollIntoView = scrollIntoViewMock;
+
+    render(
+      <YamlSidePane
+        files={singleFile}
+        activeFile={null}
+        onFileSelect={vi.fn()}
+        highlightRange={{ startLine: 2, endLine: 3 }}
+        visible={true}
+      />,
+    );
+
+    // scrollIntoView should have been called on the element at startLine
+    expect(scrollIntoViewMock).toHaveBeenCalled();
+  });
+
   it('does not render when visible=false', () => {
     const { container } = render(
       <YamlSidePane
