@@ -102,6 +102,8 @@ export interface WorkflowEditorProps {
   /** When true, renders a YAML side-pane to the right of the canvas showing file contents.
    *  Node selection highlights the corresponding line range in the active file tab. */
   showYamlPane?: boolean;
+  /** When true, renders the DSL Reference pane to the right of the canvas. */
+  showDslReference?: boolean;
 }
 
 /** Context sent to the host IDE's AI when user clicks AI Design */

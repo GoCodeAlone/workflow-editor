@@ -13,10 +13,13 @@ import { parseYamlSafe, configToYaml, resolveImports, hasFileReferences } from '
 import { applyMode } from '../modes/defaultMode.ts';
 import { buildYamlLineMap, buildMultiFileLineMap } from '../utils/yamlLineMap.ts';
 import { YamlSidePane } from './yaml/YamlSidePane.tsx';
+import { DslReferencePane } from './reference/DslReferencePane.tsx';
+import type { DSLSection } from './reference/DslReferencePane.tsx';
+import dslReferenceData from '../generated/dsl-reference.json';
 import { useEffect, useRef, useState, useMemo } from 'react';
 
 export function WorkflowEditor(props: WorkflowEditorProps) {
-  const { initialYaml, onSave, onNavigateToSource, onSchemaRequest, onPluginSchemaRequest, embedded, onAIRequest, onChange, onResolveFile, mode, testResults, onTestRun, sourceMap: sourceMapProp, onSaveToFile, showYamlPane } = props;
+  const { initialYaml, onSave, onNavigateToSource, onSchemaRequest, onPluginSchemaRequest, embedded, onAIRequest, onChange, onResolveFile, mode, testResults, onTestRun, sourceMap: sourceMapProp, onSaveToFile, showYamlPane, showDslReference } = props;
   const importFromConfig = useWorkflowStore((s) => s.importFromConfig);
   const exportToConfig = useWorkflowStore((s) => s.exportToConfig);
   const exportToFileMap = useWorkflowStore((s) => s.exportToFileMap);
@@ -195,6 +198,22 @@ export function WorkflowEditor(props: WorkflowEditorProps) {
   // Derive currentSection from the selected node's pipelineName if available
   const currentSection = selectedNode?.data?.pipelineName as string | undefined;
 
+  // DSL reference pane state
+  const [dslRefVisible, setDslRefVisible] = useState(false);
+  const dslSections = dslReferenceData.sections as DSLSection[];
+
+  // Derive active DSL section from the selected node type
+  const activeDslSection = useMemo(() => {
+    const nodeType = selectedNode?.data?.type as string | undefined;
+    if (!nodeType) return 'application';
+    if (nodeType.startsWith('http.')) return 'workflows-http';
+    if (nodeType.startsWith('messaging.') || nodeType.startsWith('kafka.') || nodeType.startsWith('rabbitmq.') || nodeType.startsWith('nats.')) return 'workflows-messaging';
+    if (nodeType.startsWith('statemachine.')) return 'workflows-statemachine';
+    if (nodeType.startsWith('events.')) return 'workflows-events';
+    if (nodeType.startsWith('step.')) return 'pipelines';
+    return 'modules';
+  }, [selectedNode]);
+
   // Partial config: all nodes are synthesized (pipeline steps) and no real modules
   const isPartialConfig = useMemo(
     () => nodes.length > 0 && nodes.every((n) => n.data?.synthesized),
@@ -227,6 +246,25 @@ export function WorkflowEditor(props: WorkflowEditorProps) {
                 style={{ fontSize: 11, padding: '2px 8px', cursor: 'pointer', background: '#1e3a5f', color: '#60a5fa', border: '1px solid #2563eb', borderRadius: 4 }}
               >
                 View full config →
+              </button>
+            </div>
+          )}
+          {showDslReference && (
+            <div style={{ display: 'flex', justifyContent: 'flex-end', padding: '2px 8px', backgroundColor: '#16161e', borderBottom: '1px solid #2a2a3a' }}>
+              <button
+                onClick={() => setDslRefVisible((v) => !v)}
+                title={dslRefVisible ? 'Hide DSL Reference' : 'Show DSL Reference'}
+                style={{
+                  fontSize: 11,
+                  padding: '2px 8px',
+                  cursor: 'pointer',
+                  background: dslRefVisible ? '#1e3a5f' : '#313244',
+                  color: dslRefVisible ? '#89b4fa' : '#cdd6f4',
+                  border: `1px solid ${dslRefVisible ? '#2563eb' : '#45475a'}`,
+                  borderRadius: 4,
+                }}
+              >
+                📖 DSL Reference
               </button>
             </div>
           )}
@@ -278,6 +316,16 @@ export function WorkflowEditor(props: WorkflowEditorProps) {
               highlightRange={highlightRange}
               onLineClick={handleYamlLineClick}
               visible={yamlPaneVisible}
+            />
+          </div>
+        )}
+        {showDslReference && (
+          <div style={{ width: panelWidths.yamlPane, flexShrink: 0 }}>
+            <DslReferencePane
+              visible={dslRefVisible}
+              sections={dslSections}
+              activeSection={activeDslSection}
+              onClose={() => setDslRefVisible(false)}
             />
           </div>
         )}
