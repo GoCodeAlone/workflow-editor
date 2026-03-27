@@ -96,6 +96,9 @@ export interface WorkflowEditorProps {
   /** Called to save changes to a specific imported file.
    *  When provided and sourceMap is set, the editor calls this for each non-main file on save. */
   onSaveToFile?: (filePath: string, content: string) => void;
+  /** When true, renders a YAML side-pane to the right of the canvas showing file contents.
+   *  Node selection highlights the corresponding line range in the active file tab. */
+  showYamlPane?: boolean;
 }
 
 /** Context sent to the host IDE's AI when user clicks AI Design */

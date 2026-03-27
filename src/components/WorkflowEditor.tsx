@@ -10,10 +10,12 @@ import useUILayoutStore from '../stores/uiLayoutStore.ts';
 import ToastContainer from './ToastContainer.tsx';
 import { parseYamlSafe, configToYaml, resolveImports, hasFileReferences } from '../utils/serialization.ts';
 import { applyMode } from '../modes/defaultMode.ts';
-import { useEffect, useRef } from 'react';
+import { buildYamlLineMap } from '../utils/yamlLineMap.ts';
+import { YamlSidePane } from './yaml/YamlSidePane.tsx';
+import { useEffect, useRef, useState, useMemo } from 'react';
 
 export function WorkflowEditor(props: WorkflowEditorProps) {
-  const { initialYaml, onSave, onNavigateToSource, onSchemaRequest, onPluginSchemaRequest, embedded, onAIRequest, onChange, onResolveFile, mode, testResults, onTestRun, sourceMap: sourceMapProp, onSaveToFile } = props;
+  const { initialYaml, onSave, onNavigateToSource, onSchemaRequest, onPluginSchemaRequest, embedded, onAIRequest, onChange, onResolveFile, mode, testResults, onTestRun, sourceMap: sourceMapProp, onSaveToFile, showYamlPane } = props;
   const importFromConfig = useWorkflowStore((s) => s.importFromConfig);
   const exportToConfig = useWorkflowStore((s) => s.exportToConfig);
   const exportToFileMap = useWorkflowStore((s) => s.exportToFileMap);
@@ -111,7 +113,60 @@ export function WorkflowEditor(props: WorkflowEditorProps) {
 
   const nodePaletteCollapsed = useUILayoutStore((s) => s.nodePaletteCollapsed);
   const propertyPanelCollapsed = useUILayoutStore((s) => s.propertyPanelCollapsed);
+  const yamlPaneVisible = useUILayoutStore((s) => s.yamlPaneVisible);
   const panelWidths = useUILayoutStore((s) => s.panelWidths);
+
+  // YAML side pane state
+  const [activeYamlFile, setActiveYamlFile] = useState<string | null>(null);
+  const selectedNodeId = useWorkflowStore((s) => s.selectedNodeId);
+  const nodes = useWorkflowStore((s) => s.nodes);
+  const storeSourceMap = useWorkflowStore((s) => s.sourceMap);
+
+  // Compute file map for YAML pane from current store state
+  const yamlFiles = useMemo(() => {
+    if (!showYamlPane) return new Map<string | null, string>();
+    return exportToFileMap();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [showYamlPane, nodes, exportToFileMap]);
+
+  // When selected node changes, update active file
+  useEffect(() => {
+    if (!showYamlPane || !selectedNodeId) return;
+    const node = nodes.find((n) => n.id === selectedNodeId);
+    const label = node?.data?.label as string | undefined;
+    if (!label) return;
+    const filePath = storeSourceMap.get(label) ?? null;
+    setActiveYamlFile(filePath);
+  }, [selectedNodeId, nodes, storeSourceMap, showYamlPane]);
+
+  // Compute highlight range for the selected node in the active file
+  const highlightRange = useMemo(() => {
+    if (!showYamlPane || !selectedNodeId) return undefined;
+    const node = nodes.find((n) => n.id === selectedNodeId);
+    const label = node?.data?.label as string | undefined;
+    if (!label) return undefined;
+    const fileContent = yamlFiles.get(activeYamlFile);
+    if (!fileContent) return undefined;
+    return buildYamlLineMap(fileContent)[label];
+  }, [showYamlPane, selectedNodeId, nodes, yamlFiles, activeYamlFile]);
+
+  // When a YAML line is clicked, select the corresponding node on canvas
+  const setSelectedNode = useWorkflowStore((s) => s.setSelectedNode);
+  const handleYamlLineClick = useMemo(() => {
+    if (!showYamlPane) return undefined;
+    return (filePath: string | null, line: number) => {
+      const fileContent = yamlFiles.get(filePath);
+      if (!fileContent) return;
+      const lineMap = buildYamlLineMap(fileContent);
+      for (const [label, range] of Object.entries(lineMap)) {
+        if (line >= range.startLine && line <= range.endLine) {
+          const node = nodes.find((n) => (n.data?.label as string) === label);
+          if (node) setSelectedNode(node.id);
+          break;
+        }
+      }
+    };
+  }, [showYamlPane, yamlFiles, nodes, setSelectedNode]);
 
   return (
     <ReactFlowProvider>
@@ -158,6 +213,18 @@ export function WorkflowEditor(props: WorkflowEditorProps) {
         {!propertyPanelCollapsed && (
           <div style={{ width: panelWidths.propertyPanel, flexShrink: 0 }}>
             <PropertyPanel />
+          </div>
+        )}
+        {showYamlPane && (
+          <div style={{ width: panelWidths.yamlPane, flexShrink: 0 }}>
+            <YamlSidePane
+              files={yamlFiles}
+              activeFile={activeYamlFile}
+              onFileSelect={setActiveYamlFile}
+              highlightRange={highlightRange}
+              onLineClick={handleYamlLineClick}
+              visible={yamlPaneVisible}
+            />
           </div>
         )}
       </div>
