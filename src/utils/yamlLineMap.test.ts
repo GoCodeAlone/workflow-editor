@@ -201,3 +201,12 @@ describe('lookupNodeInLineMap', () => {
     expect(result!.range.startLine).toBe(25);
   });
 });
+
+describe('buildYamlLineMap – triggers', () => {
+  it('maps trigger names to line ranges', () => {
+    const yaml = `triggers:\n  on-save:\n    type: cron\n    schedule: "* * * * *"\n  on-deploy:\n    type: webhook\n`;
+    const map = buildYamlLineMap(yaml);
+    expect(map['on-save']?.startLine).toBe(2);
+    expect(map['on-deploy']?.startLine).toBeGreaterThan(2);
+  });
+});
