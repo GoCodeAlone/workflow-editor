@@ -1,6 +1,6 @@
 /**
  * Schema fidelity audit: verifies that the editor's moduleTypeMap reflects
- * the engine's authoritative configFields for 10 representative module types.
+ * the engine's authoritative configFields for all 279 module types.
  *
  * Source of truth: src/generated/engine-schemas.json (generated from the engine).
  * Editor representation: getEngineModuleTypes() (load-schemas.ts passes JSON through as-is).
@@ -17,43 +17,28 @@ import engineData from '../../generated/engine-schemas.json';
 import { getEngineModuleTypes } from '../../generated/load-schemas';
 
 const moduleTypeMap = getEngineModuleTypes();
-
-// 10 types covering diverse field types:
-// string, select (with options), array, boolean, number, json, duration, sql, filepath, map
-const typesToAudit = [
-  'http.server',             // string (required)
-  'http.middleware.cors',    // array with defaultValue arrays
-  'database.workflow',       // select (driver), string (dsn), number; defaultConfig subset
-  'static.fileserver',       // string + boolean + number; defaultConfig subset
-  'storage.sqlite',          // string + number + boolean; all in defaultConfig
-  'observability.otel',      // string fields only; both in defaultConfig
-  'actor.pool',              // select + duration + json + number; empty defaultConfig
-  'auth.jwt',                // duration + select + boolean; defaultConfig subset
-  'database.partitioned',    // 11 fields: select + array + number; defaultConfig subset
-  'http.middleware.ratelimit', // number fields only; both in defaultConfig
-];
+const typesToAudit = Object.keys((engineData as any).moduleSchemas);
 
 describe('property panel schema fidelity', () => {
-  for (const type of typesToAudit) {
-    const engineSchema = (engineData as any).moduleSchemas[type];
+  it(`covers all ${typesToAudit.length} module types from engine-schemas.json`, () => {
+    expect(typesToAudit.length).toBeGreaterThan(0);
+  });
 
-    it(`${type}: exists in engine schemas`, () => {
+  describe.each(typesToAudit)('module type: %s', (type) => {
+    const engineSchema = (engineData as any).moduleSchemas[type];
+    const editorType = moduleTypeMap[type];
+    const engineFields: any[] = engineSchema?.configFields ?? [];
+
+    it('exists in engine schemas', () => {
       expect(engineSchema, `${type} missing from engine-schemas.json`).toBeDefined();
     });
 
-    if (!engineSchema) continue;
-
-    it(`${type}: exists in editor moduleTypeMap`, () => {
-      expect(moduleTypeMap[type], `${type} missing from getEngineModuleTypes()`).toBeDefined();
+    it('exists in editor moduleTypeMap', () => {
+      expect(editorType, `${type} missing from getEngineModuleTypes()`).toBeDefined();
     });
 
-    const editorType = moduleTypeMap[type];
-    if (!editorType) continue;
-
-    const engineFields: any[] = engineSchema.configFields ?? [];
-    if (engineFields.length === 0) continue;
-
-    it(`${type}: all engine configFields are present in editor`, () => {
+    it('all engine configFields are present in editor', () => {
+      if (!editorType || engineFields.length === 0) return;
       const editorKeys = editorType.configFields.map((f: any) => f.key);
       for (const engineField of engineFields) {
         expect(
@@ -63,7 +48,8 @@ describe('property panel schema fidelity', () => {
       }
     });
 
-    it(`${type}: no extra fields in editor beyond engine definition`, () => {
+    it('no extra fields in editor beyond engine definition', () => {
+      if (!editorType || engineFields.length === 0) return;
       const engineKeys = engineFields.map((f: any) => f.key);
       const editorKeys = editorType.configFields.map((f: any) => f.key);
       for (const key of editorKeys) {
@@ -74,7 +60,8 @@ describe('property panel schema fidelity', () => {
       }
     });
 
-    it(`${type}: field types match (duration fields render as 'string' or 'duration')`, () => {
+    it("field types match (duration fields render as 'string' or 'duration')", () => {
+      if (!editorType || engineFields.length === 0) return;
       for (const engineField of engineFields) {
         const editorField = editorType.configFields.find((f: any) => f.key === engineField.key);
         if (!editorField) continue;
@@ -96,7 +83,8 @@ describe('property panel schema fidelity', () => {
       }
     });
 
-    it(`${type}: required flags match`, () => {
+    it('required flags match', () => {
+      if (!editorType || engineFields.length === 0) return;
       for (const engineField of engineFields) {
         const editorField = editorType.configFields.find((f: any) => f.key === engineField.key);
         if (!editorField) continue;
@@ -107,11 +95,11 @@ describe('property panel schema fidelity', () => {
       }
     });
 
-    it(`${type}: defaultValue per field matches`, () => {
+    it('defaultValue per field matches', () => {
+      if (!editorType || engineFields.length === 0) return;
       for (const engineField of engineFields) {
         const editorField = editorType.configFields.find((f: any) => f.key === engineField.key);
         if (!editorField) continue;
-        // Engine schema omits defaultValue for required fields with no default (undefined vs null)
         const engineDefault = engineField.defaultValue ?? undefined;
         const editorDefault = editorField.defaultValue ?? undefined;
         expect(
@@ -121,8 +109,9 @@ describe('property panel schema fidelity', () => {
       }
     });
 
-    it(`${type}: defaultConfig matches engine`, () => {
-      const engineDefaults: Record<string, unknown> = engineSchema.defaultConfig ?? {};
+    it('defaultConfig matches engine', () => {
+      if (!editorType) return;
+      const engineDefaults: Record<string, unknown> = engineSchema?.defaultConfig ?? {};
       const editorDefaults: Record<string, unknown> = editorType.defaultConfig ?? {};
       for (const [key, val] of Object.entries(engineDefaults)) {
         expect(
@@ -132,7 +121,8 @@ describe('property panel schema fidelity', () => {
       }
     });
 
-    it(`${type}: select field options match`, () => {
+    it('select field options match', () => {
+      if (!editorType || engineFields.length === 0) return;
       for (const engineField of engineFields) {
         if (engineField.type !== 'select') continue;
         const editorField = editorType.configFields.find((f: any) => f.key === engineField.key);
@@ -145,5 +135,5 @@ describe('property panel schema fidelity', () => {
         ).toEqual(engineOptions);
       }
     });
-  }
+  });
 });
