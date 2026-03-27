@@ -148,3 +148,42 @@ test.describe('YAML line click selects canvas node', () => {
     expect(highlightCount).toBeGreaterThan(0);
   });
 });
+
+test.describe('breadcrumb navigation', () => {
+  test('breadcrumb bar is visible in multifile scenario', async ({ page }) => {
+    await page.goto('/?scenario=multifile-groups');
+    await page.waitForSelector('.react-flow__viewport', { timeout: 10_000 });
+    await expect(page.locator('.breadcrumb-bar')).toBeVisible();
+  });
+
+  test('clicking a node updates breadcrumb to show its source file', async ({ page }) => {
+    await page.goto('/?scenario=multifile-groups');
+    await page.waitForSelector('.react-flow__viewport', { timeout: 10_000 });
+    await expect(page.locator('.react-flow__node').first()).toBeVisible();
+    // Click the auth-server node
+    const authNode = page.locator('.react-flow__node').filter({ hasText: 'auth-server' }).first();
+    await expect(authNode).toBeVisible();
+    await authNode.click();
+    await expect(page.locator('.breadcrumb-bar')).toContainText('auth.yaml');
+  });
+});
+
+test.describe('interactive file groups', () => {
+  test('file group label is visible and has file-group-label class', async ({ page }) => {
+    await page.goto('/?scenario=multifile-groups');
+    await page.waitForSelector('.react-flow__viewport', { timeout: 10_000 });
+    await expect(page.locator('[data-id^="__file-group__"]').first()).toBeAttached();
+    const groupLabel = page.locator('.file-group-label').first();
+    await expect(groupLabel).toBeVisible();
+  });
+});
+
+test.describe('node type visual rendering', () => {
+  test('all node categories render — at least 10 nodes visible', async ({ page }) => {
+    await page.goto('/?scenario=all-node-types');
+    await page.waitForSelector('.react-flow__viewport', { timeout: 10_000 });
+    await expect(page.locator('.react-flow__node').first()).toBeVisible();
+    const nodeCount = await page.locator('.react-flow__node').count();
+    expect(nodeCount).toBeGreaterThan(10);
+  });
+});
