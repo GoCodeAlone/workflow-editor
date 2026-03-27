@@ -167,26 +167,26 @@
         {
           "key": "routes",
           "label": "Routes",
-          "type": "json",
+          "type": "array",
           "description": "Array of route definitions with pathPrefix, backend, methods, rateLimit, auth, timeout",
           "required": true
         },
         {
           "key": "globalRateLimit",
           "label": "Global Rate Limit",
-          "type": "json",
+          "type": "map",
           "description": "Global rate limit applied to all routes (requestsPerMinute, burstSize)"
         },
         {
           "key": "cors",
           "label": "CORS Config",
-          "type": "json",
+          "type": "map",
           "description": "CORS settings (allowOrigins, allowMethods, allowHeaders, maxAge)"
         },
         {
           "key": "auth",
           "label": "Auth Config",
-          "type": "json",
+          "type": "map",
           "description": "Authentication settings (type: bearer/api_key/basic, header)"
         }
       ]
@@ -4565,7 +4565,7 @@
         {
           "key": "env",
           "label": "Environment Variables",
-          "type": "json",
+          "type": "map",
           "description": "Extra environment variables for the build process"
         },
         {
@@ -5355,7 +5355,7 @@
         {
           "key": "health_check",
           "label": "Health Check",
-          "type": "json",
+          "type": "map",
           "description": "Health check configuration (path, interval, timeout, thresholds)"
         }
       ]
@@ -5383,7 +5383,7 @@
         {
           "key": "health_check",
           "label": "Health Check",
-          "type": "json",
+          "type": "map",
           "description": "Health check config: {path, timeout}"
         },
         {
@@ -5463,7 +5463,7 @@
         {
           "key": "health_check",
           "label": "Health Check",
-          "type": "json",
+          "type": "map",
           "description": "Health check config: {path, timeout}"
         }
       ]
@@ -5505,7 +5505,7 @@
         {
           "key": "health_check",
           "label": "Health Check",
-          "type": "json",
+          "type": "map",
           "description": "Health check config: {path, interval, timeout}"
         },
         {
@@ -5920,20 +5920,20 @@
         {
           "key": "payload",
           "label": "Payload",
-          "type": "json",
-          "description": "Event payload as a JSON object (supports template expressions); defaults to current pipeline context"
+          "type": "map",
+          "description": "Event payload (supports template expressions); defaults to current pipeline context"
         },
         {
           "key": "data",
           "label": "Data",
-          "type": "json",
+          "type": "map",
           "description": "Alias for 'payload' — event data fields (supports template expressions)"
         },
         {
           "key": "headers",
           "label": "Headers",
-          "type": "json",
-          "description": "Additional headers/metadata to include with the event as a JSON object"
+          "type": "map",
+          "description": "Additional headers/metadata to include with the event"
         },
         {
           "key": "event_type",
@@ -6143,7 +6143,7 @@
         {
           "key": "steps",
           "label": "Steps",
-          "type": "json",
+          "type": "array",
           "description": "Array of step maps to execute for each item (mutually exclusive with step)"
         }
       ]
@@ -6205,7 +6205,7 @@
         {
           "key": "schedule",
           "label": "Schedule Window",
-          "type": "json",
+          "type": "map",
           "description": "Time window for scheduled gates (weekdays, start_hour, end_hour)"
         }
       ],
@@ -6616,13 +6616,6 @@
           "defaultValue": "200"
         },
         {
-          "key": "status_from",
-          "label": "Status From",
-          "type": "string",
-          "description": "Dotted path to resolve HTTP status code dynamically (e.g., steps.call_upstream.status_code). Takes precedence over 'status' when resolved to a valid HTTP status code (100-599).",
-          "placeholder": "steps.call_upstream.status_code"
-        },
-        {
           "key": "headers",
           "label": "Headers",
           "type": "map",
@@ -6947,7 +6940,7 @@
         {
           "key": "steps",
           "label": "Steps",
-          "type": "json",
+          "type": "array",
           "description": "List of sub-steps to run concurrently. Each must have a unique 'name'.",
           "required": true
         },
@@ -7153,7 +7146,7 @@
         {
           "key": "payload",
           "label": "Payload",
-          "type": "json",
+          "type": "map",
           "description": "Custom payload template (uses {{ .field }} expressions). Defaults to pipeline context."
         },
         {
@@ -8084,13 +8077,13 @@
         {
           "key": "input_mapping",
           "label": "Input Mapping",
-          "type": "json",
+          "type": "map",
           "description": "Map of sub-workflow input keys to template expressions"
         },
         {
           "key": "output_mapping",
           "label": "Output Mapping",
-          "type": "json",
+          "type": "map",
           "description": "Map of parent context keys to sub-workflow output paths"
         },
         {
@@ -8200,7 +8193,7 @@
         {
           "key": "operations",
           "label": "Operations",
-          "type": "json",
+          "type": "array",
           "description": "Inline transformation operations (alternative to transformer+pipeline)"
         }
       ]
@@ -8476,14 +8469,14 @@
         {
           "key": "input",
           "label": "Input Mapping",
-          "type": "json",
-          "description": "Map of target pipeline input keys to template expressions from the current context (e.g. {\"conversation_id\": \"{{ .conversation_id }}\"}). If omitted, all current context data is passed through."
+          "type": "map",
+          "description": "Map of target pipeline input keys to template expressions from the current context. If omitted, all current context data is passed through."
         },
         {
           "key": "output_mapping",
           "label": "Output Mapping",
-          "type": "json",
-          "description": "Map of parent context keys to target pipeline output paths (e.g. {\"assigned_responder\": \"responder_id\"}). If omitted, all outputs are returned under 'result'."
+          "type": "map",
+          "description": "Map of parent context keys to target pipeline output paths. If omitted, all outputs are returned under 'result'."
         },
         {
           "key": "timeout",
@@ -8873,6 +8866,6957 @@
       "defaultConfig": {
         "storageBackend": ""
       }
+    }
+  },
+  "stepSchemas": {
+    "step.actor_ask": {
+      "type": "step.actor_ask",
+      "plugin": "actors",
+      "description": "Send a message to an actor and wait for a response.",
+      "configFields": [
+        {
+          "key": "pool",
+          "label": "",
+          "type": "string",
+          "description": "Name of the actor.pool module to send to",
+          "required": true
+        },
+        {
+          "key": "identity",
+          "label": "",
+          "type": "string",
+          "description": "Unique key for auto-managed actors"
+        },
+        {
+          "key": "timeout",
+          "label": "",
+          "type": "duration",
+          "description": "How long to wait for the actor's reply before failing",
+          "defaultValue": "10s"
+        },
+        {
+          "key": "message",
+          "label": "",
+          "type": "json",
+          "description": "Message to send (must include 'type' field)",
+          "required": true
+        }
+      ],
+      "outputs": [
+        {
+          "key": "*",
+          "type": "any",
+          "description": "The actor's reply — varies by message handler"
+        }
+      ]
+    },
+    "step.actor_send": {
+      "type": "step.actor_send",
+      "plugin": "actors",
+      "description": "Send a message to an actor without waiting for a response (fire-and-forget).",
+      "configFields": [
+        {
+          "key": "pool",
+          "label": "",
+          "type": "string",
+          "description": "Name of the actor.pool module to send to",
+          "required": true
+        },
+        {
+          "key": "identity",
+          "label": "",
+          "type": "string",
+          "description": "Unique key for auto-managed actors"
+        },
+        {
+          "key": "message",
+          "label": "",
+          "type": "json",
+          "description": "Message to send (must include 'type' field)",
+          "required": true
+        }
+      ],
+      "outputs": [
+        {
+          "key": "delivered",
+          "type": "boolean",
+          "description": "Whether the message was delivered"
+        }
+      ]
+    },
+    "step.ai_classify": {
+      "type": "step.ai_classify",
+      "plugin": "ai",
+      "description": "Classifies text input into predefined categories using an AI provider.",
+      "configFields": [
+        {
+          "key": "provider",
+          "label": "",
+          "type": "string",
+          "description": "AI provider module name"
+        },
+        {
+          "key": "model",
+          "label": "",
+          "type": "string",
+          "description": "Model name to use"
+        },
+        {
+          "key": "categories",
+          "label": "",
+          "type": "array",
+          "description": "Valid classification categories",
+          "required": true
+        },
+        {
+          "key": "input_from",
+          "label": "",
+          "type": "string",
+          "description": "Dot-path to resolve input text"
+        },
+        {
+          "key": "max_tokens",
+          "label": "",
+          "type": "number",
+          "description": "Token limit",
+          "defaultValue": 256
+        },
+        {
+          "key": "temperature",
+          "label": "",
+          "type": "number",
+          "description": "Temperature parameter"
+        }
+      ],
+      "outputs": [
+        {
+          "key": "category",
+          "type": "string",
+          "description": "Predicted category"
+        },
+        {
+          "key": "confidence",
+          "type": "number",
+          "description": "Confidence score (0-1)"
+        },
+        {
+          "key": "reasoning",
+          "type": "string",
+          "description": "Explanation of classification"
+        },
+        {
+          "key": "usage",
+          "type": "map",
+          "description": "Token usage stats"
+        }
+      ]
+    },
+    "step.ai_complete": {
+      "type": "step.ai_complete",
+      "plugin": "ai",
+      "description": "Invokes an AI provider for text completion.",
+      "configFields": [
+        {
+          "key": "provider",
+          "label": "",
+          "type": "string",
+          "description": "AI provider module name"
+        },
+        {
+          "key": "model",
+          "label": "",
+          "type": "string",
+          "description": "Model name to use"
+        },
+        {
+          "key": "system_prompt",
+          "label": "",
+          "type": "string",
+          "description": "System prompt (template expressions supported)"
+        },
+        {
+          "key": "input_from",
+          "label": "",
+          "type": "string",
+          "description": "Dot-path to resolve input text"
+        },
+        {
+          "key": "max_tokens",
+          "label": "",
+          "type": "number",
+          "description": "Token limit",
+          "defaultValue": 1024
+        },
+        {
+          "key": "temperature",
+          "label": "",
+          "type": "number",
+          "description": "Temperature parameter"
+        }
+      ],
+      "outputs": [
+        {
+          "key": "content",
+          "type": "string",
+          "description": "Generated text"
+        },
+        {
+          "key": "model",
+          "type": "string",
+          "description": "Model used"
+        },
+        {
+          "key": "finish_reason",
+          "type": "string",
+          "description": "Completion finish reason"
+        },
+        {
+          "key": "usage",
+          "type": "map",
+          "description": "Token usage (input_tokens, output_tokens)"
+        }
+      ]
+    },
+    "step.ai_extract": {
+      "type": "step.ai_extract",
+      "plugin": "ai",
+      "description": "Extracts structured data from text using AI provider with optional tool use.",
+      "configFields": [
+        {
+          "key": "provider",
+          "label": "",
+          "type": "string",
+          "description": "AI provider module name"
+        },
+        {
+          "key": "model",
+          "label": "",
+          "type": "string",
+          "description": "Model name to use"
+        },
+        {
+          "key": "schema",
+          "label": "",
+          "type": "json",
+          "description": "JSON Schema for extraction structure",
+          "required": true
+        },
+        {
+          "key": "input_from",
+          "label": "",
+          "type": "string",
+          "description": "Dot-path to input text"
+        },
+        {
+          "key": "max_tokens",
+          "label": "",
+          "type": "number",
+          "description": "Token limit",
+          "defaultValue": 1024
+        },
+        {
+          "key": "temperature",
+          "label": "",
+          "type": "number",
+          "description": "Temperature parameter"
+        }
+      ],
+      "outputs": [
+        {
+          "key": "extracted",
+          "type": "map",
+          "description": "Extracted structured data"
+        },
+        {
+          "key": "method",
+          "type": "string",
+          "description": "Extraction method used"
+        },
+        {
+          "key": "usage",
+          "type": "map",
+          "description": "Token usage"
+        }
+      ]
+    },
+    "step.apigw_apply": {
+      "type": "step.apigw_apply",
+      "plugin": "platform",
+      "description": "Applies (provisions or updates) an API gateway configuration.",
+      "configFields": [
+        {
+          "key": "gateway",
+          "label": "",
+          "type": "string",
+          "description": "Name of the platform.apigateway module",
+          "required": true
+        }
+      ],
+      "outputs": [
+        {
+          "key": "id",
+          "type": "string",
+          "description": "API gateway ID"
+        },
+        {
+          "key": "endpoint",
+          "type": "string",
+          "description": "Gateway endpoint URL"
+        }
+      ]
+    },
+    "step.apigw_destroy": {
+      "type": "step.apigw_destroy",
+      "plugin": "platform",
+      "description": "Destroys a provisioned API gateway.",
+      "configFields": [
+        {
+          "key": "gateway",
+          "label": "",
+          "type": "string",
+          "description": "Name of the platform.apigateway module",
+          "required": true
+        }
+      ],
+      "outputs": [
+        {
+          "key": "destroyed",
+          "type": "boolean",
+          "description": "Whether the gateway was destroyed"
+        }
+      ]
+    },
+    "step.apigw_plan": {
+      "type": "step.apigw_plan",
+      "plugin": "platform",
+      "description": "Plans API gateway changes without applying them.",
+      "configFields": [
+        {
+          "key": "gateway",
+          "label": "",
+          "type": "string",
+          "description": "Name of the platform.apigateway module",
+          "required": true
+        }
+      ],
+      "outputs": [
+        {
+          "key": "plan",
+          "type": "string",
+          "description": "Human-readable plan output"
+        },
+        {
+          "key": "changes",
+          "type": "number",
+          "description": "Number of changes planned"
+        }
+      ]
+    },
+    "step.apigw_status": {
+      "type": "step.apigw_status",
+      "plugin": "platform",
+      "description": "Gets the current status of an API gateway.",
+      "configFields": [
+        {
+          "key": "gateway",
+          "label": "",
+          "type": "string",
+          "description": "Name of the platform.apigateway module",
+          "required": true
+        }
+      ],
+      "outputs": [
+        {
+          "key": "status",
+          "type": "string",
+          "description": "Current gateway status"
+        },
+        {
+          "key": "endpoint",
+          "type": "string",
+          "description": "Gateway endpoint URL"
+        }
+      ]
+    },
+    "step.app_deploy": {
+      "type": "step.app_deploy",
+      "plugin": "platform",
+      "description": "Deploys an application container to the target platform.",
+      "configFields": [
+        {
+          "key": "app",
+          "label": "",
+          "type": "string",
+          "description": "Name of the app.container module",
+          "required": true
+        }
+      ],
+      "outputs": [
+        {
+          "key": "deployed",
+          "type": "boolean",
+          "description": "Whether deployment succeeded"
+        },
+        {
+          "key": "endpoint",
+          "type": "string",
+          "description": "Service endpoint after deployment"
+        }
+      ]
+    },
+    "step.app_rollback": {
+      "type": "step.app_rollback",
+      "plugin": "platform",
+      "description": "Rolls back an application container to a previous version.",
+      "configFields": [
+        {
+          "key": "app",
+          "label": "",
+          "type": "string",
+          "description": "Name of the app.container module",
+          "required": true
+        },
+        {
+          "key": "revision",
+          "label": "",
+          "type": "string",
+          "description": "Target revision to roll back to (empty = previous)"
+        }
+      ],
+      "outputs": [
+        {
+          "key": "rolled_back",
+          "type": "boolean",
+          "description": "Whether rollback succeeded"
+        }
+      ]
+    },
+    "step.app_status": {
+      "type": "step.app_status",
+      "plugin": "platform",
+      "description": "Gets the current deployment status of an application container.",
+      "configFields": [
+        {
+          "key": "app",
+          "label": "",
+          "type": "string",
+          "description": "Name of the app.container module",
+          "required": true
+        }
+      ],
+      "outputs": [
+        {
+          "key": "status",
+          "type": "string",
+          "description": "Deployment status"
+        },
+        {
+          "key": "replicas",
+          "type": "number",
+          "description": "Current replica count"
+        }
+      ]
+    },
+    "step.argo_delete": {
+      "type": "step.argo_delete",
+      "plugin": "platform",
+      "description": "Deletes an Argo Workflow.",
+      "configFields": [
+        {
+          "key": "service",
+          "label": "",
+          "type": "string",
+          "description": "Name of the argo.workflows module",
+          "required": true
+        },
+        {
+          "key": "workflow_run",
+          "label": "",
+          "type": "string",
+          "description": "Workflow run name to delete"
+        }
+      ],
+      "outputs": [
+        {
+          "key": "deleted",
+          "type": "boolean",
+          "description": "Whether the workflow was deleted"
+        }
+      ]
+    },
+    "step.argo_list": {
+      "type": "step.argo_list",
+      "plugin": "platform",
+      "description": "Lists Argo Workflows in a namespace.",
+      "configFields": [
+        {
+          "key": "service",
+          "label": "",
+          "type": "string",
+          "description": "Name of the argo.workflows module",
+          "required": true
+        },
+        {
+          "key": "label_selector",
+          "label": "",
+          "type": "string",
+          "description": "Label selector filter"
+        }
+      ],
+      "outputs": [
+        {
+          "key": "workflows",
+          "type": "[]any",
+          "description": "List of workflows"
+        },
+        {
+          "key": "count",
+          "type": "number",
+          "description": "Number of workflows"
+        }
+      ]
+    },
+    "step.argo_logs": {
+      "type": "step.argo_logs",
+      "plugin": "platform",
+      "description": "Retrieves logs from an Argo Workflow.",
+      "configFields": [
+        {
+          "key": "service",
+          "label": "",
+          "type": "string",
+          "description": "Name of the argo.workflows module",
+          "required": true
+        },
+        {
+          "key": "workflow_run",
+          "label": "",
+          "type": "string",
+          "description": "Workflow run name to get logs for"
+        }
+      ],
+      "outputs": [
+        {
+          "key": "logs",
+          "type": "string",
+          "description": "Workflow logs"
+        }
+      ]
+    },
+    "step.argo_status": {
+      "type": "step.argo_status",
+      "plugin": "platform",
+      "description": "Gets the status of an Argo Workflow.",
+      "configFields": [
+        {
+          "key": "service",
+          "label": "",
+          "type": "string",
+          "description": "Name of the argo.workflows module",
+          "required": true
+        },
+        {
+          "key": "workflow_run",
+          "label": "",
+          "type": "string",
+          "description": "Workflow run name to check status"
+        }
+      ],
+      "outputs": [
+        {
+          "key": "phase",
+          "type": "string",
+          "description": "Workflow phase (Pending, Running, Succeeded, Failed)"
+        },
+        {
+          "key": "message",
+          "type": "string",
+          "description": "Status message"
+        }
+      ]
+    },
+    "step.argo_submit": {
+      "type": "step.argo_submit",
+      "plugin": "platform",
+      "description": "Submits an Argo Workflow from a template or manifest.",
+      "configFields": [
+        {
+          "key": "service",
+          "label": "",
+          "type": "string",
+          "description": "Name of the argo.workflows module",
+          "required": true
+        },
+        {
+          "key": "workflow_name",
+          "label": "",
+          "type": "string",
+          "description": "Workflow template name (defaults to step name)"
+        },
+        {
+          "key": "steps",
+          "label": "",
+          "type": "array",
+          "description": "Workflow step definitions"
+        }
+      ],
+      "outputs": [
+        {
+          "key": "name",
+          "type": "string",
+          "description": "Created workflow name"
+        },
+        {
+          "key": "namespace",
+          "type": "string",
+          "description": "Workflow namespace"
+        }
+      ]
+    },
+    "step.artifact_delete": {
+      "type": "step.artifact_delete",
+      "plugin": "storage",
+      "description": "Deletes an artifact from the artifact store.",
+      "configFields": [
+        {
+          "key": "store",
+          "label": "",
+          "type": "string",
+          "description": "Name of the storage.artifact module",
+          "required": true
+        },
+        {
+          "key": "key",
+          "label": "",
+          "type": "string",
+          "description": "Artifact key to delete",
+          "required": true
+        }
+      ],
+      "outputs": [
+        {
+          "key": "deleted",
+          "type": "boolean",
+          "description": "Whether the artifact was deleted"
+        }
+      ]
+    },
+    "step.artifact_download": {
+      "type": "step.artifact_download",
+      "plugin": "storage",
+      "description": "Downloads an artifact from the artifact store.",
+      "configFields": [
+        {
+          "key": "store",
+          "label": "",
+          "type": "string",
+          "description": "Name of the storage.artifact module",
+          "required": true
+        },
+        {
+          "key": "key",
+          "label": "",
+          "type": "string",
+          "description": "Artifact key to download",
+          "required": true
+        },
+        {
+          "key": "dest",
+          "label": "",
+          "type": "string",
+          "description": "Local path to write the artifact"
+        }
+      ],
+      "outputs": [
+        {
+          "key": "path",
+          "type": "string",
+          "description": "Local path where artifact was written"
+        },
+        {
+          "key": "size",
+          "type": "number",
+          "description": "Artifact size in bytes"
+        }
+      ]
+    },
+    "step.artifact_list": {
+      "type": "step.artifact_list",
+      "plugin": "storage",
+      "description": "Lists artifacts in the artifact store.",
+      "configFields": [
+        {
+          "key": "store",
+          "label": "",
+          "type": "string",
+          "description": "Name of the storage.artifact module",
+          "required": true
+        },
+        {
+          "key": "prefix",
+          "label": "",
+          "type": "string",
+          "description": "Optional prefix filter"
+        }
+      ],
+      "outputs": [
+        {
+          "key": "artifacts",
+          "type": "[]any",
+          "description": "List of artifact metadata"
+        },
+        {
+          "key": "count",
+          "type": "number",
+          "description": "Number of artifacts"
+        }
+      ]
+    },
+    "step.artifact_pull": {
+      "type": "step.artifact_pull",
+      "plugin": "cicd",
+      "description": "Retrieves an artifact from a configured source (previous execution, URL, or S3).",
+      "configFields": [
+        {
+          "key": "source",
+          "label": "",
+          "type": "select",
+          "description": "Artifact source type",
+          "required": true,
+          "options": [
+            "previous_execution",
+            "url",
+            "s3"
+          ]
+        },
+        {
+          "key": "dest",
+          "label": "",
+          "type": "string",
+          "description": "Destination file path",
+          "required": true
+        },
+        {
+          "key": "key",
+          "label": "",
+          "type": "string",
+          "description": "Artifact key (for previous_execution or s3 source)"
+        },
+        {
+          "key": "url",
+          "label": "",
+          "type": "string",
+          "description": "Download URL (for url source)"
+        },
+        {
+          "key": "execution_id",
+          "label": "",
+          "type": "string",
+          "description": "Execution ID (uses metadata if not set)"
+        }
+      ],
+      "outputs": [
+        {
+          "key": "source",
+          "type": "string",
+          "description": "Source type used"
+        },
+        {
+          "key": "key",
+          "type": "string",
+          "description": "Artifact key"
+        },
+        {
+          "key": "dest",
+          "type": "string",
+          "description": "Destination path"
+        },
+        {
+          "key": "size",
+          "type": "number",
+          "description": "File size in bytes"
+        }
+      ]
+    },
+    "step.artifact_push": {
+      "type": "step.artifact_push",
+      "plugin": "cicd",
+      "description": "Reads a file and stores it as an artifact with SHA256 checksum.",
+      "configFields": [
+        {
+          "key": "source_path",
+          "label": "",
+          "type": "string",
+          "description": "Path to file to push",
+          "required": true
+        },
+        {
+          "key": "key",
+          "label": "",
+          "type": "string",
+          "description": "Storage key",
+          "required": true
+        },
+        {
+          "key": "dest",
+          "label": "",
+          "type": "string",
+          "description": "Destination type (default: artifact_store)"
+        }
+      ],
+      "outputs": [
+        {
+          "key": "key",
+          "type": "string",
+          "description": "Storage key"
+        },
+        {
+          "key": "size",
+          "type": "number",
+          "description": "File size in bytes"
+        },
+        {
+          "key": "checksum",
+          "type": "string",
+          "description": "SHA256 hex digest"
+        }
+      ]
+    },
+    "step.artifact_upload": {
+      "type": "step.artifact_upload",
+      "plugin": "storage",
+      "description": "Uploads a file as an artifact to the artifact store.",
+      "configFields": [
+        {
+          "key": "store",
+          "label": "",
+          "type": "string",
+          "description": "Name of the storage.artifact module",
+          "required": true
+        },
+        {
+          "key": "key",
+          "label": "",
+          "type": "string",
+          "description": "Artifact key (storage path)",
+          "required": true
+        },
+        {
+          "key": "source",
+          "label": "",
+          "type": "string",
+          "description": "Local file path to upload",
+          "required": true
+        },
+        {
+          "key": "metadata",
+          "label": "",
+          "type": "map",
+          "description": "Additional metadata to attach"
+        }
+      ],
+      "outputs": [
+        {
+          "key": "key",
+          "type": "string",
+          "description": "Stored artifact key"
+        },
+        {
+          "key": "store",
+          "type": "string",
+          "description": "Name of the store used"
+        }
+      ]
+    },
+    "step.auth_required": {
+      "type": "step.auth_required",
+      "plugin": "pipelinesteps",
+      "description": "Validates JWT or API key authentication. Returns 401 if not authenticated.",
+      "configFields": [
+        {
+          "key": "roles",
+          "label": "",
+          "type": "array",
+          "description": "Required roles (any match grants access)"
+        },
+        {
+          "key": "scopes",
+          "label": "",
+          "type": "array",
+          "description": "Required OAuth2 scopes"
+        }
+      ],
+      "outputs": [
+        {
+          "key": "authenticated",
+          "type": "boolean",
+          "description": "Whether the request is authenticated"
+        },
+        {
+          "key": "user_id",
+          "type": "string",
+          "description": "Authenticated user ID from token claims"
+        },
+        {
+          "key": "roles",
+          "type": "[]string",
+          "description": "User roles from token claims"
+        }
+      ]
+    },
+    "step.auth_validate": {
+      "type": "step.auth_validate",
+      "plugin": "pipelinesteps",
+      "description": "Validates a Bearer token against a registered AuthProvider module and outputs claims.",
+      "configFields": [
+        {
+          "key": "auth_module",
+          "label": "",
+          "type": "string",
+          "description": "Service name of AuthProvider module",
+          "required": true
+        },
+        {
+          "key": "token_source",
+          "label": "",
+          "type": "string",
+          "description": "Dot-path to Bearer token in pipeline context",
+          "required": true
+        },
+        {
+          "key": "subject_field",
+          "label": "",
+          "type": "string",
+          "description": "Output field name for 'sub' claim",
+          "defaultValue": "auth_user_id"
+        }
+      ],
+      "outputs": [
+        {
+          "key": "(claims)",
+          "type": "any",
+          "description": "All claims from AuthProvider as flat keys"
+        },
+        {
+          "key": "(subject_field)",
+          "type": "string",
+          "description": "Value of 'sub' claim mapped to configured subject_field"
+        }
+      ]
+    },
+    "step.authz_check": {
+      "type": "step.authz_check",
+      "plugin": "pipelinesteps",
+      "description": "Checks authorization using the configured authz module (e.g., Casbin). Returns 403 if denied.",
+      "configFields": [
+        {
+          "key": "module",
+          "label": "",
+          "type": "string",
+          "description": "Authorization module name",
+          "required": true
+        },
+        {
+          "key": "subject",
+          "label": "",
+          "type": "string",
+          "description": "Subject (template expression, e.g. user role)",
+          "required": true
+        },
+        {
+          "key": "object",
+          "label": "",
+          "type": "string",
+          "description": "Object (template expression, e.g. request path)",
+          "required": true
+        },
+        {
+          "key": "action",
+          "label": "",
+          "type": "string",
+          "description": "Action (template expression, e.g. HTTP method)",
+          "required": true
+        }
+      ],
+      "outputs": [
+        {
+          "key": "allowed",
+          "type": "boolean",
+          "description": "Whether the authorization check passed"
+        }
+      ]
+    },
+    "step.base64_decode": {
+      "type": "step.base64_decode",
+      "plugin": "pipelinesteps",
+      "description": "Decodes a base64-encoded value and validates its type.",
+      "configFields": [
+        {
+          "key": "input_from",
+          "label": "",
+          "type": "string",
+          "description": "Context key containing the base64-encoded value"
+        },
+        {
+          "key": "format",
+          "label": "",
+          "type": "string",
+          "description": "Expected format (e.g. image/png, application/pdf)"
+        },
+        {
+          "key": "allowed_types",
+          "label": "",
+          "type": "array",
+          "description": "List of allowed MIME types"
+        },
+        {
+          "key": "max_size_bytes",
+          "label": "",
+          "type": "number",
+          "description": "Maximum decoded size in bytes"
+        }
+      ],
+      "outputs": [
+        {
+          "key": "data",
+          "type": "string",
+          "description": "Decoded data"
+        },
+        {
+          "key": "mime_type",
+          "type": "string",
+          "description": "Detected MIME type"
+        },
+        {
+          "key": "size",
+          "type": "number",
+          "description": "Decoded size in bytes"
+        }
+      ]
+    },
+    "step.branch": {
+      "type": "step.branch",
+      "plugin": "pipelinesteps",
+      "description": "Switch/case routing: evaluates a field, executes only the matched branch's sub-steps inline, then jumps to merge_step. Unlike step.conditional, skipped branches never execute.",
+      "configFields": [
+        {
+          "key": "field",
+          "label": "",
+          "type": "string",
+          "description": "Dot-path field to evaluate for branch selection",
+          "required": true
+        },
+        {
+          "key": "branches",
+          "label": "",
+          "type": "map",
+          "description": "Map of field values to lists of inline step configs",
+          "required": true
+        },
+        {
+          "key": "default",
+          "label": "",
+          "type": "array",
+          "description": "Sub-steps to run when no branch matches"
+        },
+        {
+          "key": "merge_step",
+          "label": "",
+          "type": "string",
+          "description": "Step name to jump to after the branch completes (empty = continue sequentially)"
+        }
+      ],
+      "outputs": [
+        {
+          "key": "matched_value",
+          "type": "string",
+          "description": "The field value that was matched"
+        },
+        {
+          "key": "branch",
+          "type": "string",
+          "description": "Name of the branch that was executed"
+        }
+      ]
+    },
+    "step.build_binary": {
+      "type": "step.build_binary",
+      "plugin": "cicd",
+      "description": "Builds a Go binary from source.",
+      "configFields": [
+        {
+          "key": "source",
+          "label": "",
+          "type": "string",
+          "description": "Source directory or package path",
+          "required": true
+        },
+        {
+          "key": "output",
+          "label": "",
+          "type": "string",
+          "description": "Output binary path"
+        },
+        {
+          "key": "os",
+          "label": "",
+          "type": "string",
+          "description": "Target OS (GOOS)"
+        },
+        {
+          "key": "arch",
+          "label": "",
+          "type": "string",
+          "description": "Target architecture (GOARCH)"
+        },
+        {
+          "key": "ldflags",
+          "label": "",
+          "type": "string",
+          "description": "Linker flags"
+        }
+      ],
+      "outputs": [
+        {
+          "key": "binary_path",
+          "type": "string",
+          "description": "Path to the built binary"
+        }
+      ]
+    },
+    "step.build_from_config": {
+      "type": "step.build_from_config",
+      "plugin": "cicd",
+      "description": "Builds an application using the workflow engine config as build specification.",
+      "configFields": [
+        {
+          "key": "config",
+          "label": "",
+          "type": "string",
+          "description": "Path to build config file",
+          "required": true
+        },
+        {
+          "key": "target",
+          "label": "",
+          "type": "string",
+          "description": "Build target name"
+        }
+      ],
+      "outputs": [
+        {
+          "key": "artifact",
+          "type": "string",
+          "description": "Path to the built artifact"
+        },
+        {
+          "key": "success",
+          "type": "boolean",
+          "description": "Whether the build succeeded"
+        }
+      ]
+    },
+    "step.build_ui": {
+      "type": "step.build_ui",
+      "plugin": "cicd",
+      "description": "Builds a UI project (npm install + npm run build) and copies output to target directory.",
+      "configFields": [
+        {
+          "key": "source_dir",
+          "label": "",
+          "type": "string",
+          "description": "UI source directory (containing package.json)",
+          "required": true
+        },
+        {
+          "key": "output_dir",
+          "label": "",
+          "type": "string",
+          "description": "Target directory for built assets",
+          "required": true
+        },
+        {
+          "key": "install_cmd",
+          "label": "",
+          "type": "string",
+          "description": "npm install command",
+          "defaultValue": "npm install --silent"
+        },
+        {
+          "key": "build_cmd",
+          "label": "",
+          "type": "string",
+          "description": "Build command",
+          "defaultValue": "npm run build"
+        },
+        {
+          "key": "env",
+          "label": "",
+          "type": "map",
+          "description": "Environment variables"
+        },
+        {
+          "key": "timeout",
+          "label": "",
+          "type": "duration",
+          "description": "Build timeout",
+          "defaultValue": "5m"
+        }
+      ],
+      "outputs": [
+        {
+          "key": "status",
+          "type": "string",
+          "description": "Build status"
+        },
+        {
+          "key": "file_count",
+          "type": "number",
+          "description": "Number of files in output"
+        },
+        {
+          "key": "output_dir",
+          "type": "string",
+          "description": "Resolved output path"
+        }
+      ]
+    },
+    "step.cache_delete": {
+      "type": "step.cache_delete",
+      "plugin": "pipelinesteps",
+      "description": "Deletes a value from a cache module by key.",
+      "configFields": [
+        {
+          "key": "cache",
+          "label": "",
+          "type": "string",
+          "description": "Cache module name",
+          "required": true
+        },
+        {
+          "key": "key",
+          "label": "",
+          "type": "string",
+          "description": "Cache key to delete (template expressions supported)",
+          "required": true
+        }
+      ],
+      "outputs": [
+        {
+          "key": "deleted",
+          "type": "boolean",
+          "description": "Whether the key was deleted"
+        }
+      ]
+    },
+    "step.cache_get": {
+      "type": "step.cache_get",
+      "plugin": "pipelinesteps",
+      "description": "Retrieves a value from a cache module by key.",
+      "configFields": [
+        {
+          "key": "cache",
+          "label": "",
+          "type": "string",
+          "description": "Cache module name",
+          "required": true
+        },
+        {
+          "key": "key",
+          "label": "",
+          "type": "string",
+          "description": "Cache key (template expressions supported)",
+          "required": true
+        },
+        {
+          "key": "output",
+          "label": "",
+          "type": "string",
+          "description": "Context key to store the result"
+        }
+      ],
+      "outputs": [
+        {
+          "key": "value",
+          "type": "any",
+          "description": "The cached value (nil if not found)"
+        },
+        {
+          "key": "found",
+          "type": "boolean",
+          "description": "Whether the key was found in cache"
+        }
+      ]
+    },
+    "step.cache_set": {
+      "type": "step.cache_set",
+      "plugin": "pipelinesteps",
+      "description": "Stores a value in a cache module by key.",
+      "configFields": [
+        {
+          "key": "cache",
+          "label": "",
+          "type": "string",
+          "description": "Cache module name",
+          "required": true
+        },
+        {
+          "key": "key",
+          "label": "",
+          "type": "string",
+          "description": "Cache key (template expressions supported)",
+          "required": true
+        },
+        {
+          "key": "value",
+          "label": "",
+          "type": "string",
+          "description": "Value to cache (template expressions supported)"
+        },
+        {
+          "key": "ttl",
+          "label": "",
+          "type": "duration",
+          "description": "Time-to-live duration (e.g. 5m, 1h)"
+        }
+      ],
+      "outputs": [
+        {
+          "key": "stored",
+          "type": "boolean",
+          "description": "Whether the value was stored successfully"
+        }
+      ]
+    },
+    "step.circuit_breaker": {
+      "type": "step.circuit_breaker",
+      "plugin": "pipelinesteps",
+      "description": "Tracks service failures and opens the circuit when a threshold is exceeded to prevent cascading failures.",
+      "configFields": [
+        {
+          "key": "failure_threshold",
+          "label": "",
+          "type": "number",
+          "description": "Failures before opening the circuit",
+          "defaultValue": 5
+        },
+        {
+          "key": "success_threshold",
+          "label": "",
+          "type": "number",
+          "description": "Successes to close circuit in half-open state",
+          "defaultValue": 3
+        },
+        {
+          "key": "timeout",
+          "label": "",
+          "type": "duration",
+          "description": "Duration before transitioning to half-open",
+          "defaultValue": "30s"
+        },
+        {
+          "key": "service_name",
+          "label": "",
+          "type": "string",
+          "description": "Service identifier for the circuit"
+        }
+      ],
+      "outputs": [
+        {
+          "key": "circuit_breaker",
+          "type": "map",
+          "description": "Status: {state, service, allowed, transitioned}"
+        }
+      ]
+    },
+    "step.cli_invoke": {
+      "type": "step.cli_invoke",
+      "plugin": "pipelinesteps",
+      "description": "Calls a registered Go CLI command function from the CLICommandRegistry.",
+      "configFields": [
+        {
+          "key": "command",
+          "label": "",
+          "type": "string",
+          "description": "Registered command name in CLICommandRegistry",
+          "required": true
+        }
+      ],
+      "outputs": [
+        {
+          "key": "command",
+          "type": "string",
+          "description": "Name of the executed command"
+        },
+        {
+          "key": "success",
+          "type": "boolean",
+          "description": "Whether the command succeeded"
+        }
+      ]
+    },
+    "step.cli_print": {
+      "type": "step.cli_print",
+      "plugin": "pipelinesteps",
+      "description": "Writes a template-resolved message to stdout or stderr.",
+      "configFields": [
+        {
+          "key": "message",
+          "label": "",
+          "type": "string",
+          "description": "Message template (resolved against pipeline context)",
+          "required": true
+        },
+        {
+          "key": "newline",
+          "label": "",
+          "type": "boolean",
+          "description": "Append trailing newline",
+          "defaultValue": true
+        },
+        {
+          "key": "target",
+          "label": "",
+          "type": "select",
+          "description": "Output destination",
+          "defaultValue": "stdout",
+          "options": [
+            "stdout",
+            "stderr"
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "key": "printed",
+          "type": "string",
+          "description": "The resolved message that was written"
+        }
+      ]
+    },
+    "step.cloud_validate": {
+      "type": "step.cloud_validate",
+      "plugin": "cloud",
+      "description": "Validates cloud provider credentials and connectivity.",
+      "configFields": [
+        {
+          "key": "account",
+          "label": "",
+          "type": "string",
+          "description": "Name of the cloud.account module",
+          "required": true
+        }
+      ],
+      "outputs": [
+        {
+          "key": "valid",
+          "type": "boolean",
+          "description": "Whether credentials are valid"
+        },
+        {
+          "key": "provider",
+          "type": "string",
+          "description": "Cloud provider name"
+        },
+        {
+          "key": "region",
+          "type": "string",
+          "description": "Configured region"
+        }
+      ]
+    },
+    "step.codebuild_create_project": {
+      "type": "step.codebuild_create_project",
+      "plugin": "cicd",
+      "description": "Creates an AWS CodeBuild project.",
+      "configFields": [
+        {
+          "key": "project",
+          "label": "",
+          "type": "string",
+          "description": "Name of the aws.codebuild module",
+          "required": true
+        },
+        {
+          "key": "project_name",
+          "label": "",
+          "type": "string",
+          "description": "CodeBuild project name",
+          "required": true
+        },
+        {
+          "key": "source",
+          "label": "",
+          "type": "map",
+          "description": "Source configuration (type, location)"
+        },
+        {
+          "key": "environment",
+          "label": "",
+          "type": "map",
+          "description": "Build environment configuration"
+        }
+      ],
+      "outputs": [
+        {
+          "key": "project_name",
+          "type": "string",
+          "description": "Created project name"
+        },
+        {
+          "key": "arn",
+          "type": "string",
+          "description": "Project ARN"
+        }
+      ]
+    },
+    "step.codebuild_delete_project": {
+      "type": "step.codebuild_delete_project",
+      "plugin": "cicd",
+      "description": "Deletes an AWS CodeBuild project.",
+      "configFields": [
+        {
+          "key": "project",
+          "label": "",
+          "type": "string",
+          "description": "Name of the aws.codebuild module",
+          "required": true
+        },
+        {
+          "key": "project_name",
+          "label": "",
+          "type": "string",
+          "description": "CodeBuild project name to delete",
+          "required": true
+        }
+      ],
+      "outputs": [
+        {
+          "key": "deleted",
+          "type": "boolean",
+          "description": "Whether the project was deleted"
+        }
+      ]
+    },
+    "step.codebuild_list_builds": {
+      "type": "step.codebuild_list_builds",
+      "plugin": "cicd",
+      "description": "Lists builds for an AWS CodeBuild project.",
+      "configFields": [
+        {
+          "key": "project",
+          "label": "",
+          "type": "string",
+          "description": "Name of the aws.codebuild module",
+          "required": true
+        },
+        {
+          "key": "project_name",
+          "label": "",
+          "type": "string",
+          "description": "CodeBuild project name",
+          "required": true
+        }
+      ],
+      "outputs": [
+        {
+          "key": "builds",
+          "type": "[]any",
+          "description": "List of build IDs"
+        },
+        {
+          "key": "count",
+          "type": "number",
+          "description": "Number of builds"
+        }
+      ]
+    },
+    "step.codebuild_logs": {
+      "type": "step.codebuild_logs",
+      "plugin": "cicd",
+      "description": "Retrieves logs for an AWS CodeBuild build.",
+      "configFields": [
+        {
+          "key": "project",
+          "label": "",
+          "type": "string",
+          "description": "Name of the aws.codebuild module",
+          "required": true
+        },
+        {
+          "key": "build_id",
+          "label": "",
+          "type": "string",
+          "description": "CodeBuild build ID",
+          "required": true
+        }
+      ],
+      "outputs": [
+        {
+          "key": "logs",
+          "type": "string",
+          "description": "Build log output"
+        }
+      ]
+    },
+    "step.codebuild_start": {
+      "type": "step.codebuild_start",
+      "plugin": "cicd",
+      "description": "Starts an AWS CodeBuild build.",
+      "configFields": [
+        {
+          "key": "project",
+          "label": "",
+          "type": "string",
+          "description": "Name of the aws.codebuild module",
+          "required": true
+        },
+        {
+          "key": "project_name",
+          "label": "",
+          "type": "string",
+          "description": "CodeBuild project name",
+          "required": true
+        },
+        {
+          "key": "env_override",
+          "label": "",
+          "type": "map",
+          "description": "Environment variable overrides"
+        }
+      ],
+      "outputs": [
+        {
+          "key": "build_id",
+          "type": "string",
+          "description": "Started build ID"
+        },
+        {
+          "key": "status",
+          "type": "string",
+          "description": "Initial build status"
+        }
+      ]
+    },
+    "step.codebuild_status": {
+      "type": "step.codebuild_status",
+      "plugin": "cicd",
+      "description": "Gets the status of an AWS CodeBuild build.",
+      "configFields": [
+        {
+          "key": "project",
+          "label": "",
+          "type": "string",
+          "description": "Name of the aws.codebuild module",
+          "required": true
+        },
+        {
+          "key": "build_id",
+          "label": "",
+          "type": "string",
+          "description": "CodeBuild build ID",
+          "required": true
+        }
+      ],
+      "outputs": [
+        {
+          "key": "status",
+          "type": "string",
+          "description": "Build status (IN_PROGRESS, SUCCEEDED, FAILED, etc.)"
+        },
+        {
+          "key": "phase",
+          "type": "string",
+          "description": "Current build phase"
+        }
+      ]
+    },
+    "step.conditional": {
+      "type": "step.conditional",
+      "plugin": "pipelinesteps",
+      "description": "Branches pipeline execution based on a field value. Uses 'field' with 'routes' map and 'default'.",
+      "configFields": [
+        {
+          "key": "field",
+          "label": "",
+          "type": "string",
+          "description": "Template expression to evaluate for routing",
+          "required": true
+        },
+        {
+          "key": "routes",
+          "label": "",
+          "type": "map",
+          "description": "Map of field values to step names for branching",
+          "required": true
+        },
+        {
+          "key": "default",
+          "label": "",
+          "type": "string",
+          "description": "Default step name when no route matches",
+          "required": true
+        }
+      ],
+      "outputs": [
+        {
+          "key": "matched_route",
+          "type": "string",
+          "description": "The route value that was matched"
+        },
+        {
+          "key": "next_step",
+          "type": "string",
+          "description": "Name of the next step to execute"
+        }
+      ]
+    },
+    "step.constraint_check": {
+      "type": "step.constraint_check",
+      "plugin": "pipelinesteps",
+      "description": "Validates capability declarations against defined constraints.",
+      "configFields": [
+        {
+          "key": "resources_from",
+          "label": "",
+          "type": "string",
+          "description": "Context key containing resources to validate",
+          "defaultValue": "resources"
+        },
+        {
+          "key": "constraints",
+          "label": "",
+          "type": "array",
+          "description": "Constraint definitions [{field, operator, value, source}]"
+        }
+      ],
+      "outputs": [
+        {
+          "key": "constraint_violations",
+          "type": "[]any",
+          "description": "List of constraint violations"
+        },
+        {
+          "key": "constraint_summary",
+          "type": "map",
+          "description": "Summary: {passed, total_checked, violation_count}"
+        }
+      ]
+    },
+    "step.container_build": {
+      "type": "step.container_build",
+      "plugin": "cicd",
+      "description": "Builds a container image using docker/podman and pushes it to a registry.",
+      "configFields": [
+        {
+          "key": "context",
+          "label": "",
+          "type": "filepath",
+          "description": "Build context path",
+          "required": true
+        },
+        {
+          "key": "tag",
+          "label": "",
+          "type": "string",
+          "description": "Image tag (template expressions supported)",
+          "required": true
+        },
+        {
+          "key": "registry",
+          "label": "",
+          "type": "string",
+          "description": "ContainerRegistry service name",
+          "required": true
+        },
+        {
+          "key": "dockerfile",
+          "label": "",
+          "type": "string",
+          "description": "Dockerfile path relative to context",
+          "defaultValue": "Dockerfile"
+        },
+        {
+          "key": "build_args",
+          "label": "",
+          "type": "map",
+          "description": "Build-time variables passed as --build-arg flags"
+        },
+        {
+          "key": "builder",
+          "label": "",
+          "type": "select",
+          "description": "Container builder binary",
+          "defaultValue": "docker",
+          "options": [
+            "docker",
+            "podman"
+          ]
+        },
+        {
+          "key": "dry_run",
+          "label": "",
+          "type": "boolean",
+          "description": "Print build command without executing"
+        }
+      ],
+      "outputs": [
+        {
+          "key": "image",
+          "type": "string",
+          "description": "Full image reference (registry/tag)"
+        },
+        {
+          "key": "digest",
+          "type": "string",
+          "description": "Image digest returned by the registry"
+        }
+      ]
+    },
+    "step.db_create_partition": {
+      "type": "step.db_create_partition",
+      "plugin": "pipelinesteps",
+      "description": "Creates a PostgreSQL LIST partition for a tenant value.",
+      "configFields": [
+        {
+          "key": "database",
+          "label": "",
+          "type": "string",
+          "description": "Database module name",
+          "required": true
+        },
+        {
+          "key": "tenantKey",
+          "label": "",
+          "type": "string",
+          "description": "Dot-path to tenant value",
+          "required": true
+        },
+        {
+          "key": "partitionKey",
+          "label": "",
+          "type": "string",
+          "description": "Target partition config key"
+        }
+      ],
+      "outputs": [
+        {
+          "key": "synced",
+          "type": "boolean",
+          "description": "Whether the partition was created"
+        }
+      ]
+    },
+    "step.db_exec": {
+      "type": "step.db_exec",
+      "plugin": "pipelinesteps",
+      "description": "Executes a database INSERT/UPDATE/DELETE statement.",
+      "configFields": [
+        {
+          "key": "database",
+          "label": "",
+          "type": "string",
+          "description": "Database module name",
+          "required": true
+        },
+        {
+          "key": "query",
+          "label": "",
+          "type": "sql",
+          "description": "SQL statement (template expressions supported)",
+          "required": true
+        },
+        {
+          "key": "params",
+          "label": "",
+          "type": "array",
+          "description": "Statement parameters (positional $1, $2...)"
+        }
+      ],
+      "outputs": [
+        {
+          "key": "rows_affected",
+          "type": "number",
+          "description": "Number of rows affected by the statement"
+        },
+        {
+          "key": "last_insert_id",
+          "type": "number",
+          "description": "Last inserted row ID (if supported by driver)"
+        }
+      ]
+    },
+    "step.db_query": {
+      "type": "step.db_query",
+      "plugin": "pipelinesteps",
+      "description": "Executes a database SELECT query and stores results in the pipeline context.",
+      "configFields": [
+        {
+          "key": "database",
+          "label": "",
+          "type": "string",
+          "description": "Database module name",
+          "required": true
+        },
+        {
+          "key": "query",
+          "label": "",
+          "type": "sql",
+          "description": "SQL query (template expressions supported)",
+          "required": true
+        },
+        {
+          "key": "params",
+          "label": "",
+          "type": "array",
+          "description": "Query parameters (positional $1, $2...)"
+        },
+        {
+          "key": "mode",
+          "label": "",
+          "type": "select",
+          "description": "Result mode",
+          "defaultValue": "list",
+          "options": [
+            "single",
+            "list"
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "key": "row",
+          "type": "map",
+          "description": "First result row as key-value map (single mode)"
+        },
+        {
+          "key": "rows",
+          "type": "[]map",
+          "description": "All result rows (list mode)"
+        },
+        {
+          "key": "count",
+          "type": "number",
+          "description": "Number of rows returned (list mode)"
+        }
+      ]
+    },
+    "step.db_query_cached": {
+      "type": "step.db_query_cached",
+      "plugin": "pipelinesteps",
+      "description": "Executes a cached database query. Returns cached results if available, otherwise runs query and caches.",
+      "configFields": [
+        {
+          "key": "database",
+          "label": "",
+          "type": "string",
+          "description": "Database module name",
+          "required": true
+        },
+        {
+          "key": "query",
+          "label": "",
+          "type": "sql",
+          "description": "SQL query (template expressions supported)",
+          "required": true
+        },
+        {
+          "key": "params",
+          "label": "",
+          "type": "array",
+          "description": "Query parameters"
+        },
+        {
+          "key": "cache_key",
+          "label": "",
+          "type": "string",
+          "description": "Cache key (template expressions supported)",
+          "required": true
+        },
+        {
+          "key": "ttl",
+          "label": "",
+          "type": "duration",
+          "description": "Cache TTL (e.g. 5m, 1h)",
+          "defaultValue": "5m"
+        },
+        {
+          "key": "mode",
+          "label": "",
+          "type": "select",
+          "description": "Result mode",
+          "defaultValue": "single",
+          "options": [
+            "single",
+            "list"
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "key": "row",
+          "type": "map",
+          "description": "First result row (single mode, not nested under 'row')"
+        },
+        {
+          "key": "rows",
+          "type": "[]map",
+          "description": "All result rows (list mode)"
+        },
+        {
+          "key": "count",
+          "type": "number",
+          "description": "Number of rows (list mode)"
+        },
+        {
+          "key": "cache_hit",
+          "type": "boolean",
+          "description": "Whether the result came from cache"
+        }
+      ]
+    },
+    "step.db_sync_partitions": {
+      "type": "step.db_sync_partitions",
+      "plugin": "pipelinesteps",
+      "description": "Synchronizes partitions from source table for all managed tables.",
+      "configFields": [
+        {
+          "key": "database",
+          "label": "",
+          "type": "string",
+          "description": "Database module name",
+          "required": true
+        },
+        {
+          "key": "partitionKey",
+          "label": "",
+          "type": "string",
+          "description": "Target partition key"
+        }
+      ],
+      "outputs": [
+        {
+          "key": "synced",
+          "type": "boolean",
+          "description": "Whether synchronization completed"
+        }
+      ]
+    },
+    "step.delegate": {
+      "type": "step.delegate",
+      "plugin": "pipelinesteps",
+      "description": "Delegates execution to another module service.",
+      "configFields": [
+        {
+          "key": "service",
+          "label": "",
+          "type": "string",
+          "description": "Name of the service module to delegate to",
+          "required": true
+        },
+        {
+          "key": "action",
+          "label": "",
+          "type": "string",
+          "description": "Action to invoke on the service"
+        }
+      ],
+      "outputs": [
+        {
+          "key": "(dynamic)",
+          "type": "any",
+          "description": "Output depends on the delegated service"
+        }
+      ]
+    },
+    "step.deploy": {
+      "type": "step.deploy",
+      "plugin": "cicd",
+      "description": "Executes deployment with strategy support (rolling, blue_green, canary).",
+      "configFields": [
+        {
+          "key": "environment",
+          "label": "",
+          "type": "string",
+          "description": "Target environment",
+          "required": true
+        },
+        {
+          "key": "strategy",
+          "label": "",
+          "type": "select",
+          "description": "Deployment strategy",
+          "required": true,
+          "options": [
+            "rolling",
+            "blue_green",
+            "canary"
+          ]
+        },
+        {
+          "key": "image",
+          "label": "",
+          "type": "string",
+          "description": "Container image to deploy",
+          "required": true
+        },
+        {
+          "key": "provider",
+          "label": "",
+          "type": "string",
+          "description": "Deployment provider name"
+        },
+        {
+          "key": "rollback_on_failure",
+          "label": "",
+          "type": "boolean",
+          "description": "Auto-rollback on deployment error"
+        },
+        {
+          "key": "health_check",
+          "label": "",
+          "type": "map",
+          "description": "Health check configuration (path, interval, timeout)"
+        }
+      ],
+      "outputs": [
+        {
+          "key": "status",
+          "type": "string",
+          "description": "Deployment status"
+        },
+        {
+          "key": "image",
+          "type": "string",
+          "description": "Deployed image"
+        },
+        {
+          "key": "environment",
+          "type": "string",
+          "description": "Target environment"
+        }
+      ]
+    },
+    "step.deploy_blue_green": {
+      "type": "step.deploy_blue_green",
+      "plugin": "cicd",
+      "description": "Deploys an image using blue/green strategy: creates a green environment, verifies it, switches traffic, and destroys the old blue environment.",
+      "configFields": [
+        {
+          "key": "service",
+          "label": "",
+          "type": "string",
+          "description": "BlueGreenDriver service name",
+          "required": true
+        },
+        {
+          "key": "image",
+          "label": "",
+          "type": "string",
+          "description": "Docker image to deploy (template expressions supported)",
+          "required": true
+        },
+        {
+          "key": "health_check",
+          "label": "",
+          "type": "json",
+          "description": "Health check config: {path, timeout}"
+        },
+        {
+          "key": "traffic_switch",
+          "label": "",
+          "type": "select",
+          "description": "Traffic switch mechanism",
+          "defaultValue": "lb",
+          "options": [
+            "dns",
+            "lb"
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "key": "deploy_id",
+          "type": "string",
+          "description": "Deployment identifier"
+        },
+        {
+          "key": "status",
+          "type": "string",
+          "description": "Deployment status (success/failed)"
+        },
+        {
+          "key": "green_endpoint",
+          "type": "string",
+          "description": "Endpoint of the promoted green environment"
+        }
+      ]
+    },
+    "step.deploy_canary": {
+      "type": "step.deploy_canary",
+      "plugin": "cicd",
+      "description": "Gradually shifts traffic to a new image via configurable stages with optional metric gates.",
+      "configFields": [
+        {
+          "key": "service",
+          "label": "",
+          "type": "string",
+          "description": "CanaryDriver service name",
+          "required": true
+        },
+        {
+          "key": "image",
+          "label": "",
+          "type": "string",
+          "description": "Docker image to deploy (template expressions supported)",
+          "required": true
+        },
+        {
+          "key": "stages",
+          "label": "",
+          "type": "array",
+          "description": "Canary stages: [{percent, duration, metric_gate}]"
+        },
+        {
+          "key": "rollback_on_failure",
+          "label": "",
+          "type": "boolean",
+          "description": "Automatically rollback if a stage fails"
+        }
+      ],
+      "outputs": [
+        {
+          "key": "deploy_id",
+          "type": "string",
+          "description": "Deployment identifier"
+        },
+        {
+          "key": "status",
+          "type": "string",
+          "description": "Deployment status (success/failed/rolled_back)"
+        }
+      ]
+    },
+    "step.deploy_rollback": {
+      "type": "step.deploy_rollback",
+      "plugin": "cicd",
+      "description": "Rolls back a service to a previous image version using deployment history.",
+      "configFields": [
+        {
+          "key": "service",
+          "label": "",
+          "type": "string",
+          "description": "DeployDriver service name",
+          "required": true
+        },
+        {
+          "key": "history_store",
+          "label": "",
+          "type": "string",
+          "description": "DeployHistoryStore service name",
+          "required": true
+        },
+        {
+          "key": "target_version",
+          "label": "",
+          "type": "string",
+          "description": "Version to roll back to (default: previous)",
+          "defaultValue": "previous"
+        },
+        {
+          "key": "health_check",
+          "label": "",
+          "type": "json",
+          "description": "Health check config: {path, timeout}"
+        }
+      ],
+      "outputs": [
+        {
+          "key": "rolled_back_to",
+          "type": "string",
+          "description": "Image that was rolled back to"
+        },
+        {
+          "key": "status",
+          "type": "string",
+          "description": "Rollback status (success/failed)"
+        }
+      ]
+    },
+    "step.deploy_rolling": {
+      "type": "step.deploy_rolling",
+      "plugin": "cicd",
+      "description": "Deploys an image using a rolling update strategy, replacing instances one-by-one with health checks between batches.",
+      "configFields": [
+        {
+          "key": "service",
+          "label": "",
+          "type": "string",
+          "description": "DeployDriver service name",
+          "required": true
+        },
+        {
+          "key": "image",
+          "label": "",
+          "type": "string",
+          "description": "Docker image to deploy (template expressions supported)",
+          "required": true
+        },
+        {
+          "key": "max_surge",
+          "label": "",
+          "type": "number",
+          "description": "Maximum instances to add above desired count",
+          "defaultValue": 1
+        },
+        {
+          "key": "max_unavailable",
+          "label": "",
+          "type": "number",
+          "description": "Maximum instances that can be unavailable during update",
+          "defaultValue": 1
+        },
+        {
+          "key": "health_check",
+          "label": "",
+          "type": "json",
+          "description": "Health check config: {path, interval, timeout}"
+        },
+        {
+          "key": "rollback_on_failure",
+          "label": "",
+          "type": "boolean",
+          "description": "Automatically rollback if health checks fail"
+        }
+      ],
+      "outputs": [
+        {
+          "key": "deploy_id",
+          "type": "string",
+          "description": "Deployment identifier"
+        },
+        {
+          "key": "status",
+          "type": "string",
+          "description": "Deployment status (success/failed/rolled_back)"
+        }
+      ]
+    },
+    "step.deploy_verify": {
+      "type": "step.deploy_verify",
+      "plugin": "cicd",
+      "description": "Runs HTTP and/or metrics checks against a service to confirm it is healthy after a deployment.",
+      "configFields": [
+        {
+          "key": "service",
+          "label": "",
+          "type": "string",
+          "description": "DeployDriver service name",
+          "required": true
+        },
+        {
+          "key": "checks",
+          "label": "",
+          "type": "array",
+          "description": "Verification checks: [{type, path, expected_status, threshold, window}]",
+          "required": true
+        }
+      ],
+      "outputs": [
+        {
+          "key": "results",
+          "type": "[]any",
+          "description": "Check results: [{type, path, passed, message}]"
+        },
+        {
+          "key": "passed",
+          "type": "boolean",
+          "description": "Whether all checks passed"
+        }
+      ]
+    },
+    "step.dlq_replay": {
+      "type": "step.dlq_replay",
+      "plugin": "pipelinesteps",
+      "description": "Replays messages from the dead-letter queue to the target topic.",
+      "configFields": [
+        {
+          "key": "dlq_topic",
+          "label": "",
+          "type": "string",
+          "description": "DLQ topic to read from",
+          "required": true
+        },
+        {
+          "key": "target_topic",
+          "label": "",
+          "type": "string",
+          "description": "Target topic to replay messages to",
+          "required": true
+        },
+        {
+          "key": "max_messages",
+          "label": "",
+          "type": "number",
+          "description": "Maximum messages to replay (default: all)"
+        },
+        {
+          "key": "broker",
+          "label": "",
+          "type": "string",
+          "description": "Messaging broker module name"
+        }
+      ],
+      "outputs": [
+        {
+          "key": "replayed",
+          "type": "number",
+          "description": "Number of messages replayed"
+        }
+      ]
+    },
+    "step.dlq_send": {
+      "type": "step.dlq_send",
+      "plugin": "pipelinesteps",
+      "description": "Sends a failed message to the dead-letter queue.",
+      "configFields": [
+        {
+          "key": "topic",
+          "label": "",
+          "type": "string",
+          "description": "DLQ topic name",
+          "required": true
+        },
+        {
+          "key": "original_topic",
+          "label": "",
+          "type": "string",
+          "description": "Original topic the message came from"
+        },
+        {
+          "key": "error",
+          "label": "",
+          "type": "string",
+          "description": "Error message describing the failure"
+        },
+        {
+          "key": "payload",
+          "label": "",
+          "type": "string",
+          "description": "Original message payload"
+        },
+        {
+          "key": "broker",
+          "label": "",
+          "type": "string",
+          "description": "Messaging broker module name"
+        }
+      ],
+      "outputs": [
+        {
+          "key": "sent",
+          "type": "boolean",
+          "description": "Whether the message was sent to DLQ"
+        }
+      ]
+    },
+    "step.dns_apply": {
+      "type": "step.dns_apply",
+      "plugin": "platform",
+      "description": "Applies DNS zone and record changes.",
+      "configFields": [
+        {
+          "key": "zone",
+          "label": "",
+          "type": "string",
+          "description": "Name of the platform.dns module",
+          "required": true
+        }
+      ],
+      "outputs": [
+        {
+          "key": "zone_id",
+          "type": "string",
+          "description": "DNS zone ID"
+        },
+        {
+          "key": "nameservers",
+          "type": "[]string",
+          "description": "Zone nameservers"
+        }
+      ]
+    },
+    "step.dns_plan": {
+      "type": "step.dns_plan",
+      "plugin": "platform",
+      "description": "Plans DNS changes without applying them.",
+      "configFields": [
+        {
+          "key": "zone",
+          "label": "",
+          "type": "string",
+          "description": "Name of the platform.dns module",
+          "required": true
+        }
+      ],
+      "outputs": [
+        {
+          "key": "plan",
+          "type": "string",
+          "description": "Human-readable plan output"
+        },
+        {
+          "key": "changes",
+          "type": "number",
+          "description": "Number of changes planned"
+        }
+      ]
+    },
+    "step.dns_status": {
+      "type": "step.dns_status",
+      "plugin": "platform",
+      "description": "Gets the current status of a DNS zone.",
+      "configFields": [
+        {
+          "key": "zone",
+          "label": "",
+          "type": "string",
+          "description": "Name of the platform.dns module",
+          "required": true
+        }
+      ],
+      "outputs": [
+        {
+          "key": "status",
+          "type": "string",
+          "description": "Zone status"
+        },
+        {
+          "key": "zone_id",
+          "type": "string",
+          "description": "DNS zone ID"
+        }
+      ]
+    },
+    "step.do_deploy": {
+      "type": "step.do_deploy",
+      "plugin": "platform",
+      "description": "Deploys an application to DigitalOcean App Platform.",
+      "configFields": [
+        {
+          "key": "app",
+          "label": "",
+          "type": "string",
+          "description": "Name of the platform.do_app module",
+          "required": true
+        }
+      ],
+      "outputs": [
+        {
+          "key": "app_id",
+          "type": "string",
+          "description": "DigitalOcean app ID"
+        },
+        {
+          "key": "live_url",
+          "type": "string",
+          "description": "App live URL"
+        }
+      ]
+    },
+    "step.do_destroy": {
+      "type": "step.do_destroy",
+      "plugin": "platform",
+      "description": "Destroys a DigitalOcean App Platform application.",
+      "configFields": [
+        {
+          "key": "app",
+          "label": "",
+          "type": "string",
+          "description": "Name of the platform.do_app module",
+          "required": true
+        }
+      ],
+      "outputs": [
+        {
+          "key": "destroyed",
+          "type": "boolean",
+          "description": "Whether the app was destroyed"
+        }
+      ]
+    },
+    "step.do_logs": {
+      "type": "step.do_logs",
+      "plugin": "platform",
+      "description": "Retrieves logs from a DigitalOcean App Platform application.",
+      "configFields": [
+        {
+          "key": "app",
+          "label": "",
+          "type": "string",
+          "description": "Name of the platform.do_app module",
+          "required": true
+        },
+        {
+          "key": "component",
+          "label": "",
+          "type": "string",
+          "description": "App component name"
+        }
+      ],
+      "outputs": [
+        {
+          "key": "logs",
+          "type": "string",
+          "description": "Application log output"
+        }
+      ]
+    },
+    "step.do_scale": {
+      "type": "step.do_scale",
+      "plugin": "platform",
+      "description": "Scales a DigitalOcean App Platform application.",
+      "configFields": [
+        {
+          "key": "app",
+          "label": "",
+          "type": "string",
+          "description": "Name of the platform.do_app module",
+          "required": true
+        },
+        {
+          "key": "instances",
+          "label": "",
+          "type": "number",
+          "description": "Desired instance count",
+          "required": true
+        }
+      ],
+      "outputs": [
+        {
+          "key": "instances",
+          "type": "number",
+          "description": "New instance count"
+        }
+      ]
+    },
+    "step.do_status": {
+      "type": "step.do_status",
+      "plugin": "platform",
+      "description": "Gets the status of a DigitalOcean App Platform application.",
+      "configFields": [
+        {
+          "key": "app",
+          "label": "",
+          "type": "string",
+          "description": "Name of the platform.do_app module",
+          "required": true
+        }
+      ],
+      "outputs": [
+        {
+          "key": "phase",
+          "type": "string",
+          "description": "App deployment phase"
+        },
+        {
+          "key": "live_url",
+          "type": "string",
+          "description": "App live URL"
+        }
+      ]
+    },
+    "step.docker_build": {
+      "type": "step.docker_build",
+      "plugin": "cicd",
+      "description": "Builds a Docker image from a context directory.",
+      "configFields": [
+        {
+          "key": "context",
+          "label": "",
+          "type": "string",
+          "description": "Build context directory",
+          "required": true
+        },
+        {
+          "key": "dockerfile",
+          "label": "",
+          "type": "string",
+          "description": "Dockerfile path",
+          "defaultValue": "Dockerfile"
+        },
+        {
+          "key": "tags",
+          "label": "",
+          "type": "array",
+          "description": "Image tags"
+        },
+        {
+          "key": "build_args",
+          "label": "",
+          "type": "map",
+          "description": "Build arguments"
+        },
+        {
+          "key": "cache_from",
+          "label": "",
+          "type": "array",
+          "description": "Cache images"
+        }
+      ],
+      "outputs": [
+        {
+          "key": "images_built",
+          "type": "[]string",
+          "description": "Built image tags"
+        },
+        {
+          "key": "digest",
+          "type": "string",
+          "description": "Image digest"
+        }
+      ]
+    },
+    "step.docker_push": {
+      "type": "step.docker_push",
+      "plugin": "cicd",
+      "description": "Pushes a Docker image to a remote registry.",
+      "configFields": [
+        {
+          "key": "image",
+          "label": "",
+          "type": "string",
+          "description": "Image name/tag to push",
+          "required": true
+        },
+        {
+          "key": "registry",
+          "label": "",
+          "type": "string",
+          "description": "Registry prefix"
+        },
+        {
+          "key": "auth_provider",
+          "label": "",
+          "type": "string",
+          "description": "Auth provider name"
+        }
+      ],
+      "outputs": [
+        {
+          "key": "image",
+          "type": "string",
+          "description": "Image name"
+        },
+        {
+          "key": "digest",
+          "type": "string",
+          "description": "Image digest"
+        }
+      ]
+    },
+    "step.docker_run": {
+      "type": "step.docker_run",
+      "plugin": "cicd",
+      "description": "Runs a command inside a Docker container.",
+      "configFields": [
+        {
+          "key": "image",
+          "label": "",
+          "type": "string",
+          "description": "Container image",
+          "required": true
+        },
+        {
+          "key": "command",
+          "label": "",
+          "type": "array",
+          "description": "Command to run"
+        },
+        {
+          "key": "env",
+          "label": "",
+          "type": "map",
+          "description": "Environment variables"
+        },
+        {
+          "key": "timeout",
+          "label": "",
+          "type": "duration",
+          "description": "Execution timeout"
+        },
+        {
+          "key": "wait_for_exit",
+          "label": "",
+          "type": "boolean",
+          "description": "Wait for container to exit",
+          "defaultValue": true
+        }
+      ],
+      "outputs": [
+        {
+          "key": "exit_code",
+          "type": "number",
+          "description": "Container exit code"
+        },
+        {
+          "key": "stdout",
+          "type": "string",
+          "description": "Standard output"
+        },
+        {
+          "key": "stderr",
+          "type": "string",
+          "description": "Standard error"
+        }
+      ]
+    },
+    "step.drift_check": {
+      "type": "step.drift_check",
+      "plugin": "platform",
+      "description": "Checks resources for configuration drift by comparing current vs desired state.",
+      "configFields": [
+        {
+          "key": "provider_service",
+          "label": "",
+          "type": "string",
+          "description": "Provider service name",
+          "required": true
+        },
+        {
+          "key": "resources_from",
+          "label": "",
+          "type": "string",
+          "description": "Context key for applied resources",
+          "defaultValue": "applied_resources"
+        }
+      ],
+      "outputs": [
+        {
+          "key": "reports",
+          "type": "[]any",
+          "description": "Drift report per resource"
+        },
+        {
+          "key": "drift_detected",
+          "type": "boolean",
+          "description": "Whether any drift was detected"
+        }
+      ]
+    },
+    "step.ecs_apply": {
+      "type": "step.ecs_apply",
+      "plugin": "platform",
+      "description": "Applies (deploys) an ECS Fargate service.",
+      "configFields": [
+        {
+          "key": "service",
+          "label": "",
+          "type": "string",
+          "description": "Name of the platform.ecs module",
+          "required": true
+        },
+        {
+          "key": "image",
+          "label": "",
+          "type": "string",
+          "description": "Container image to deploy"
+        }
+      ],
+      "outputs": [
+        {
+          "key": "service_arn",
+          "type": "string",
+          "description": "ECS service ARN"
+        },
+        {
+          "key": "status",
+          "type": "string",
+          "description": "Service status"
+        }
+      ]
+    },
+    "step.ecs_destroy": {
+      "type": "step.ecs_destroy",
+      "plugin": "platform",
+      "description": "Destroys an ECS Fargate service.",
+      "configFields": [
+        {
+          "key": "service",
+          "label": "",
+          "type": "string",
+          "description": "Name of the platform.ecs module",
+          "required": true
+        }
+      ],
+      "outputs": [
+        {
+          "key": "destroyed",
+          "type": "boolean",
+          "description": "Whether the service was destroyed"
+        }
+      ]
+    },
+    "step.ecs_plan": {
+      "type": "step.ecs_plan",
+      "plugin": "platform",
+      "description": "Plans ECS service deployment changes without applying them.",
+      "configFields": [
+        {
+          "key": "service",
+          "label": "",
+          "type": "string",
+          "description": "Name of the platform.ecs module",
+          "required": true
+        },
+        {
+          "key": "image",
+          "label": "",
+          "type": "string",
+          "description": "Container image to plan for"
+        }
+      ],
+      "outputs": [
+        {
+          "key": "plan",
+          "type": "string",
+          "description": "Human-readable plan output"
+        },
+        {
+          "key": "changes",
+          "type": "number",
+          "description": "Number of changes planned"
+        }
+      ]
+    },
+    "step.ecs_status": {
+      "type": "step.ecs_status",
+      "plugin": "platform",
+      "description": "Gets the status of an ECS Fargate service.",
+      "configFields": [
+        {
+          "key": "service",
+          "label": "",
+          "type": "string",
+          "description": "Name of the platform.ecs module",
+          "required": true
+        }
+      ],
+      "outputs": [
+        {
+          "key": "status",
+          "type": "string",
+          "description": "Service status"
+        },
+        {
+          "key": "running_count",
+          "type": "number",
+          "description": "Number of running tasks"
+        }
+      ]
+    },
+    "step.event_decrypt": {
+      "type": "step.event_decrypt",
+      "plugin": "pipelinesteps",
+      "description": "Decrypts field-level encryption applied by step.event_publish, reading CloudEvents extension attributes.",
+      "configFields": [
+        {
+          "key": "key_id",
+          "label": "",
+          "type": "string",
+          "description": "Key ID override (supports ${ENV_VAR} expressions)"
+        }
+      ],
+      "outputs": [
+        {
+          "key": "decrypted",
+          "type": "boolean",
+          "description": "Whether decryption was performed"
+        }
+      ]
+    },
+    "step.event_publish": {
+      "type": "step.event_publish",
+      "plugin": "pipelinesteps",
+      "description": "Publishes a structured event in CloudEvents format to a messaging broker or EventPublisher.",
+      "configFields": [
+        {
+          "key": "topic",
+          "label": "",
+          "type": "string",
+          "description": "Topic name to publish to",
+          "required": true
+        },
+        {
+          "key": "stream",
+          "label": "",
+          "type": "string",
+          "description": "Alias for topic (e.g., Kinesis stream name)"
+        },
+        {
+          "key": "broker",
+          "label": "",
+          "type": "string",
+          "description": "Messaging broker module name"
+        },
+        {
+          "key": "provider",
+          "label": "",
+          "type": "string",
+          "description": "Alias for broker — EventPublisher or MessageBroker service name"
+        },
+        {
+          "key": "payload",
+          "label": "",
+          "type": "map",
+          "description": "Event payload (template expressions supported)"
+        },
+        {
+          "key": "data",
+          "label": "",
+          "type": "map",
+          "description": "Alias for payload"
+        },
+        {
+          "key": "headers",
+          "label": "",
+          "type": "map",
+          "description": "Event headers"
+        },
+        {
+          "key": "event_type",
+          "label": "",
+          "type": "string",
+          "description": "CloudEvents type identifier"
+        },
+        {
+          "key": "source",
+          "label": "",
+          "type": "string",
+          "description": "CloudEvents source URI (template expressions supported)"
+        }
+      ],
+      "outputs": [
+        {
+          "key": "published",
+          "type": "boolean",
+          "description": "Whether the event was published successfully"
+        },
+        {
+          "key": "event_id",
+          "type": "string",
+          "description": "Generated event ID"
+        },
+        {
+          "key": "topic",
+          "type": "string",
+          "description": "The topic the event was published to"
+        }
+      ]
+    },
+    "step.feature_flag": {
+      "type": "step.feature_flag",
+      "plugin": "featureflags",
+      "description": "Evaluates a feature flag and stores the result in the pipeline context.",
+      "configFields": [
+        {
+          "key": "flag",
+          "label": "",
+          "type": "string",
+          "description": "Feature flag name",
+          "required": true
+        },
+        {
+          "key": "default",
+          "label": "",
+          "type": "boolean",
+          "description": "Default value when flag not found",
+          "defaultValue": false
+        },
+        {
+          "key": "output",
+          "label": "",
+          "type": "string",
+          "description": "Context key to store the flag value"
+        }
+      ],
+      "outputs": [
+        {
+          "key": "enabled",
+          "type": "boolean",
+          "description": "Whether the feature flag is enabled"
+        },
+        {
+          "key": "flag",
+          "type": "string",
+          "description": "The flag name that was evaluated"
+        }
+      ]
+    },
+    "step.ff_gate": {
+      "type": "step.ff_gate",
+      "plugin": "featureflags",
+      "description": "Evaluates a feature flag and routes pipeline execution based on the result.",
+      "configFields": [
+        {
+          "key": "flag",
+          "label": "",
+          "type": "string",
+          "description": "Feature flag name",
+          "required": true
+        },
+        {
+          "key": "on_enabled",
+          "label": "",
+          "type": "string",
+          "description": "Next step name when flag is enabled",
+          "required": true
+        },
+        {
+          "key": "on_disabled",
+          "label": "",
+          "type": "string",
+          "description": "Next step name when flag is disabled",
+          "required": true
+        },
+        {
+          "key": "user_from",
+          "label": "",
+          "type": "string",
+          "description": "Template expression to resolve user key"
+        },
+        {
+          "key": "group_from",
+          "label": "",
+          "type": "string",
+          "description": "Template expression to resolve group"
+        }
+      ],
+      "outputs": [
+        {
+          "key": "flag_value",
+          "type": "any",
+          "description": "Evaluated flag value"
+        },
+        {
+          "key": "enabled",
+          "type": "boolean",
+          "description": "Whether the flag is enabled"
+        }
+      ]
+    },
+    "step.field_reencrypt": {
+      "type": "step.field_reencrypt",
+      "plugin": "pipelinesteps",
+      "description": "Re-encrypts pipeline context data with the latest key version using a ProtectedFieldManager.",
+      "configFields": [
+        {
+          "key": "module",
+          "label": "",
+          "type": "string",
+          "description": "Service name of ProtectedFieldManager",
+          "required": true
+        },
+        {
+          "key": "tenant_id",
+          "label": "",
+          "type": "string",
+          "description": "Template expression for tenant ID"
+        }
+      ],
+      "outputs": [
+        {
+          "key": "reencrypted",
+          "type": "boolean",
+          "description": "Whether re-encryption was performed"
+        }
+      ]
+    },
+    "step.foreach": {
+      "type": "step.foreach",
+      "plugin": "pipelinesteps",
+      "description": "Iterates over a collection and executes nested steps for each item.",
+      "configFields": [
+        {
+          "key": "collection",
+          "label": "",
+          "type": "string",
+          "description": "Template expression resolving to the collection to iterate",
+          "required": true
+        },
+        {
+          "key": "item_var",
+          "label": "",
+          "type": "string",
+          "description": "Context key for the current item",
+          "defaultValue": "item"
+        },
+        {
+          "key": "item_key",
+          "label": "",
+          "type": "string",
+          "description": "Context key for the current item's key/index"
+        },
+        {
+          "key": "index_key",
+          "label": "",
+          "type": "string",
+          "description": "Context key for the numeric loop index"
+        },
+        {
+          "key": "step",
+          "label": "",
+          "type": "map",
+          "description": "Single step definition to execute per item (must include 'type' key)"
+        },
+        {
+          "key": "steps",
+          "label": "",
+          "type": "array",
+          "description": "List of step definitions to execute per item"
+        },
+        {
+          "key": "concurrency",
+          "label": "",
+          "type": "number",
+          "description": "Worker pool size. 0 = sequential. Time: O(⌈n/c⌉ × per_item). Space: O(c × context_size).",
+          "defaultValue": 0
+        },
+        {
+          "key": "error_strategy",
+          "label": "",
+          "type": "select",
+          "description": "Error handling for concurrent mode. fail_fast: cancel on first error. collect_errors: continue, mark failed items.",
+          "defaultValue": "fail_fast",
+          "options": [
+            "fail_fast",
+            "collect_errors"
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "key": "count",
+          "type": "number",
+          "description": "Number of iterations completed"
+        },
+        {
+          "key": "results",
+          "type": "[]any",
+          "description": "Output from each iteration"
+        },
+        {
+          "key": "error_count",
+          "type": "integer",
+          "description": "Count of failed items (only present with error_strategy: collect_errors)"
+        }
+      ]
+    },
+    "step.gate": {
+      "type": "step.gate",
+      "plugin": "cicd",
+      "description": "Approval gate supporting manual, automated, and scheduled approval types.",
+      "configFields": [
+        {
+          "key": "type",
+          "label": "",
+          "type": "select",
+          "description": "Gate type",
+          "required": true,
+          "options": [
+            "manual",
+            "automated",
+            "scheduled"
+          ]
+        },
+        {
+          "key": "timeout",
+          "label": "",
+          "type": "duration",
+          "description": "Approval timeout",
+          "defaultValue": "24h"
+        },
+        {
+          "key": "approvers",
+          "label": "",
+          "type": "array",
+          "description": "Required approver names"
+        },
+        {
+          "key": "auto_approve_conditions",
+          "label": "",
+          "type": "array",
+          "description": "Conditions for automated approval"
+        },
+        {
+          "key": "schedule",
+          "label": "",
+          "type": "map",
+          "description": "Scheduled window config (weekdays, start_hour, end_hour)"
+        }
+      ],
+      "outputs": [
+        {
+          "key": "gate_result",
+          "type": "map",
+          "description": "Gate result: {passed, type, reason, approval_required}"
+        }
+      ]
+    },
+    "step.git_checkout": {
+      "type": "step.git_checkout",
+      "plugin": "cicd",
+      "description": "Checks out a Git branch, tag, or commit.",
+      "configFields": [
+        {
+          "key": "path",
+          "label": "",
+          "type": "string",
+          "description": "Local repository path",
+          "required": true
+        },
+        {
+          "key": "ref",
+          "label": "",
+          "type": "string",
+          "description": "Branch, tag, or commit SHA to checkout",
+          "required": true
+        }
+      ],
+      "outputs": [
+        {
+          "key": "commit",
+          "type": "string",
+          "description": "HEAD commit SHA after checkout"
+        },
+        {
+          "key": "branch",
+          "type": "string",
+          "description": "Current branch name"
+        }
+      ]
+    },
+    "step.git_clone": {
+      "type": "step.git_clone",
+      "plugin": "cicd",
+      "description": "Clones a Git repository to a local path.",
+      "configFields": [
+        {
+          "key": "url",
+          "label": "",
+          "type": "string",
+          "description": "Repository URL to clone",
+          "required": true
+        },
+        {
+          "key": "path",
+          "label": "",
+          "type": "string",
+          "description": "Local path to clone into",
+          "required": true
+        },
+        {
+          "key": "branch",
+          "label": "",
+          "type": "string",
+          "description": "Branch to clone (default: main)"
+        },
+        {
+          "key": "depth",
+          "label": "",
+          "type": "number",
+          "description": "Clone depth (0 = full history)"
+        },
+        {
+          "key": "token",
+          "label": "",
+          "type": "string",
+          "description": "Auth token for private repos",
+          "sensitive": true
+        }
+      ],
+      "outputs": [
+        {
+          "key": "commit",
+          "type": "string",
+          "description": "HEAD commit SHA"
+        },
+        {
+          "key": "path",
+          "type": "string",
+          "description": "Local path where repo was cloned"
+        }
+      ]
+    },
+    "step.git_commit": {
+      "type": "step.git_commit",
+      "plugin": "cicd",
+      "description": "Creates a Git commit with staged changes.",
+      "configFields": [
+        {
+          "key": "path",
+          "label": "",
+          "type": "string",
+          "description": "Local repository path",
+          "required": true
+        },
+        {
+          "key": "message",
+          "label": "",
+          "type": "string",
+          "description": "Commit message",
+          "required": true
+        },
+        {
+          "key": "author_name",
+          "label": "",
+          "type": "string",
+          "description": "Commit author name"
+        },
+        {
+          "key": "author_email",
+          "label": "",
+          "type": "string",
+          "description": "Commit author email"
+        },
+        {
+          "key": "add_all",
+          "label": "",
+          "type": "boolean",
+          "description": "Stage all changes before committing"
+        }
+      ],
+      "outputs": [
+        {
+          "key": "sha",
+          "type": "string",
+          "description": "New commit SHA"
+        }
+      ]
+    },
+    "step.git_push": {
+      "type": "step.git_push",
+      "plugin": "cicd",
+      "description": "Pushes local commits to a remote Git repository.",
+      "configFields": [
+        {
+          "key": "path",
+          "label": "",
+          "type": "string",
+          "description": "Local repository path",
+          "required": true
+        },
+        {
+          "key": "remote",
+          "label": "",
+          "type": "string",
+          "description": "Remote name (default: origin)",
+          "defaultValue": "origin"
+        },
+        {
+          "key": "branch",
+          "label": "",
+          "type": "string",
+          "description": "Branch to push"
+        },
+        {
+          "key": "token",
+          "label": "",
+          "type": "string",
+          "description": "Auth token for private repos",
+          "sensitive": true
+        },
+        {
+          "key": "force",
+          "label": "",
+          "type": "boolean",
+          "description": "Force push"
+        }
+      ],
+      "outputs": [
+        {
+          "key": "pushed",
+          "type": "boolean",
+          "description": "Whether push succeeded"
+        }
+      ]
+    },
+    "step.git_tag": {
+      "type": "step.git_tag",
+      "plugin": "cicd",
+      "description": "Creates a Git tag on the current commit.",
+      "configFields": [
+        {
+          "key": "path",
+          "label": "",
+          "type": "string",
+          "description": "Local repository path",
+          "required": true
+        },
+        {
+          "key": "tag",
+          "label": "",
+          "type": "string",
+          "description": "Tag name to create",
+          "required": true
+        },
+        {
+          "key": "message",
+          "label": "",
+          "type": "string",
+          "description": "Annotated tag message (empty = lightweight tag)"
+        },
+        {
+          "key": "push",
+          "label": "",
+          "type": "boolean",
+          "description": "Push tag to remote after creating"
+        }
+      ],
+      "outputs": [
+        {
+          "key": "tag",
+          "type": "string",
+          "description": "Created tag name"
+        },
+        {
+          "key": "sha",
+          "type": "string",
+          "description": "Tagged commit SHA"
+        }
+      ]
+    },
+    "step.gitlab_create_mr": {
+      "type": "step.gitlab_create_mr",
+      "plugin": "gitlab",
+      "description": "Creates a GitLab merge request.",
+      "configFields": [
+        {
+          "key": "client",
+          "label": "",
+          "type": "string",
+          "description": "Name of the gitlab.client module",
+          "required": true
+        },
+        {
+          "key": "project_id",
+          "label": "",
+          "type": "string",
+          "description": "GitLab project ID or path",
+          "required": true
+        },
+        {
+          "key": "source_branch",
+          "label": "",
+          "type": "string",
+          "description": "Source branch for the MR",
+          "required": true
+        },
+        {
+          "key": "target_branch",
+          "label": "",
+          "type": "string",
+          "description": "Target branch for the MR",
+          "required": true
+        },
+        {
+          "key": "title",
+          "label": "",
+          "type": "string",
+          "description": "MR title",
+          "required": true
+        },
+        {
+          "key": "description",
+          "label": "",
+          "type": "string",
+          "description": "MR description"
+        }
+      ],
+      "outputs": [
+        {
+          "key": "iid",
+          "type": "number",
+          "description": "Merge request internal ID"
+        },
+        {
+          "key": "url",
+          "type": "string",
+          "description": "Merge request URL"
+        }
+      ]
+    },
+    "step.gitlab_mr_comment": {
+      "type": "step.gitlab_mr_comment",
+      "plugin": "gitlab",
+      "description": "Adds a comment to a GitLab merge request.",
+      "configFields": [
+        {
+          "key": "client",
+          "label": "",
+          "type": "string",
+          "description": "Name of the gitlab.client module",
+          "required": true
+        },
+        {
+          "key": "project_id",
+          "label": "",
+          "type": "string",
+          "description": "GitLab project ID or path",
+          "required": true
+        },
+        {
+          "key": "mr_iid",
+          "label": "",
+          "type": "number",
+          "description": "Merge request internal ID",
+          "required": true
+        },
+        {
+          "key": "body",
+          "label": "",
+          "type": "string",
+          "description": "Comment body text",
+          "required": true
+        }
+      ],
+      "outputs": [
+        {
+          "key": "note_id",
+          "type": "number",
+          "description": "Created note ID"
+        }
+      ]
+    },
+    "step.gitlab_parse_webhook": {
+      "type": "step.gitlab_parse_webhook",
+      "plugin": "gitlab",
+      "description": "Parses and validates a GitLab webhook payload.",
+      "configFields": [
+        {
+          "key": "webhook",
+          "label": "",
+          "type": "string",
+          "description": "Name of the gitlab.webhook module",
+          "required": true
+        }
+      ],
+      "outputs": [
+        {
+          "key": "event_type",
+          "type": "string",
+          "description": "GitLab event type (push, tag, merge_request, etc.)"
+        },
+        {
+          "key": "project_id",
+          "type": "number",
+          "description": "GitLab project ID"
+        },
+        {
+          "key": "payload",
+          "type": "any",
+          "description": "Parsed webhook payload"
+        }
+      ]
+    },
+    "step.gitlab_pipeline_status": {
+      "type": "step.gitlab_pipeline_status",
+      "plugin": "gitlab",
+      "description": "Gets the status of a GitLab pipeline.",
+      "configFields": [
+        {
+          "key": "client",
+          "label": "",
+          "type": "string",
+          "description": "Name of the gitlab.client module",
+          "required": true
+        },
+        {
+          "key": "project_id",
+          "label": "",
+          "type": "string",
+          "description": "GitLab project ID or path",
+          "required": true
+        },
+        {
+          "key": "pipeline_id",
+          "label": "",
+          "type": "number",
+          "description": "Pipeline ID",
+          "required": true
+        }
+      ],
+      "outputs": [
+        {
+          "key": "status",
+          "type": "string",
+          "description": "Pipeline status (running, success, failed, etc.)"
+        },
+        {
+          "key": "url",
+          "type": "string",
+          "description": "Pipeline web URL"
+        }
+      ]
+    },
+    "step.gitlab_trigger_pipeline": {
+      "type": "step.gitlab_trigger_pipeline",
+      "plugin": "gitlab",
+      "description": "Triggers a GitLab CI/CD pipeline.",
+      "configFields": [
+        {
+          "key": "client",
+          "label": "",
+          "type": "string",
+          "description": "Name of the gitlab.client module",
+          "required": true
+        },
+        {
+          "key": "project_id",
+          "label": "",
+          "type": "string",
+          "description": "GitLab project ID or path",
+          "required": true
+        },
+        {
+          "key": "ref",
+          "label": "",
+          "type": "string",
+          "description": "Branch or tag to run pipeline on",
+          "required": true
+        },
+        {
+          "key": "variables",
+          "label": "",
+          "type": "map",
+          "description": "Pipeline variables to pass"
+        }
+      ],
+      "outputs": [
+        {
+          "key": "pipeline_id",
+          "type": "number",
+          "description": "Triggered pipeline ID"
+        },
+        {
+          "key": "status",
+          "type": "string",
+          "description": "Initial pipeline status"
+        },
+        {
+          "key": "url",
+          "type": "string",
+          "description": "Pipeline web URL"
+        }
+      ]
+    },
+    "step.graphql": {
+      "type": "step.graphql",
+      "plugin": "pipelinesteps",
+      "description": "Executes GraphQL queries or mutations with support for pagination, batch requests, and OAuth2 authentication.",
+      "configFields": [
+        {
+          "key": "url",
+          "label": "",
+          "type": "string",
+          "description": "GraphQL endpoint URL (template expressions supported)",
+          "required": true
+        },
+        {
+          "key": "query",
+          "label": "",
+          "type": "string",
+          "description": "GraphQL query or mutation"
+        },
+        {
+          "key": "variables",
+          "label": "",
+          "type": "map",
+          "description": "Query variables (template expressions supported)"
+        },
+        {
+          "key": "data_path",
+          "label": "",
+          "type": "string",
+          "description": "Dot-separated path to extract nested data (e.g. user.profile)"
+        },
+        {
+          "key": "headers",
+          "label": "",
+          "type": "map",
+          "description": "Custom HTTP headers"
+        },
+        {
+          "key": "timeout",
+          "label": "",
+          "type": "duration",
+          "description": "Request timeout",
+          "defaultValue": "30s"
+        },
+        {
+          "key": "fail_on_graphql_errors",
+          "label": "",
+          "type": "boolean",
+          "description": "Fail if response contains errors",
+          "defaultValue": true
+        },
+        {
+          "key": "auth",
+          "label": "",
+          "type": "map",
+          "description": "Authentication config (type, token, client_id, client_secret)"
+        },
+        {
+          "key": "pagination",
+          "label": "",
+          "type": "map",
+          "description": "Pagination config (strategy, page_info_path, cursor_variable, max_pages)"
+        },
+        {
+          "key": "batch",
+          "label": "",
+          "type": "map",
+          "description": "Batch query config (queries array)"
+        }
+      ],
+      "outputs": [
+        {
+          "key": "data",
+          "type": "any",
+          "description": "Extracted data (after data_path applied)"
+        },
+        {
+          "key": "errors",
+          "type": "[]any",
+          "description": "GraphQL errors"
+        },
+        {
+          "key": "has_errors",
+          "type": "boolean",
+          "description": "Whether errors are present"
+        },
+        {
+          "key": "status_code",
+          "type": "number",
+          "description": "HTTP status code"
+        }
+      ]
+    },
+    "step.hash": {
+      "type": "step.hash",
+      "plugin": "pipelinesteps",
+      "description": "Computes a cryptographic hash of a template-resolved input string.",
+      "configFields": [
+        {
+          "key": "algorithm",
+          "label": "",
+          "type": "select",
+          "description": "Hash algorithm",
+          "defaultValue": "sha256",
+          "options": [
+            "md5",
+            "sha256",
+            "sha512"
+          ]
+        },
+        {
+          "key": "input",
+          "label": "",
+          "type": "string",
+          "description": "Input string to hash (template expressions supported)",
+          "required": true
+        }
+      ],
+      "outputs": [
+        {
+          "key": "hash",
+          "type": "string",
+          "description": "Hex-encoded hash value"
+        }
+      ]
+    },
+    "step.http_call": {
+      "type": "step.http_call",
+      "plugin": "pipelinesteps",
+      "description": "Makes an outbound HTTP request and stores the response in the pipeline context.",
+      "configFields": [
+        {
+          "key": "url",
+          "label": "",
+          "type": "string",
+          "description": "Request URL (template expressions supported)",
+          "required": true
+        },
+        {
+          "key": "method",
+          "label": "",
+          "type": "select",
+          "description": "HTTP method",
+          "required": true,
+          "options": [
+            "GET",
+            "POST",
+            "PUT",
+            "DELETE",
+            "PATCH"
+          ]
+        },
+        {
+          "key": "headers",
+          "label": "",
+          "type": "map",
+          "description": "Request headers"
+        },
+        {
+          "key": "body",
+          "label": "",
+          "type": "string",
+          "description": "Request body (template expressions supported)"
+        },
+        {
+          "key": "body_from",
+          "label": "",
+          "type": "string",
+          "description": "Template expression to build body from step outputs"
+        },
+        {
+          "key": "timeout",
+          "label": "",
+          "type": "duration",
+          "description": "Request timeout duration (e.g. 30s)",
+          "defaultValue": "30s"
+        },
+        {
+          "key": "auth",
+          "label": "",
+          "type": "map",
+          "description": "Authentication config (type, token, client_id, client_secret, token_url for OAuth2)"
+        }
+      ],
+      "outputs": [
+        {
+          "key": "status",
+          "type": "number",
+          "description": "HTTP response status code"
+        },
+        {
+          "key": "body",
+          "type": "any",
+          "description": "Response body (parsed as JSON if Content-Type is application/json)"
+        },
+        {
+          "key": "headers",
+          "type": "map",
+          "description": "Response headers"
+        }
+      ]
+    },
+    "step.http_proxy": {
+      "type": "step.http_proxy",
+      "plugin": "pipelinesteps",
+      "description": "Forwards the original HTTP request to a dynamically resolved backend URL.",
+      "configFields": [
+        {
+          "key": "backend_url_key",
+          "label": "",
+          "type": "string",
+          "description": "Context key containing the backend URL",
+          "defaultValue": "backend_url"
+        },
+        {
+          "key": "resource_key",
+          "label": "",
+          "type": "string",
+          "description": "Context key for the resource path suffix",
+          "defaultValue": "path_params.resource"
+        },
+        {
+          "key": "forward_headers",
+          "label": "",
+          "type": "array",
+          "description": "Headers to forward from the original request"
+        },
+        {
+          "key": "timeout",
+          "label": "",
+          "type": "duration",
+          "description": "Request timeout",
+          "defaultValue": "30s"
+        }
+      ],
+      "outputs": [
+        {
+          "key": "status_code",
+          "type": "number",
+          "description": "Backend response status code"
+        },
+        {
+          "key": "proxied_to",
+          "type": "string",
+          "description": "The backend URL that was called"
+        },
+        {
+          "key": "body",
+          "type": "string",
+          "description": "Backend response body (when no HTTP writer)"
+        },
+        {
+          "key": "headers",
+          "type": "map",
+          "description": "Backend response headers (when no HTTP writer)"
+        }
+      ]
+    },
+    "step.iac_apply": {
+      "type": "step.iac_apply",
+      "plugin": "platform",
+      "description": "Applies infrastructure changes from an IaC plan.",
+      "configFields": [
+        {
+          "key": "platform",
+          "label": "",
+          "type": "string",
+          "description": "Name of the platform module",
+          "required": true
+        },
+        {
+          "key": "resource_id",
+          "label": "",
+          "type": "string",
+          "description": "Resource ID to manage"
+        },
+        {
+          "key": "state_store",
+          "label": "",
+          "type": "string",
+          "description": "Name of the iac.state module for state backend"
+        }
+      ],
+      "outputs": [
+        {
+          "key": "applied",
+          "type": "boolean",
+          "description": "Whether changes were applied"
+        },
+        {
+          "key": "resources",
+          "type": "[]any",
+          "description": "Applied resource details"
+        }
+      ]
+    },
+    "step.iac_destroy": {
+      "type": "step.iac_destroy",
+      "plugin": "platform",
+      "description": "Destroys infrastructure managed by an IaC module.",
+      "configFields": [
+        {
+          "key": "platform",
+          "label": "",
+          "type": "string",
+          "description": "Name of the platform module",
+          "required": true
+        },
+        {
+          "key": "resource_id",
+          "label": "",
+          "type": "string",
+          "description": "Resource ID to destroy"
+        },
+        {
+          "key": "state_store",
+          "label": "",
+          "type": "string",
+          "description": "Name of the iac.state module for state backend"
+        }
+      ],
+      "outputs": [
+        {
+          "key": "destroyed",
+          "type": "boolean",
+          "description": "Whether resources were destroyed"
+        }
+      ]
+    },
+    "step.iac_drift_detect": {
+      "type": "step.iac_drift_detect",
+      "plugin": "platform",
+      "description": "Detects configuration drift between IaC state and actual infrastructure.",
+      "configFields": [
+        {
+          "key": "platform",
+          "label": "",
+          "type": "string",
+          "description": "Name of the platform module",
+          "required": true
+        },
+        {
+          "key": "resource_id",
+          "label": "",
+          "type": "string",
+          "description": "Resource ID to check"
+        },
+        {
+          "key": "state_store",
+          "label": "",
+          "type": "string",
+          "description": "Name of the iac.state module for state backend"
+        },
+        {
+          "key": "config",
+          "label": "",
+          "type": "map",
+          "description": "Current config to compare against state"
+        }
+      ],
+      "outputs": [
+        {
+          "key": "has_drift",
+          "type": "boolean",
+          "description": "Whether drift was detected"
+        },
+        {
+          "key": "drifted_resources",
+          "type": "[]any",
+          "description": "List of drifted resources"
+        }
+      ]
+    },
+    "step.iac_plan": {
+      "type": "step.iac_plan",
+      "plugin": "platform",
+      "description": "Plans infrastructure changes without applying them.",
+      "configFields": [
+        {
+          "key": "platform",
+          "label": "",
+          "type": "string",
+          "description": "Name of the platform module",
+          "required": true
+        },
+        {
+          "key": "resource_id",
+          "label": "",
+          "type": "string",
+          "description": "Resource ID to plan"
+        },
+        {
+          "key": "state_store",
+          "label": "",
+          "type": "string",
+          "description": "Name of the iac.state module for state backend"
+        }
+      ],
+      "outputs": [
+        {
+          "key": "plan",
+          "type": "string",
+          "description": "Human-readable plan output"
+        },
+        {
+          "key": "changes",
+          "type": "number",
+          "description": "Number of changes planned"
+        }
+      ]
+    },
+    "step.iac_status": {
+      "type": "step.iac_status",
+      "plugin": "platform",
+      "description": "Gets the current provisioning status of IaC-managed infrastructure.",
+      "configFields": [
+        {
+          "key": "platform",
+          "label": "",
+          "type": "string",
+          "description": "Name of the platform module",
+          "required": true
+        },
+        {
+          "key": "resource_id",
+          "label": "",
+          "type": "string",
+          "description": "Resource ID to query"
+        },
+        {
+          "key": "state_store",
+          "label": "",
+          "type": "string",
+          "description": "Name of the iac.state module for state backend"
+        }
+      ],
+      "outputs": [
+        {
+          "key": "status",
+          "type": "string",
+          "description": "Provisioning status"
+        },
+        {
+          "key": "resources",
+          "type": "[]any",
+          "description": "Managed resource states"
+        }
+      ]
+    },
+    "step.jq": {
+      "type": "step.jq",
+      "plugin": "pipelinesteps",
+      "description": "Applies a jq expression to transform data in the pipeline context.",
+      "configFields": [
+        {
+          "key": "expression",
+          "label": "",
+          "type": "string",
+          "description": "jq filter expression",
+          "required": true
+        },
+        {
+          "key": "input",
+          "label": "",
+          "type": "string",
+          "description": "Context key of the input value (default: whole context)"
+        },
+        {
+          "key": "output",
+          "label": "",
+          "type": "string",
+          "description": "Context key to store the result"
+        }
+      ],
+      "outputs": [
+        {
+          "key": "result",
+          "type": "any",
+          "description": "Result of the jq expression"
+        }
+      ]
+    },
+    "step.json_parse": {
+      "type": "step.json_parse",
+      "plugin": "pipelinesteps",
+      "description": "Parses a JSON string from pipeline context into a structured value.",
+      "configFields": [
+        {
+          "key": "source",
+          "label": "",
+          "type": "string",
+          "description": "Dot-path to JSON string value",
+          "required": true
+        },
+        {
+          "key": "target",
+          "label": "",
+          "type": "string",
+          "description": "Output key name for parsed result",
+          "defaultValue": "value"
+        }
+      ],
+      "outputs": [
+        {
+          "key": "(target)",
+          "type": "any",
+          "description": "Parsed JSON value stored under the configured target key"
+        }
+      ]
+    },
+    "step.json_response": {
+      "type": "step.json_response",
+      "plugin": "pipelinesteps",
+      "description": "Sends a JSON HTTP response and terminates pipeline execution.",
+      "configFields": [
+        {
+          "key": "status",
+          "label": "",
+          "type": "number",
+          "description": "HTTP status code",
+          "required": true
+        },
+        {
+          "key": "body",
+          "label": "",
+          "type": "json",
+          "description": "Response body (static JSON object or template expression)"
+        },
+        {
+          "key": "body_from",
+          "label": "",
+          "type": "string",
+          "description": "Template expression to build body from step outputs (e.g. 'steps.query.rows')"
+        },
+        {
+          "key": "headers",
+          "label": "",
+          "type": "map",
+          "description": "Additional response headers"
+        }
+      ],
+      "outputs": [
+        {
+          "key": "sent",
+          "type": "boolean",
+          "description": "Whether the response was sent successfully"
+        }
+      ]
+    },
+    "step.k8s_apply": {
+      "type": "step.k8s_apply",
+      "plugin": "platform",
+      "description": "Applies Kubernetes manifests to a cluster.",
+      "configFields": [
+        {
+          "key": "cluster",
+          "label": "",
+          "type": "string",
+          "description": "Name of the platform.kubernetes module",
+          "required": true
+        },
+        {
+          "key": "manifest",
+          "label": "",
+          "type": "string",
+          "description": "YAML manifest or path to manifest file"
+        },
+        {
+          "key": "namespace",
+          "label": "",
+          "type": "string",
+          "description": "Kubernetes namespace"
+        }
+      ],
+      "outputs": [
+        {
+          "key": "applied",
+          "type": "boolean",
+          "description": "Whether manifests were applied"
+        },
+        {
+          "key": "resources",
+          "type": "[]any",
+          "description": "Applied resource summaries"
+        }
+      ]
+    },
+    "step.k8s_destroy": {
+      "type": "step.k8s_destroy",
+      "plugin": "platform",
+      "description": "Deletes Kubernetes resources.",
+      "configFields": [
+        {
+          "key": "cluster",
+          "label": "",
+          "type": "string",
+          "description": "Name of the platform.kubernetes module",
+          "required": true
+        },
+        {
+          "key": "manifest",
+          "label": "",
+          "type": "string",
+          "description": "YAML manifest or path to manifest file"
+        },
+        {
+          "key": "namespace",
+          "label": "",
+          "type": "string",
+          "description": "Kubernetes namespace"
+        }
+      ],
+      "outputs": [
+        {
+          "key": "destroyed",
+          "type": "boolean",
+          "description": "Whether resources were deleted"
+        }
+      ]
+    },
+    "step.k8s_plan": {
+      "type": "step.k8s_plan",
+      "plugin": "platform",
+      "description": "Diffs Kubernetes manifests against the current cluster state.",
+      "configFields": [
+        {
+          "key": "cluster",
+          "label": "",
+          "type": "string",
+          "description": "Name of the platform.kubernetes module",
+          "required": true
+        },
+        {
+          "key": "manifest",
+          "label": "",
+          "type": "string",
+          "description": "YAML manifest or path to manifest file"
+        },
+        {
+          "key": "namespace",
+          "label": "",
+          "type": "string",
+          "description": "Kubernetes namespace"
+        }
+      ],
+      "outputs": [
+        {
+          "key": "diff",
+          "type": "string",
+          "description": "Diff output"
+        },
+        {
+          "key": "changes",
+          "type": "number",
+          "description": "Number of changes detected"
+        }
+      ]
+    },
+    "step.k8s_status": {
+      "type": "step.k8s_status",
+      "plugin": "platform",
+      "description": "Gets the status of Kubernetes resources.",
+      "configFields": [
+        {
+          "key": "cluster",
+          "label": "",
+          "type": "string",
+          "description": "Name of the platform.kubernetes module",
+          "required": true
+        },
+        {
+          "key": "kind",
+          "label": "",
+          "type": "string",
+          "description": "Resource kind (Deployment, Service, etc.)"
+        },
+        {
+          "key": "name",
+          "label": "",
+          "type": "string",
+          "description": "Resource name"
+        },
+        {
+          "key": "namespace",
+          "label": "",
+          "type": "string",
+          "description": "Kubernetes namespace"
+        }
+      ],
+      "outputs": [
+        {
+          "key": "status",
+          "type": "string",
+          "description": "Resource status"
+        },
+        {
+          "key": "ready",
+          "type": "boolean",
+          "description": "Whether resource is ready"
+        }
+      ]
+    },
+    "step.log": {
+      "type": "step.log",
+      "plugin": "pipelinesteps",
+      "description": "Logs a message at the specified log level.",
+      "configFields": [
+        {
+          "key": "message",
+          "label": "",
+          "type": "string",
+          "description": "Message to log (template expressions supported)",
+          "required": true
+        },
+        {
+          "key": "level",
+          "label": "",
+          "type": "select",
+          "description": "Log level",
+          "defaultValue": "info",
+          "options": [
+            "debug",
+            "info",
+            "warn",
+            "error"
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "key": "logged",
+          "type": "boolean",
+          "description": "Always true when log succeeds"
+        }
+      ]
+    },
+    "step.m2m_token": {
+      "type": "step.m2m_token",
+      "plugin": "auth",
+      "description": "Generates or validates a machine-to-machine (M2M) token with custom claims.",
+      "configFields": [
+        {
+          "key": "action",
+          "label": "",
+          "type": "select",
+          "description": "Token action",
+          "required": true,
+          "options": [
+            "generate",
+            "validate",
+            "revoke",
+            "introspect"
+          ]
+        },
+        {
+          "key": "claims",
+          "label": "",
+          "type": "map",
+          "description": "Custom claims to include in the token"
+        },
+        {
+          "key": "ttl",
+          "label": "",
+          "type": "duration",
+          "description": "Token time-to-live"
+        }
+      ],
+      "outputs": [
+        {
+          "key": "token",
+          "type": "string",
+          "description": "Generated or validated token"
+        },
+        {
+          "key": "claims",
+          "type": "map",
+          "description": "Token claims"
+        },
+        {
+          "key": "valid",
+          "type": "boolean",
+          "description": "Whether the token is valid (validate action)"
+        }
+      ]
+    },
+    "step.marketplace_detail": {
+      "type": "step.marketplace_detail",
+      "plugin": "marketplace",
+      "description": "Gets detailed information about a marketplace plugin.",
+      "configFields": [
+        {
+          "key": "plugin",
+          "label": "",
+          "type": "string",
+          "description": "Plugin name to get details for",
+          "required": true
+        }
+      ],
+      "outputs": [
+        {
+          "key": "plugin",
+          "type": "any",
+          "description": "Plugin metadata and details"
+        }
+      ]
+    },
+    "step.marketplace_install": {
+      "type": "step.marketplace_install",
+      "plugin": "marketplace",
+      "description": "Installs a plugin from the marketplace.",
+      "configFields": [
+        {
+          "key": "plugin",
+          "label": "",
+          "type": "string",
+          "description": "Plugin name to install",
+          "required": true
+        },
+        {
+          "key": "version",
+          "label": "",
+          "type": "string",
+          "description": "Plugin version (default: latest)"
+        }
+      ],
+      "outputs": [
+        {
+          "key": "installed",
+          "type": "boolean",
+          "description": "Whether installation succeeded"
+        },
+        {
+          "key": "version",
+          "type": "string",
+          "description": "Installed plugin version"
+        }
+      ]
+    },
+    "step.marketplace_installed": {
+      "type": "step.marketplace_installed",
+      "plugin": "marketplace",
+      "description": "Lists installed marketplace plugins.",
+      "configFields": [],
+      "outputs": [
+        {
+          "key": "plugins",
+          "type": "[]any",
+          "description": "List of installed plugin metadata"
+        },
+        {
+          "key": "count",
+          "type": "number",
+          "description": "Number of installed plugins"
+        }
+      ]
+    },
+    "step.marketplace_search": {
+      "type": "step.marketplace_search",
+      "plugin": "marketplace",
+      "description": "Searches the plugin marketplace.",
+      "configFields": [
+        {
+          "key": "query",
+          "label": "",
+          "type": "string",
+          "description": "Search query string"
+        },
+        {
+          "key": "category",
+          "label": "",
+          "type": "string",
+          "description": "Filter by category"
+        }
+      ],
+      "outputs": [
+        {
+          "key": "results",
+          "type": "[]any",
+          "description": "Search result plugins"
+        },
+        {
+          "key": "count",
+          "type": "number",
+          "description": "Number of results"
+        }
+      ]
+    },
+    "step.marketplace_uninstall": {
+      "type": "step.marketplace_uninstall",
+      "plugin": "marketplace",
+      "description": "Uninstalls a marketplace plugin.",
+      "configFields": [
+        {
+          "key": "plugin",
+          "label": "",
+          "type": "string",
+          "description": "Plugin name to uninstall",
+          "required": true
+        }
+      ],
+      "outputs": [
+        {
+          "key": "uninstalled",
+          "type": "boolean",
+          "description": "Whether uninstall succeeded"
+        }
+      ]
+    },
+    "step.marketplace_update": {
+      "type": "step.marketplace_update",
+      "plugin": "marketplace",
+      "description": "Updates an installed marketplace plugin to a newer version.",
+      "configFields": [
+        {
+          "key": "plugin",
+          "label": "",
+          "type": "string",
+          "description": "Plugin name to update",
+          "required": true
+        },
+        {
+          "key": "version",
+          "label": "",
+          "type": "string",
+          "description": "Target version (default: latest)"
+        }
+      ],
+      "outputs": [
+        {
+          "key": "updated",
+          "type": "boolean",
+          "description": "Whether update succeeded"
+        },
+        {
+          "key": "version",
+          "type": "string",
+          "description": "Updated plugin version"
+        }
+      ]
+    },
+    "step.network_apply": {
+      "type": "step.network_apply",
+      "plugin": "platform",
+      "description": "Applies VPC networking changes.",
+      "configFields": [
+        {
+          "key": "network",
+          "label": "",
+          "type": "string",
+          "description": "Name of the platform.networking module",
+          "required": true
+        }
+      ],
+      "outputs": [
+        {
+          "key": "vpc_id",
+          "type": "string",
+          "description": "VPC ID"
+        },
+        {
+          "key": "subnet_ids",
+          "type": "[]string",
+          "description": "Created subnet IDs"
+        }
+      ]
+    },
+    "step.network_plan": {
+      "type": "step.network_plan",
+      "plugin": "platform",
+      "description": "Plans VPC networking changes without applying them.",
+      "configFields": [
+        {
+          "key": "network",
+          "label": "",
+          "type": "string",
+          "description": "Name of the platform.networking module",
+          "required": true
+        }
+      ],
+      "outputs": [
+        {
+          "key": "plan",
+          "type": "string",
+          "description": "Human-readable plan output"
+        },
+        {
+          "key": "changes",
+          "type": "number",
+          "description": "Number of changes planned"
+        }
+      ]
+    },
+    "step.network_status": {
+      "type": "step.network_status",
+      "plugin": "platform",
+      "description": "Gets the status of VPC networking resources.",
+      "configFields": [
+        {
+          "key": "network",
+          "label": "",
+          "type": "string",
+          "description": "Name of the platform.networking module",
+          "required": true
+        }
+      ],
+      "outputs": [
+        {
+          "key": "status",
+          "type": "string",
+          "description": "Network status"
+        },
+        {
+          "key": "vpc_id",
+          "type": "string",
+          "description": "VPC ID"
+        }
+      ]
+    },
+    "step.nosql_delete": {
+      "type": "step.nosql_delete",
+      "plugin": "datastores",
+      "description": "Deletes an item from a NoSQL store by key.",
+      "configFields": [
+        {
+          "key": "store",
+          "label": "",
+          "type": "string",
+          "description": "Name of the nosql.* module",
+          "required": true
+        },
+        {
+          "key": "key",
+          "label": "",
+          "type": "string",
+          "description": "Item key to delete",
+          "required": true
+        }
+      ],
+      "outputs": [
+        {
+          "key": "deleted",
+          "type": "boolean",
+          "description": "Whether the item was deleted"
+        }
+      ]
+    },
+    "step.nosql_get": {
+      "type": "step.nosql_get",
+      "plugin": "datastores",
+      "description": "Retrieves a document from a NoSQL store by key.",
+      "configFields": [
+        {
+          "key": "store",
+          "label": "",
+          "type": "string",
+          "description": "NoSQL store module name",
+          "required": true
+        },
+        {
+          "key": "key",
+          "label": "",
+          "type": "string",
+          "description": "Document key (template expressions supported)",
+          "required": true
+        },
+        {
+          "key": "output",
+          "label": "",
+          "type": "string",
+          "description": "Context key to store the result"
+        },
+        {
+          "key": "miss_ok",
+          "label": "",
+          "type": "boolean",
+          "description": "Don't fail if key not found",
+          "defaultValue": false
+        }
+      ],
+      "outputs": [
+        {
+          "key": "value",
+          "type": "any",
+          "description": "The retrieved document"
+        },
+        {
+          "key": "found",
+          "type": "boolean",
+          "description": "Whether the key was found"
+        }
+      ]
+    },
+    "step.nosql_put": {
+      "type": "step.nosql_put",
+      "plugin": "datastores",
+      "description": "Stores a document in a NoSQL store by key.",
+      "configFields": [
+        {
+          "key": "store",
+          "label": "",
+          "type": "string",
+          "description": "NoSQL store module name",
+          "required": true
+        },
+        {
+          "key": "key",
+          "label": "",
+          "type": "string",
+          "description": "Document key (template expressions supported)",
+          "required": true
+        },
+        {
+          "key": "item",
+          "label": "",
+          "type": "json",
+          "description": "Document to store"
+        }
+      ],
+      "outputs": [
+        {
+          "key": "stored",
+          "type": "boolean",
+          "description": "Whether the document was stored successfully"
+        }
+      ]
+    },
+    "step.nosql_query": {
+      "type": "step.nosql_query",
+      "plugin": "datastores",
+      "description": "Queries documents from a NoSQL store by key prefix.",
+      "configFields": [
+        {
+          "key": "store",
+          "label": "",
+          "type": "string",
+          "description": "NoSQL store module name",
+          "required": true
+        },
+        {
+          "key": "prefix",
+          "label": "",
+          "type": "string",
+          "description": "Key prefix to filter documents"
+        },
+        {
+          "key": "output",
+          "label": "",
+          "type": "string",
+          "description": "Context key to store results"
+        }
+      ],
+      "outputs": [
+        {
+          "key": "items",
+          "type": "[]any",
+          "description": "Matching documents"
+        },
+        {
+          "key": "count",
+          "type": "number",
+          "description": "Number of matching documents"
+        }
+      ]
+    },
+    "step.oidc_auth_url": {
+      "type": "step.oidc_auth_url",
+      "plugin": "auth",
+      "description": "Generates an OIDC/OAuth2 authorization URL and redirects the user.",
+      "configFields": [
+        {
+          "key": "provider",
+          "label": "",
+          "type": "string",
+          "description": "OIDC provider name (registered in auth module)",
+          "required": true
+        },
+        {
+          "key": "redirect_uri",
+          "label": "",
+          "type": "string",
+          "description": "Redirect URI after authentication",
+          "required": true
+        },
+        {
+          "key": "scopes",
+          "label": "",
+          "type": "array",
+          "description": "OAuth2 scopes to request"
+        }
+      ],
+      "outputs": [
+        {
+          "key": "auth_url",
+          "type": "string",
+          "description": "The generated authorization URL"
+        },
+        {
+          "key": "state",
+          "type": "string",
+          "description": "The CSRF state parameter"
+        }
+      ]
+    },
+    "step.oidc_callback": {
+      "type": "step.oidc_callback",
+      "plugin": "auth",
+      "description": "Handles the OIDC/OAuth2 callback, exchanges the code for tokens, and extracts user info.",
+      "configFields": [
+        {
+          "key": "provider",
+          "label": "",
+          "type": "string",
+          "description": "OIDC provider name",
+          "required": true
+        },
+        {
+          "key": "redirect_uri",
+          "label": "",
+          "type": "string",
+          "description": "Redirect URI (must match auth URL)",
+          "required": true
+        }
+      ],
+      "outputs": [
+        {
+          "key": "id_token",
+          "type": "string",
+          "description": "The ID token"
+        },
+        {
+          "key": "access_token",
+          "type": "string",
+          "description": "The access token"
+        },
+        {
+          "key": "user_info",
+          "type": "map",
+          "description": "User info claims from the ID token"
+        },
+        {
+          "key": "email",
+          "type": "string",
+          "description": "User email from claims"
+        },
+        {
+          "key": "sub",
+          "type": "string",
+          "description": "Subject identifier from claims"
+        }
+      ]
+    },
+    "step.parallel": {
+      "type": "step.parallel",
+      "plugin": "pipelinesteps",
+      "description": "Execute multiple named sub-steps concurrently and collect results. Time: O(max(branch)). Space: O(branches × context_size).",
+      "configFields": [
+        {
+          "key": "steps",
+          "label": "",
+          "type": "array",
+          "description": "List of sub-steps to run concurrently. Each must have a unique 'name'.",
+          "required": true
+        },
+        {
+          "key": "error_strategy",
+          "label": "",
+          "type": "select",
+          "description": "fail_fast: cancel on first error. collect_errors: run all, collect partial results.",
+          "defaultValue": "fail_fast",
+          "options": [
+            "fail_fast",
+            "collect_errors"
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "key": "results",
+          "type": "map",
+          "description": "Map of branch_name → branch output (successful branches)"
+        },
+        {
+          "key": "errors",
+          "type": "map",
+          "description": "Map of branch_name → error string (failed branches)"
+        },
+        {
+          "key": "completed",
+          "type": "integer",
+          "description": "Count of successful branches"
+        },
+        {
+          "key": "failed",
+          "type": "integer",
+          "description": "Count of failed branches"
+        }
+      ]
+    },
+    "step.pipeline_output": {
+      "type": "step.pipeline_output",
+      "plugin": "pipelinesteps",
+      "description": "Marks structured data as the pipeline's return value for extraction by engine.ExecutePipeline() or the HTTP trigger fallback.",
+      "configFields": [
+        {
+          "key": "source",
+          "label": "",
+          "type": "string",
+          "description": "Dot-path to step output (e.g. steps.fetch or steps.fetch.row)"
+        },
+        {
+          "key": "values",
+          "label": "",
+          "type": "map",
+          "description": "Template map of key-value pairs to include in output"
+        }
+      ],
+      "outputs": [
+        {
+          "key": "_pipeline_output",
+          "type": "map",
+          "description": "The structured output stored in pipeline metadata"
+        }
+      ]
+    },
+    "step.platform_apply": {
+      "type": "step.platform_apply",
+      "plugin": "platform",
+      "description": "Applies infrastructure changes for a named platform resource module.",
+      "configFields": [
+        {
+          "key": "module",
+          "label": "",
+          "type": "string",
+          "description": "Platform resource module name",
+          "required": true
+        },
+        {
+          "key": "resources_from",
+          "label": "",
+          "type": "string",
+          "description": "Context key containing resources to apply"
+        }
+      ],
+      "outputs": [
+        {
+          "key": "result",
+          "type": "map",
+          "description": "Apply result"
+        },
+        {
+          "key": "success",
+          "type": "boolean",
+          "description": "Whether the apply succeeded"
+        }
+      ]
+    },
+    "step.platform_destroy": {
+      "type": "step.platform_destroy",
+      "plugin": "platform",
+      "description": "Destroys infrastructure resources managed by a named platform resource module.",
+      "configFields": [
+        {
+          "key": "module",
+          "label": "",
+          "type": "string",
+          "description": "Platform resource module name",
+          "required": true
+        },
+        {
+          "key": "resources_from",
+          "label": "",
+          "type": "string",
+          "description": "Context key containing resources to destroy"
+        }
+      ],
+      "outputs": [
+        {
+          "key": "success",
+          "type": "boolean",
+          "description": "Whether the destroy succeeded"
+        }
+      ]
+    },
+    "step.platform_plan": {
+      "type": "step.platform_plan",
+      "plugin": "platform",
+      "description": "Plans infrastructure changes for a named platform resource module.",
+      "configFields": [
+        {
+          "key": "module",
+          "label": "",
+          "type": "string",
+          "description": "Platform resource module name",
+          "required": true
+        },
+        {
+          "key": "resources_from",
+          "label": "",
+          "type": "string",
+          "description": "Context key containing resources to plan"
+        }
+      ],
+      "outputs": [
+        {
+          "key": "plan",
+          "type": "map",
+          "description": "Infrastructure plan"
+        },
+        {
+          "key": "actions",
+          "type": "[]any",
+          "description": "Planned actions"
+        }
+      ]
+    },
+    "step.platform_template": {
+      "type": "step.platform_template",
+      "plugin": "platform",
+      "description": "Resolves a platform resource template with parameters, producing capability declarations.",
+      "configFields": [
+        {
+          "key": "template_name",
+          "label": "",
+          "type": "string",
+          "description": "Template name to resolve",
+          "required": true
+        },
+        {
+          "key": "template_version",
+          "label": "",
+          "type": "string",
+          "description": "Template version"
+        },
+        {
+          "key": "parameters",
+          "label": "",
+          "type": "map",
+          "description": "Template parameters"
+        }
+      ],
+      "outputs": [
+        {
+          "key": "resolved_resources",
+          "type": "[]any",
+          "description": "Resolved capability declarations"
+        },
+        {
+          "key": "template_name",
+          "type": "string",
+          "description": "Resolved template name"
+        }
+      ]
+    },
+    "step.policy_evaluate": {
+      "type": "step.policy_evaluate",
+      "plugin": "policy",
+      "description": "Evaluates input data against a loaded policy and returns an allow/deny decision.",
+      "configFields": [
+        {
+          "key": "engine",
+          "label": "",
+          "type": "string",
+          "description": "Name of the policy.* module",
+          "required": true
+        },
+        {
+          "key": "policy",
+          "label": "",
+          "type": "string",
+          "description": "Policy name to evaluate",
+          "required": true
+        },
+        {
+          "key": "input",
+          "label": "",
+          "type": "json",
+          "description": "Input data for policy evaluation"
+        }
+      ],
+      "outputs": [
+        {
+          "key": "allowed",
+          "type": "boolean",
+          "description": "Whether the policy allows the action"
+        },
+        {
+          "key": "reason",
+          "type": "string",
+          "description": "Decision reason or denial message"
+        }
+      ]
+    },
+    "step.policy_list": {
+      "type": "step.policy_list",
+      "plugin": "policy",
+      "description": "Lists all loaded policies in a policy engine.",
+      "configFields": [
+        {
+          "key": "engine",
+          "label": "",
+          "type": "string",
+          "description": "Name of the policy.* module",
+          "required": true
+        }
+      ],
+      "outputs": [
+        {
+          "key": "policies",
+          "type": "[]string",
+          "description": "List of loaded policy names"
+        },
+        {
+          "key": "count",
+          "type": "number",
+          "description": "Number of loaded policies"
+        }
+      ]
+    },
+    "step.policy_load": {
+      "type": "step.policy_load",
+      "plugin": "policy",
+      "description": "Loads a policy into the policy engine at runtime.",
+      "configFields": [
+        {
+          "key": "engine",
+          "label": "",
+          "type": "string",
+          "description": "Name of the policy.* module",
+          "required": true
+        },
+        {
+          "key": "name",
+          "label": "",
+          "type": "string",
+          "description": "Policy name",
+          "required": true
+        },
+        {
+          "key": "content",
+          "label": "",
+          "type": "string",
+          "description": "Policy content (Rego, CEL, etc.)",
+          "required": true
+        }
+      ],
+      "outputs": [
+        {
+          "key": "loaded",
+          "type": "boolean",
+          "description": "Whether the policy was loaded successfully"
+        }
+      ]
+    },
+    "step.policy_test": {
+      "type": "step.policy_test",
+      "plugin": "policy",
+      "description": "Runs tests against a policy to verify its behavior.",
+      "configFields": [
+        {
+          "key": "engine",
+          "label": "",
+          "type": "string",
+          "description": "Name of the policy.* module",
+          "required": true
+        },
+        {
+          "key": "policy",
+          "label": "",
+          "type": "string",
+          "description": "Policy name to test",
+          "required": true
+        },
+        {
+          "key": "cases",
+          "label": "",
+          "type": "json",
+          "description": "Test cases (array of {input, expected_allow})"
+        }
+      ],
+      "outputs": [
+        {
+          "key": "passed",
+          "type": "boolean",
+          "description": "Whether all test cases passed"
+        },
+        {
+          "key": "results",
+          "type": "[]any",
+          "description": "Per-case test results"
+        }
+      ]
+    },
+    "step.publish": {
+      "type": "step.publish",
+      "plugin": "pipelinesteps",
+      "description": "Publishes a message to a messaging broker topic or EventBus.",
+      "configFields": [
+        {
+          "key": "topic",
+          "label": "",
+          "type": "string",
+          "description": "Topic name to publish to",
+          "required": true
+        },
+        {
+          "key": "broker",
+          "label": "",
+          "type": "string",
+          "description": "Messaging broker module name (optional, falls back to EventBus)"
+        },
+        {
+          "key": "payload",
+          "label": "",
+          "type": "map",
+          "description": "Message payload (template expressions supported)"
+        }
+      ],
+      "outputs": [
+        {
+          "key": "published",
+          "type": "boolean",
+          "description": "Whether the message was published successfully"
+        },
+        {
+          "key": "topic",
+          "type": "string",
+          "description": "The topic the message was published to"
+        }
+      ]
+    },
+    "step.rate_limit": {
+      "type": "step.rate_limit",
+      "plugin": "pipelinesteps",
+      "description": "Enforces rate limiting using the token bucket algorithm.",
+      "configFields": [
+        {
+          "key": "requests_per_minute",
+          "label": "",
+          "type": "number",
+          "description": "Rate limit in requests per minute",
+          "defaultValue": 60
+        },
+        {
+          "key": "burst_size",
+          "label": "",
+          "type": "number",
+          "description": "Burst capacity",
+          "defaultValue": 10
+        },
+        {
+          "key": "key_from",
+          "label": "",
+          "type": "string",
+          "description": "Template for per-client key (default: global)"
+        }
+      ],
+      "outputs": [
+        {
+          "key": "rate_limit",
+          "type": "map",
+          "description": "Rate limit result: {allowed, key}"
+        }
+      ]
+    },
+    "step.raw_response": {
+      "type": "step.raw_response",
+      "plugin": "pipelinesteps",
+      "description": "Writes a non-JSON HTTP response (XML, HTML, plain text) with custom status code, content type, and optional headers. Stops pipeline execution.",
+      "configFields": [
+        {
+          "key": "content_type",
+          "label": "",
+          "type": "string",
+          "description": "Content-Type header (e.g. text/xml)",
+          "required": true
+        },
+        {
+          "key": "status",
+          "label": "",
+          "type": "number",
+          "description": "HTTP status code",
+          "defaultValue": 200
+        },
+        {
+          "key": "headers",
+          "label": "",
+          "type": "map",
+          "description": "Custom response headers"
+        },
+        {
+          "key": "body",
+          "label": "",
+          "type": "string",
+          "description": "Response body (template expressions supported)"
+        },
+        {
+          "key": "body_from",
+          "label": "",
+          "type": "string",
+          "description": "Dot-path to body value in pipeline context"
+        }
+      ],
+      "outputs": [
+        {
+          "key": "status",
+          "type": "number",
+          "description": "HTTP status code sent"
+        },
+        {
+          "key": "content_type",
+          "type": "string",
+          "description": "Content type used"
+        }
+      ]
+    },
+    "step.regex_match": {
+      "type": "step.regex_match",
+      "plugin": "pipelinesteps",
+      "description": "Matches a regular expression against a template-resolved input string.",
+      "configFields": [
+        {
+          "key": "pattern",
+          "label": "",
+          "type": "string",
+          "description": "Regular expression pattern (compiled at config time)",
+          "required": true
+        },
+        {
+          "key": "input",
+          "label": "",
+          "type": "string",
+          "description": "Input string to match against (template expressions supported)",
+          "required": true
+        }
+      ],
+      "outputs": [
+        {
+          "key": "matched",
+          "type": "boolean",
+          "description": "Whether the pattern matched"
+        },
+        {
+          "key": "match",
+          "type": "string",
+          "description": "The matched substring"
+        },
+        {
+          "key": "groups",
+          "type": "[]string",
+          "description": "Captured groups from the match"
+        }
+      ]
+    },
+    "step.region_deploy": {
+      "type": "step.region_deploy",
+      "plugin": "platform",
+      "description": "Deploys to a specific region in a multi-region configuration.",
+      "configFields": [
+        {
+          "key": "module",
+          "label": "",
+          "type": "string",
+          "description": "Name of the platform.region module",
+          "required": true
+        },
+        {
+          "key": "region",
+          "label": "",
+          "type": "string",
+          "description": "Region name to deploy to"
+        }
+      ],
+      "outputs": [
+        {
+          "key": "deployed",
+          "type": "boolean",
+          "description": "Whether deployment succeeded"
+        },
+        {
+          "key": "endpoint",
+          "type": "string",
+          "description": "Region endpoint after deployment"
+        }
+      ]
+    },
+    "step.region_failover": {
+      "type": "step.region_failover",
+      "plugin": "platform",
+      "description": "Triggers a failover to a secondary region.",
+      "configFields": [
+        {
+          "key": "module",
+          "label": "",
+          "type": "string",
+          "description": "Name of the platform.region module",
+          "required": true
+        },
+        {
+          "key": "from_region",
+          "label": "",
+          "type": "string",
+          "description": "Region to fail over from"
+        },
+        {
+          "key": "to_region",
+          "label": "",
+          "type": "string",
+          "description": "Region to fail over to"
+        }
+      ],
+      "outputs": [
+        {
+          "key": "active_region",
+          "type": "string",
+          "description": "Active region after failover"
+        }
+      ]
+    },
+    "step.region_promote": {
+      "type": "step.region_promote",
+      "plugin": "platform",
+      "description": "Promotes a region to primary (increases traffic weight or priority).",
+      "configFields": [
+        {
+          "key": "module",
+          "label": "",
+          "type": "string",
+          "description": "Name of the platform.region module",
+          "required": true
+        },
+        {
+          "key": "region",
+          "label": "",
+          "type": "string",
+          "description": "Region to promote",
+          "required": true
+        }
+      ],
+      "outputs": [
+        {
+          "key": "promoted",
+          "type": "boolean",
+          "description": "Whether promotion succeeded"
+        }
+      ]
+    },
+    "step.region_status": {
+      "type": "step.region_status",
+      "plugin": "platform",
+      "description": "Gets the health and status of all regions.",
+      "configFields": [
+        {
+          "key": "module",
+          "label": "",
+          "type": "string",
+          "description": "Name of the platform.region module",
+          "required": true
+        }
+      ],
+      "outputs": [
+        {
+          "key": "regions",
+          "type": "[]any",
+          "description": "Region status objects"
+        },
+        {
+          "key": "active_count",
+          "type": "number",
+          "description": "Number of healthy regions"
+        }
+      ]
+    },
+    "step.region_sync": {
+      "type": "step.region_sync",
+      "plugin": "platform",
+      "description": "Syncs state or configuration across all regions.",
+      "configFields": [
+        {
+          "key": "module",
+          "label": "",
+          "type": "string",
+          "description": "Name of the platform.region module",
+          "required": true
+        }
+      ],
+      "outputs": [
+        {
+          "key": "synced",
+          "type": "boolean",
+          "description": "Whether sync succeeded"
+        },
+        {
+          "key": "regions_synced",
+          "type": "number",
+          "description": "Number of regions synced"
+        }
+      ]
+    },
+    "step.region_weight": {
+      "type": "step.region_weight",
+      "plugin": "platform",
+      "description": "Sets the traffic weight for a region.",
+      "configFields": [
+        {
+          "key": "module",
+          "label": "",
+          "type": "string",
+          "description": "Name of the platform.region module",
+          "required": true
+        },
+        {
+          "key": "region",
+          "label": "",
+          "type": "string",
+          "description": "Region name",
+          "required": true
+        },
+        {
+          "key": "weight",
+          "label": "",
+          "type": "number",
+          "description": "Traffic weight (0-100)",
+          "required": true
+        }
+      ],
+      "outputs": [
+        {
+          "key": "weight",
+          "type": "number",
+          "description": "Applied weight"
+        }
+      ]
+    },
+    "step.request_parse": {
+      "type": "step.request_parse",
+      "plugin": "pipelinesteps",
+      "description": "Parses incoming HTTP request body (JSON or form-urlencoded), query params, and headers into the pipeline context.",
+      "configFields": [
+        {
+          "key": "body_fields",
+          "label": "",
+          "type": "array",
+          "description": "Specific body fields to extract (default: all)"
+        },
+        {
+          "key": "query_params",
+          "label": "",
+          "type": "array",
+          "description": "Specific query parameters to extract"
+        },
+        {
+          "key": "headers",
+          "label": "",
+          "type": "array",
+          "description": "Specific headers to extract"
+        }
+      ],
+      "outputs": [
+        {
+          "key": "body",
+          "type": "map",
+          "description": "Parsed request body fields"
+        },
+        {
+          "key": "query",
+          "type": "map",
+          "description": "Parsed query parameters"
+        },
+        {
+          "key": "headers",
+          "type": "map",
+          "description": "Parsed request headers"
+        },
+        {
+          "key": "content_type",
+          "type": "string",
+          "description": "Detected content type (application/json, application/x-www-form-urlencoded)"
+        }
+      ]
+    },
+    "step.resilient_circuit_breaker": {
+      "type": "step.resilient_circuit_breaker",
+      "plugin": "pipelinesteps",
+      "description": "Checks circuit breaker state for a service. Allows requests when closed/half-open, rejects when open.",
+      "configFields": [
+        {
+          "key": "failure_threshold",
+          "label": "",
+          "type": "number",
+          "description": "Number of failures before opening the circuit",
+          "defaultValue": 5
+        },
+        {
+          "key": "success_threshold",
+          "label": "",
+          "type": "number",
+          "description": "Number of successes in half-open to close the circuit",
+          "defaultValue": 3
+        },
+        {
+          "key": "timeout",
+          "label": "",
+          "type": "duration",
+          "description": "Duration before trying half-open",
+          "defaultValue": "30s"
+        },
+        {
+          "key": "service_name",
+          "label": "",
+          "type": "string",
+          "description": "Service identifier for the circuit"
+        }
+      ],
+      "outputs": [
+        {
+          "key": "circuit_breaker",
+          "type": "map",
+          "description": "Circuit breaker status: {state, service, allowed, transitioned}"
+        }
+      ]
+    },
+    "step.retry_with_backoff": {
+      "type": "step.retry_with_backoff",
+      "plugin": "pipelinesteps",
+      "description": "Retries a nested step with exponential backoff on failure.",
+      "configFields": [
+        {
+          "key": "max_retries",
+          "label": "",
+          "type": "number",
+          "description": "Maximum retry attempts",
+          "required": true
+        },
+        {
+          "key": "initial_delay",
+          "label": "",
+          "type": "duration",
+          "description": "Initial delay before first retry",
+          "defaultValue": "100ms"
+        },
+        {
+          "key": "max_delay",
+          "label": "",
+          "type": "duration",
+          "description": "Maximum delay between retries",
+          "defaultValue": "30s"
+        },
+        {
+          "key": "multiplier",
+          "label": "",
+          "type": "number",
+          "description": "Backoff multiplier",
+          "defaultValue": 2
+        },
+        {
+          "key": "step",
+          "label": "",
+          "type": "json",
+          "description": "The step definition to retry",
+          "required": true
+        }
+      ],
+      "outputs": [
+        {
+          "key": "attempts",
+          "type": "number",
+          "description": "Number of attempts made"
+        },
+        {
+          "key": "(nested)",
+          "type": "any",
+          "description": "Output from the nested step on success"
+        }
+      ]
+    },
+    "step.s3_upload": {
+      "type": "step.s3_upload",
+      "plugin": "pipelinesteps",
+      "description": "Uploads base64-encoded binary data to an S3 bucket.",
+      "configFields": [
+        {
+          "key": "bucket",
+          "label": "",
+          "type": "string",
+          "description": "S3 bucket name",
+          "required": true
+        },
+        {
+          "key": "region",
+          "label": "",
+          "type": "string",
+          "description": "AWS region",
+          "required": true
+        },
+        {
+          "key": "key",
+          "label": "",
+          "type": "string",
+          "description": "S3 key (template expressions supported)",
+          "required": true
+        },
+        {
+          "key": "body_from",
+          "label": "",
+          "type": "string",
+          "description": "Dot-path to base64-encoded body",
+          "required": true
+        },
+        {
+          "key": "content_type",
+          "label": "",
+          "type": "string",
+          "description": "Static MIME type"
+        },
+        {
+          "key": "content_type_from",
+          "label": "",
+          "type": "string",
+          "description": "Dot-path to MIME type"
+        },
+        {
+          "key": "endpoint",
+          "label": "",
+          "type": "string",
+          "description": "Custom S3 endpoint (for MinIO or LocalStack)"
+        }
+      ],
+      "outputs": [
+        {
+          "key": "url",
+          "type": "string",
+          "description": "Public URL of the uploaded object"
+        },
+        {
+          "key": "key",
+          "type": "string",
+          "description": "Resolved S3 key"
+        },
+        {
+          "key": "bucket",
+          "type": "string",
+          "description": "Bucket name"
+        }
+      ]
+    },
+    "step.sandbox_exec": {
+      "type": "step.sandbox_exec",
+      "plugin": "pipelinesteps",
+      "description": "Runs a command in a hardened Docker sandbox container with resource limits.",
+      "configFields": [
+        {
+          "key": "image",
+          "label": "",
+          "type": "string",
+          "description": "Container image URI",
+          "defaultValue": "cgr.dev/chainguard/wolfi-base:latest"
+        },
+        {
+          "key": "command",
+          "label": "",
+          "type": "array",
+          "description": "Command to execute in sandbox"
+        },
+        {
+          "key": "security_profile",
+          "label": "",
+          "type": "select",
+          "description": "Security profile",
+          "defaultValue": "strict",
+          "options": [
+            "strict",
+            "standard",
+            "permissive"
+          ]
+        },
+        {
+          "key": "memory_limit",
+          "label": "",
+          "type": "string",
+          "description": "Memory limit (e.g. 128m, 1g)"
+        },
+        {
+          "key": "cpu_limit",
+          "label": "",
+          "type": "number",
+          "description": "CPU limit (e.g. 0.5)"
+        },
+        {
+          "key": "timeout",
+          "label": "",
+          "type": "duration",
+          "description": "Execution timeout"
+        },
+        {
+          "key": "env",
+          "label": "",
+          "type": "map",
+          "description": "Environment variables"
+        },
+        {
+          "key": "fail_on_error",
+          "label": "",
+          "type": "boolean",
+          "description": "Stop pipeline if exit_code != 0",
+          "defaultValue": true
+        }
+      ],
+      "outputs": [
+        {
+          "key": "exit_code",
+          "type": "number",
+          "description": "Container exit code"
+        },
+        {
+          "key": "stdout",
+          "type": "string",
+          "description": "Standard output"
+        },
+        {
+          "key": "stderr",
+          "type": "string",
+          "description": "Standard error"
+        }
+      ]
+    },
+    "step.scaling_apply": {
+      "type": "step.scaling_apply",
+      "plugin": "platform",
+      "description": "Applies autoscaling policy changes.",
+      "configFields": [
+        {
+          "key": "scaling",
+          "label": "",
+          "type": "string",
+          "description": "Name of the platform.autoscaling module",
+          "required": true
+        }
+      ],
+      "outputs": [
+        {
+          "key": "applied",
+          "type": "boolean",
+          "description": "Whether scaling policies were applied"
+        }
+      ]
+    },
+    "step.scaling_destroy": {
+      "type": "step.scaling_destroy",
+      "plugin": "platform",
+      "description": "Removes autoscaling policies.",
+      "configFields": [
+        {
+          "key": "scaling",
+          "label": "",
+          "type": "string",
+          "description": "Name of the platform.autoscaling module",
+          "required": true
+        }
+      ],
+      "outputs": [
+        {
+          "key": "destroyed",
+          "type": "boolean",
+          "description": "Whether policies were removed"
+        }
+      ]
+    },
+    "step.scaling_plan": {
+      "type": "step.scaling_plan",
+      "plugin": "platform",
+      "description": "Plans autoscaling policy changes without applying them.",
+      "configFields": [
+        {
+          "key": "scaling",
+          "label": "",
+          "type": "string",
+          "description": "Name of the platform.autoscaling module",
+          "required": true
+        }
+      ],
+      "outputs": [
+        {
+          "key": "plan",
+          "type": "string",
+          "description": "Human-readable plan output"
+        },
+        {
+          "key": "changes",
+          "type": "number",
+          "description": "Number of changes planned"
+        }
+      ]
+    },
+    "step.scaling_status": {
+      "type": "step.scaling_status",
+      "plugin": "platform",
+      "description": "Gets the status of autoscaling policies.",
+      "configFields": [
+        {
+          "key": "scaling",
+          "label": "",
+          "type": "string",
+          "description": "Name of the platform.autoscaling module",
+          "required": true
+        }
+      ],
+      "outputs": [
+        {
+          "key": "status",
+          "type": "string",
+          "description": "Scaling status"
+        },
+        {
+          "key": "policies",
+          "type": "[]any",
+          "description": "Active scaling policy details"
+        }
+      ]
+    },
+    "step.scan_container": {
+      "type": "step.scan_container",
+      "plugin": "cicd",
+      "description": "Scans a container image for vulnerabilities.",
+      "configFields": [
+        {
+          "key": "target_image",
+          "label": "",
+          "type": "string",
+          "description": "Image to scan",
+          "required": true
+        },
+        {
+          "key": "fail_on_severity",
+          "label": "",
+          "type": "select",
+          "description": "Minimum severity to fail",
+          "options": [
+            "critical",
+            "high",
+            "medium",
+            "low"
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "key": "vulnerabilities",
+          "type": "[]any",
+          "description": "Found vulnerabilities"
+        },
+        {
+          "key": "severity_counts",
+          "type": "map",
+          "description": "Vulnerability counts by severity"
+        }
+      ]
+    },
+    "step.scan_deps": {
+      "type": "step.scan_deps",
+      "plugin": "cicd",
+      "description": "Scans project dependencies for known vulnerabilities.",
+      "configFields": [
+        {
+          "key": "manifest_path",
+          "label": "",
+          "type": "string",
+          "description": "Package manifest file path"
+        },
+        {
+          "key": "fail_on_severity",
+          "label": "",
+          "type": "select",
+          "description": "Minimum severity to fail",
+          "options": [
+            "critical",
+            "high",
+            "medium",
+            "low"
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "key": "vulnerabilities",
+          "type": "[]any",
+          "description": "Vulnerable dependencies found"
+        },
+        {
+          "key": "passed",
+          "type": "boolean",
+          "description": "Whether the scan passed"
+        }
+      ]
+    },
+    "step.scan_sast": {
+      "type": "step.scan_sast",
+      "plugin": "cicd",
+      "description": "Performs static application security testing (SAST).",
+      "configFields": [
+        {
+          "key": "scanner",
+          "label": "",
+          "type": "string",
+          "description": "Scanner name (e.g., semgrep)",
+          "required": true
+        },
+        {
+          "key": "target",
+          "label": "",
+          "type": "string",
+          "description": "Scan target path"
+        },
+        {
+          "key": "rules",
+          "label": "",
+          "type": "array",
+          "description": "Scanner rule sets"
+        }
+      ],
+      "outputs": [
+        {
+          "key": "findings",
+          "type": "[]any",
+          "description": "Security findings"
+        },
+        {
+          "key": "passed",
+          "type": "boolean",
+          "description": "Whether the scan passed"
+        }
+      ]
+    },
+    "step.secret_fetch": {
+      "type": "step.secret_fetch",
+      "plugin": "pipelinesteps",
+      "description": "Fetches one or more secrets from a named secrets module (AWS/Vault).",
+      "configFields": [
+        {
+          "key": "module",
+          "label": "",
+          "type": "string",
+          "description": "Service name of secrets module",
+          "required": true
+        },
+        {
+          "key": "secrets",
+          "label": "",
+          "type": "map",
+          "description": "Map of output key to secret ID/ARN (supports template expressions)",
+          "required": true
+        }
+      ],
+      "outputs": [
+        {
+          "key": "(key)",
+          "type": "string",
+          "description": "For each key in secrets map, the resolved secret value"
+        },
+        {
+          "key": "fetched",
+          "type": "boolean",
+          "description": "Whether all secrets were fetched"
+        }
+      ]
+    },
+    "step.secret_rotate": {
+      "type": "step.secret_rotate",
+      "plugin": "secrets",
+      "description": "Rotates a secret by generating a new value and updating the secrets backend.",
+      "configFields": [
+        {
+          "key": "provider",
+          "label": "",
+          "type": "string",
+          "description": "Name of the secrets module",
+          "required": true
+        },
+        {
+          "key": "secret_id",
+          "label": "",
+          "type": "string",
+          "description": "Secret ID or ARN to rotate",
+          "required": true
+        }
+      ],
+      "outputs": [
+        {
+          "key": "rotated",
+          "type": "boolean",
+          "description": "Whether the secret was rotated"
+        },
+        {
+          "key": "version_id",
+          "type": "string",
+          "description": "New secret version ID"
+        }
+      ]
+    },
+    "step.set": {
+      "type": "step.set",
+      "plugin": "pipelinesteps",
+      "description": "Sets key/value pairs in the pipeline context. Values can contain template expressions.",
+      "configFields": [
+        {
+          "key": "values",
+          "label": "",
+          "type": "map",
+          "description": "Map of key/value pairs to merge into the pipeline context",
+          "required": true
+        }
+      ],
+      "outputs": [
+        {
+          "key": "(dynamic)",
+          "type": "any",
+          "description": "Each key from 'values' becomes an output key with its resolved value"
+        }
+      ]
+    },
+    "step.shell_exec": {
+      "type": "step.shell_exec",
+      "plugin": "cicd",
+      "description": "Executes a shell command and captures its output.",
+      "configFields": [
+        {
+          "key": "command",
+          "label": "",
+          "type": "string",
+          "description": "Command to execute",
+          "required": true
+        },
+        {
+          "key": "args",
+          "label": "",
+          "type": "array",
+          "description": "Command arguments"
+        },
+        {
+          "key": "env",
+          "label": "",
+          "type": "map",
+          "description": "Environment variables"
+        },
+        {
+          "key": "workdir",
+          "label": "",
+          "type": "string",
+          "description": "Working directory"
+        },
+        {
+          "key": "timeout",
+          "label": "",
+          "type": "duration",
+          "description": "Execution timeout (e.g. 5m)"
+        }
+      ],
+      "outputs": [
+        {
+          "key": "stdout",
+          "type": "string",
+          "description": "Standard output from the command"
+        },
+        {
+          "key": "stderr",
+          "type": "string",
+          "description": "Standard error from the command"
+        },
+        {
+          "key": "exit_code",
+          "type": "number",
+          "description": "Process exit code"
+        }
+      ]
+    },
+    "step.statemachine_get": {
+      "type": "step.statemachine_get",
+      "plugin": "statemachine",
+      "description": "Retrieves the current state of a state machine instance.",
+      "configFields": [
+        {
+          "key": "engine",
+          "label": "",
+          "type": "string",
+          "description": "State machine engine module name",
+          "required": true
+        },
+        {
+          "key": "instanceId",
+          "label": "",
+          "type": "string",
+          "description": "State machine instance ID (template expressions supported)",
+          "required": true
+        }
+      ],
+      "outputs": [
+        {
+          "key": "state",
+          "type": "string",
+          "description": "Current state of the instance"
+        },
+        {
+          "key": "instance_id",
+          "type": "string",
+          "description": "Instance ID"
+        }
+      ]
+    },
+    "step.statemachine_transition": {
+      "type": "step.statemachine_transition",
+      "plugin": "statemachine",
+      "description": "Triggers a state machine transition for a given instance.",
+      "configFields": [
+        {
+          "key": "engine",
+          "label": "",
+          "type": "string",
+          "description": "State machine engine module name",
+          "required": true
+        },
+        {
+          "key": "instanceId",
+          "label": "",
+          "type": "string",
+          "description": "State machine instance ID (template expressions supported)",
+          "required": true
+        },
+        {
+          "key": "transition",
+          "label": "",
+          "type": "string",
+          "description": "Transition name to trigger",
+          "required": true
+        }
+      ],
+      "outputs": [
+        {
+          "key": "previous_state",
+          "type": "string",
+          "description": "State before the transition"
+        },
+        {
+          "key": "current_state",
+          "type": "string",
+          "description": "State after the transition"
+        },
+        {
+          "key": "transitioned",
+          "type": "boolean",
+          "description": "Whether the transition was applied"
+        }
+      ]
+    },
+    "step.static_file": {
+      "type": "step.static_file",
+      "plugin": "pipelinesteps",
+      "description": "Serves a static file from the filesystem as the HTTP response.",
+      "configFields": [
+        {
+          "key": "path",
+          "label": "",
+          "type": "filepath",
+          "description": "File path to serve (template expressions supported)",
+          "required": true
+        },
+        {
+          "key": "content_type",
+          "label": "",
+          "type": "string",
+          "description": "Content-Type header (auto-detected from extension if not set)"
+        }
+      ],
+      "outputs": [
+        {
+          "key": "served",
+          "type": "boolean",
+          "description": "Whether the file was served"
+        },
+        {
+          "key": "content_type",
+          "type": "string",
+          "description": "The Content-Type that was sent"
+        }
+      ]
+    },
+    "step.sub_workflow": {
+      "type": "step.sub_workflow",
+      "plugin": "ai",
+      "description": "Invokes a registered plugin workflow as a sub-workflow.",
+      "configFields": [
+        {
+          "key": "workflow",
+          "label": "",
+          "type": "string",
+          "description": "Qualified workflow name",
+          "required": true
+        },
+        {
+          "key": "input_mapping",
+          "label": "",
+          "type": "map",
+          "description": "Template expressions mapping parent to child inputs"
+        },
+        {
+          "key": "output_mapping",
+          "label": "",
+          "type": "map",
+          "description": "Dot-paths mapping child outputs to parent keys"
+        },
+        {
+          "key": "timeout",
+          "label": "",
+          "type": "duration",
+          "description": "Execution timeout",
+          "defaultValue": "30s"
+        }
+      ],
+      "outputs": [
+        {
+          "key": "result",
+          "type": "map",
+          "description": "Child pipeline outputs"
+        }
+      ]
+    },
+    "step.token_revoke": {
+      "type": "step.token_revoke",
+      "plugin": "pipelinesteps",
+      "description": "Revokes a JWT by extracting its JTI claim and adding it to a token blacklist.",
+      "configFields": [
+        {
+          "key": "blacklist_module",
+          "label": "",
+          "type": "string",
+          "description": "Service name of TokenBlacklist module",
+          "required": true
+        },
+        {
+          "key": "token_source",
+          "label": "",
+          "type": "string",
+          "description": "Dot-path to Bearer token",
+          "required": true
+        }
+      ],
+      "outputs": [
+        {
+          "key": "revoked",
+          "type": "boolean",
+          "description": "Whether the JTI was added to the blacklist"
+        },
+        {
+          "key": "jti",
+          "type": "string",
+          "description": "The JTI claim value (present if revoked=true)"
+        }
+      ]
+    },
+    "step.trace_annotate": {
+      "type": "step.trace_annotate",
+      "plugin": "observability",
+      "description": "Adds attributes or events to the current trace span.",
+      "configFields": [
+        {
+          "key": "attributes",
+          "label": "",
+          "type": "map",
+          "description": "Key/value attributes to add to the span"
+        },
+        {
+          "key": "event",
+          "label": "",
+          "type": "string",
+          "description": "Event name to record on the span"
+        }
+      ],
+      "outputs": [
+        {
+          "key": "annotated",
+          "type": "boolean",
+          "description": "Whether annotation was applied"
+        }
+      ]
+    },
+    "step.trace_extract": {
+      "type": "step.trace_extract",
+      "plugin": "observability",
+      "description": "Extracts trace context from incoming request headers or message attributes.",
+      "configFields": [
+        {
+          "key": "source",
+          "label": "",
+          "type": "string",
+          "description": "Source to extract from: headers, message, context",
+          "defaultValue": "headers"
+        }
+      ],
+      "outputs": [
+        {
+          "key": "trace_id",
+          "type": "string",
+          "description": "Extracted trace ID"
+        },
+        {
+          "key": "span_id",
+          "type": "string",
+          "description": "Extracted span ID"
+        }
+      ]
+    },
+    "step.trace_inject": {
+      "type": "step.trace_inject",
+      "plugin": "observability",
+      "description": "Injects trace context into outgoing request headers or message attributes.",
+      "configFields": [
+        {
+          "key": "target",
+          "label": "",
+          "type": "string",
+          "description": "Target to inject into: headers, message",
+          "defaultValue": "headers"
+        }
+      ],
+      "outputs": [
+        {
+          "key": "injected",
+          "type": "boolean",
+          "description": "Whether context was injected"
+        }
+      ]
+    },
+    "step.trace_link": {
+      "type": "step.trace_link",
+      "plugin": "observability",
+      "description": "Creates a causal link between the current span and another span.",
+      "configFields": [
+        {
+          "key": "trace_id",
+          "label": "",
+          "type": "string",
+          "description": "Trace ID to link to",
+          "required": true
+        },
+        {
+          "key": "span_id",
+          "label": "",
+          "type": "string",
+          "description": "Span ID to link to"
+        }
+      ],
+      "outputs": [
+        {
+          "key": "linked",
+          "type": "boolean",
+          "description": "Whether the link was created"
+        }
+      ]
+    },
+    "step.trace_start": {
+      "type": "step.trace_start",
+      "plugin": "observability",
+      "description": "Starts a new trace span for the current pipeline step or operation.",
+      "configFields": [
+        {
+          "key": "name",
+          "label": "",
+          "type": "string",
+          "description": "Span name",
+          "required": true
+        },
+        {
+          "key": "attributes",
+          "label": "",
+          "type": "map",
+          "description": "Initial span attributes"
+        }
+      ],
+      "outputs": [
+        {
+          "key": "trace_id",
+          "type": "string",
+          "description": "New trace ID"
+        },
+        {
+          "key": "span_id",
+          "type": "string",
+          "description": "New span ID"
+        }
+      ]
+    },
+    "step.transform": {
+      "type": "step.transform",
+      "plugin": "pipelinesteps",
+      "description": "Transforms pipeline context values using field mapping or template expressions.",
+      "configFields": [
+        {
+          "key": "mapping",
+          "label": "",
+          "type": "map",
+          "description": "Field mapping from source to target keys"
+        },
+        {
+          "key": "template",
+          "label": "",
+          "type": "string",
+          "description": "Go template string for complex transformations"
+        }
+      ],
+      "outputs": [
+        {
+          "key": "(dynamic)",
+          "type": "any",
+          "description": "Output keys match the mapping target keys or template result"
+        }
+      ]
+    },
+    "step.ui_scaffold": {
+      "type": "step.ui_scaffold",
+      "plugin": "pipelinesteps",
+      "description": "Generates a Vite+React+TypeScript UI scaffold from an OpenAPI spec and returns a ZIP file.",
+      "configFields": [
+        {
+          "key": "title",
+          "label": "",
+          "type": "string",
+          "description": "UI title"
+        },
+        {
+          "key": "theme",
+          "label": "",
+          "type": "string",
+          "description": "Theme name"
+        },
+        {
+          "key": "auth",
+          "label": "",
+          "type": "boolean",
+          "description": "Include authentication module"
+        },
+        {
+          "key": "filename",
+          "label": "",
+          "type": "string",
+          "description": "ZIP filename",
+          "defaultValue": "scaffold.zip"
+        }
+      ],
+      "outputs": [
+        {
+          "key": "status",
+          "type": "number",
+          "description": "HTTP response status (200 on success)"
+        }
+      ]
+    },
+    "step.ui_scaffold_analyze": {
+      "type": "step.ui_scaffold_analyze",
+      "plugin": "pipelinesteps",
+      "description": "Analyzes an OpenAPI spec and returns parsed resource/operation structure as JSON.",
+      "configFields": [
+        {
+          "key": "title",
+          "label": "",
+          "type": "string",
+          "description": "UI title for scaffold analysis"
+        },
+        {
+          "key": "theme",
+          "label": "",
+          "type": "string",
+          "description": "Theme for analysis"
+        }
+      ],
+      "outputs": [
+        {
+          "key": "resources",
+          "type": "[]any",
+          "description": "Parsed API resources"
+        },
+        {
+          "key": "operations",
+          "type": "[]any",
+          "description": "Parsed operations"
+        }
+      ]
+    },
+    "step.validate": {
+      "type": "step.validate",
+      "plugin": "pipelinesteps",
+      "description": "Validates pipeline context fields against rules.",
+      "configFields": [
+        {
+          "key": "rules",
+          "label": "",
+          "type": "map",
+          "description": "Validation rules per field"
+        },
+        {
+          "key": "required",
+          "label": "",
+          "type": "array",
+          "description": "List of required field names"
+        },
+        {
+          "key": "schema",
+          "label": "",
+          "type": "string",
+          "description": "JSON Schema for request body validation"
+        }
+      ],
+      "outputs": [
+        {
+          "key": "valid",
+          "type": "boolean",
+          "description": "Whether validation passed"
+        }
+      ]
+    },
+    "step.validate_pagination": {
+      "type": "step.validate_pagination",
+      "plugin": "pipelinesteps",
+      "description": "Validates and normalizes pagination query parameters (limit, offset).",
+      "configFields": [
+        {
+          "key": "maxLimit",
+          "label": "",
+          "type": "number",
+          "description": "Maximum allowed limit value",
+          "defaultValue": 100
+        },
+        {
+          "key": "defaultLimit",
+          "label": "",
+          "type": "number",
+          "description": "Default limit when not provided",
+          "defaultValue": 20
+        }
+      ],
+      "outputs": [
+        {
+          "key": "limit",
+          "type": "number",
+          "description": "Normalized limit value"
+        },
+        {
+          "key": "offset",
+          "type": "number",
+          "description": "Normalized offset value"
+        }
+      ]
+    },
+    "step.validate_path_param": {
+      "type": "step.validate_path_param",
+      "plugin": "pipelinesteps",
+      "description": "Validates a URL path parameter exists and matches the expected type.",
+      "configFields": [
+        {
+          "key": "param",
+          "label": "",
+          "type": "string",
+          "description": "Path parameter name",
+          "required": true
+        },
+        {
+          "key": "type",
+          "label": "",
+          "type": "select",
+          "description": "Expected type",
+          "options": [
+            "string",
+            "integer",
+            "uuid"
+          ]
+        },
+        {
+          "key": "required",
+          "label": "",
+          "type": "boolean",
+          "description": "Whether the parameter is required",
+          "defaultValue": true
+        }
+      ],
+      "outputs": [
+        {
+          "key": "valid",
+          "type": "boolean",
+          "description": "Whether the parameter is valid"
+        },
+        {
+          "key": "value",
+          "type": "string",
+          "description": "The validated parameter value"
+        }
+      ]
+    },
+    "step.validate_request_body": {
+      "type": "step.validate_request_body",
+      "plugin": "pipelinesteps",
+      "description": "Validates the request body against a JSON Schema.",
+      "configFields": [
+        {
+          "key": "schema",
+          "label": "",
+          "type": "json",
+          "description": "JSON Schema to validate against",
+          "required": true
+        },
+        {
+          "key": "required",
+          "label": "",
+          "type": "array",
+          "description": "List of required body fields"
+        }
+      ],
+      "outputs": [
+        {
+          "key": "valid",
+          "type": "boolean",
+          "description": "Whether the body passed validation"
+        }
+      ]
+    },
+    "step.webhook_verify": {
+      "type": "step.webhook_verify",
+      "plugin": "pipelinesteps",
+      "description": "Verifies webhook signatures from providers like GitHub, GitLab, or Stripe.",
+      "configFields": [
+        {
+          "key": "provider",
+          "label": "",
+          "type": "select",
+          "description": "Webhook provider",
+          "options": [
+            "github",
+            "gitlab",
+            "stripe",
+            "generic"
+          ]
+        },
+        {
+          "key": "scheme",
+          "label": "",
+          "type": "select",
+          "description": "Signature scheme",
+          "options": [
+            "hmac-sha256",
+            "hmac-sha1"
+          ]
+        },
+        {
+          "key": "secret",
+          "label": "",
+          "type": "string",
+          "description": "Shared secret for signature verification",
+          "sensitive": true
+        },
+        {
+          "key": "secret_from",
+          "label": "",
+          "type": "string",
+          "description": "Context key containing the secret"
+        },
+        {
+          "key": "signature_header",
+          "label": "",
+          "type": "string",
+          "description": "HTTP header containing the signature"
+        },
+        {
+          "key": "header",
+          "label": "",
+          "type": "string",
+          "description": "Alias for signature_header"
+        }
+      ],
+      "outputs": [
+        {
+          "key": "verified",
+          "type": "boolean",
+          "description": "Whether the webhook signature is valid"
+        }
+      ]
+    },
+    "step.workflow_call": {
+      "type": "step.workflow_call",
+      "plugin": "pipelinesteps",
+      "description": "Calls another workflow and returns its result.",
+      "configFields": [
+        {
+          "key": "workflow",
+          "label": "",
+          "type": "string",
+          "description": "Workflow name to call",
+          "required": true
+        },
+        {
+          "key": "input",
+          "label": "",
+          "type": "map",
+          "description": "Input data to pass to the workflow"
+        }
+      ],
+      "outputs": [
+        {
+          "key": "(dynamic)",
+          "type": "any",
+          "description": "Output from the called workflow"
+        }
+      ]
     }
   },
   "coercionRules": {
