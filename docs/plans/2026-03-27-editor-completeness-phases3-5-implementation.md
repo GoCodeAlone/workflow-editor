@@ -336,6 +336,16 @@ func TestNoNewJSONFields(t *testing.T) {
 
     // Ratchet: count should only decrease over time
     // Update this number as fields are converted to typed schemas
+    // When STRICT_SCHEMA is set, zero json fields allowed
+    if os.Getenv("STRICT_SCHEMA") == "true" {
+        if len(jsonFields) > 0 {
+            t.Errorf("STRICT_SCHEMA: %d json fields remain (must be 0):\n%s",
+                len(jsonFields), strings.Join(jsonFields, "\n"))
+        }
+        return
+    }
+
+    // Ratchet: count should only decrease over time
     maxAllowed := 40  // was 60, reduced by Task 5
     if len(jsonFields) > maxAllowed {
         t.Errorf("JSON field count increased to %d (max allowed: %d). New json fields:\n%s",
@@ -521,6 +531,50 @@ git commit -m "feat: Workflow DSL Reference tool window"
 
 ---
 
+### Task 12: Breadcrumb IDE wiring + sync CI
+
+**Repos:** workflow-vscode, workflow-jetbrains, workflow-editor
+**Files:**
+- Modify: `/Users/jon/workspace/workflow-vscode/webview-src/index.tsx` — wire breadcrumb onNavigate to bridge
+- Modify: `/Users/jon/workspace/workflow-vscode/src/visual-editor.ts` — handle breadcrumb navigation message
+- Modify: `/Users/jon/workspace/workflow-jetbrains/webview-src/index.tsx` — same
+- Modify: `/Users/jon/workspace/workflow-jetbrains/src/main/kotlin/com/gocodalone/workflow/ide/editor/WorkflowBridge.kt` — handle breadcrumb navigation
+
+The BreadcrumbBar (Task 6 from Phase 2) renders inside the `WorkflowEditor` component. When `onNavigate` fires, it already calls `onNavigateToSource(filePath, 1, 0)`. Both IDE plugins already handle `onNavigateToSource` with the multi-file overload (from the previous agent team). So breadcrumb clicks in the visual editor already work in IDEs — no additional wiring needed for basic navigation.
+
+However, add explicit handling:
+1. **VS Code**: When breadcrumb navigates to a different file, ensure the YAML text editor also switches to that file (not just the webview)
+2. **JetBrains**: Same — `navigateToFileAndLine` already handles this from the previous work
+3. **Sync CI**: Update workflow-editor's `sync-schema.yml` GitHub Action to also copy `dsl-reference.json` alongside `engine-schemas.json` when dispatched from a workflow release
+
+**Step 1:** Verify breadcrumb already works in IDEs (it should — the bridge is already wired).
+
+**Step 2:** Add `dsl-reference.json` to the `sync-schema.yml` workflow.
+
+**Step 3:** Commit:
+```bash
+cd /Users/jon/workspace/workflow-editor
+git add .github/workflows/sync-schema.yml
+git commit -m "ci: add dsl-reference.json to schema sync workflow"
+```
+
+---
+
+## Alignment Notes
+
+**Intentional scope decisions (deferred to future major version):**
+- `pkg/schema/` struct-tag reflection generator — deferred. Task 5 directly edits schema definitions which achieves the same immediate goal. The full generator is a major version bump scope item requiring struct tag changes on every module config.
+- Major version bump — deferred until all json fields are eliminated. Task 6's ratchet test ensures count only decreases.
+- Removing `MODULE_TYPES` static fallback — deferred until engine schema is confirmed authoritative across all consumers.
+
+**Addressed drift items:**
+- Task 2 also serves as `wfctl docs` (JSON output can be piped to a renderer; human-facing rendering is lower priority than machine-parseable extraction)
+- Task 6 updated: includes `STRICT_SCHEMA=true` env var gate (see below)
+- Tasks 10+11: IDE reference commands reuse `dsl-reference.json` via webview bridge where the existing `WorkflowEditor` component is already mounted, rather than duplicating rendering
+- Task 12 added: breadcrumb IDE wiring + sync CI
+
+---
+
 ## Summary
 
 | Task | Phase | Repo | Type |
@@ -536,3 +590,4 @@ git commit -m "feat: Workflow DSL Reference tool window"
 | 9 | 5 | workflow | LSP completion |
 | 10 | 5 | workflow-vscode | DSL reference command |
 | 11 | 5 | workflow-jetbrains | DSL reference tool window |
+| 12 | 5 | vscode + jetbrains + editor | Breadcrumb IDE wiring + sync CI |
