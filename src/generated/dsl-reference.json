@@ -3,225 +3,263 @@
     {
       "id": "application",
       "title": "Application",
-      "description": "The top-level application block defines the identity and requirements of your workflow application. It sets the name, version, and declares any required external capabilities.",
-      "requiredFields": [
-        { "name": "name", "type": "string", "description": "Unique application identifier" }
-      ],
+      "description": "The optional top-level metadata fields identify the application and declare its external dependencies.",
+      "requiredFields": null,
       "optionalFields": [
-        { "name": "version", "type": "string", "description": "Application version string (e.g. '1.0.0')" },
-        { "name": "requires", "type": "string[]", "description": "List of required capabilities or feature flags" }
+        {
+          "name": "name",
+          "type": "string",
+          "description": "human-readable application name, used in logs and the management API"
+        },
+        {
+          "name": "version",
+          "type": "string",
+          "description": "application version (semver recommended, e.g., `\"1.0.0\"`)"
+        },
+        {
+          "name": "description",
+          "type": "string",
+          "description": "free-text description used by `wfctl docs generate`"
+        },
+        {
+          "name": "requires",
+          "type": "object",
+          "description": "declares plugins and capabilities the engine must load before starting"
+        }
       ],
-      "example": "name: my-app\nversion: \"1.0.0\"\nrequires:\n  - messaging\n  - database",
+      "example": "name: order-api\nversion: \"2.1.0\"\ndescription: \"REST API for order management with JWT auth and state machine processing\"\n\nrequires:\n  plugins:\n    - name: workflow-plugin-http\n    - name: workflow-plugin-authz\n      version: \"\u003e=1.0.0\"\n  capabilities:\n    - authorization\n    - http-serving",
       "relationships": [
-        "The application name is used as a namespace for module resolution",
-        "Required capabilities must be satisfied by the platform configuration"
-      ],
-      "parent": null
+        "`requires.plugins` must be satisfied before any module or workflow config is validated",
+        "Plugin names resolve to module type registrations consumed by `modules[].type`"
+      ]
     },
     {
       "id": "modules",
       "title": "Modules",
-      "description": "Modules are the building blocks of a workflow application. Each module represents a runtime service component such as an HTTP server, database connection, message broker, or pipeline step.",
+      "description": "Modules are the building blocks of a workflow application. Each module represents a runtime service component (HTTP server, database connection, message broker, state machine, etc.). The engine initialises modules in dependency order and keeps them running for the application lifetime.",
       "requiredFields": [
-        { "name": "name", "type": "string", "description": "Unique identifier for this module instance" },
-        { "name": "type", "type": "string", "description": "Module type from the registry (e.g. 'http.server', 'database.workflow')" }
+        {
+          "name": "name",
+          "type": "string",
+          "description": "unique identifier for this module instance (used as reference in workflows, triggers, and pipelines)"
+        },
+        {
+          "name": "type",
+          "type": "string",
+          "description": "module type from the registry (e.g., `http.server`, `database.workflow`, `messaging.broker`)"
+        }
       ],
       "optionalFields": [
-        { "name": "config", "type": "map", "description": "Type-specific configuration key-value pairs" },
-        { "name": "dependsOn", "type": "string[]", "description": "Module names this module depends on — controls initialization order" },
-        { "name": "branches", "type": "map", "description": "Conditional routing to other modules" }
+        {
+          "name": "config",
+          "type": "map",
+          "description": "type-specific configuration key/value pairs; available keys depend on the module type"
+        },
+        {
+          "name": "dependsOn",
+          "type": "string[]",
+          "description": "module names this module waits for before initialising (controls start-up order)"
+        },
+        {
+          "name": "branches",
+          "type": "map",
+          "description": "conditional routing to other modules (used by `dynamic.component` and `processing.step`)"
+        }
       ],
-      "example": "modules:\n  - name: api-server\n    type: http.server\n    config:\n      address: \":8080\"\n  - name: db\n    type: database.workflow\n    config:\n      driver: postgres\n      dsn: \"${DATABASE_URL}\"\n    dependsOn:\n      - api-server",
+      "example": "modules:\n  - name: api-server\n    type: http.server\n    config:\n      address: \":8080\"\n\n  - name: api-router\n    type: http.router\n    dependsOn:\n      - api-server\n\n  - name: db\n    type: database.workflow\n    config:\n      driver: postgres\n      dsn: \"${DATABASE_URL}\"\n\n  - name: auth-jwt\n    type: auth.jwt\n    dependsOn:\n      - api-router\n    config:\n      secret: \"${JWT_SECRET}\"\n      issuer: \"https://auth.example.com\"",
       "relationships": [
-        "Modules are referenced by workflows.http.routes[].handler",
-        "Modules can reference pipelines via their config",
-        "Module names must be unique across all imported files"
-      ],
-      "parent": null
+        "Module `name` values are referenced in `workflows.http.routes[].handler`, `workflows.messaging.broker`, `workflows.statemachine.engine`, and `triggers.http.server`",
+        "`dependsOn` forms a DAG — circular dependencies are rejected at startup",
+        "Module types are registered by plugins declared in `requires.plugins`"
+      ]
     },
     {
       "id": "workflows",
       "title": "Workflows",
-      "description": "The workflows section groups all event-driven entrypoints into your application. It contains sub-sections for HTTP, messaging, state machine, and event-based workflows.",
-      "requiredFields": [],
-      "optionalFields": [
-        { "name": "http", "type": "map", "description": "HTTP server and router configuration" },
-        { "name": "messaging", "type": "map", "description": "Message broker subscriptions and topics" },
-        { "name": "statemachine", "type": "map", "description": "State machine engine definitions and transitions" },
-        { "name": "events", "type": "map", "description": "Event processor handlers and adapters" }
-      ],
-      "example": "workflows:\n  http:\n    server: api-server\n    router: api-router\n    routes:\n      - method: GET\n        path: /health\n        handler: health-check",
+      "description": "The `workflows` section wires together modules into runtime behaviours. It has four sub-sections, each mapping to a workflow kind: `http`, `messaging`, `statemachine`, and `event`.",
+      "requiredFields": null,
+      "optionalFields": null,
+      "example": "workflows:\n  http:\n    server: api-server\n    router: api-router\n    routes:\n      - method: GET\n        path: /api/orders\n        handler: orders-handler\n\n  messaging:\n    broker: event-broker\n    subscriptions:\n      - topic: order.created\n        handler: notification-handler\n\n  statemachine:\n    engine: order-state\n    definitions:\n      - name: order-lifecycle\n        initialState: pending\n        states:\n          pending: {}\n          shipped: { isFinal: false }\n          delivered: { isFinal: true }\n        transitions:\n          ship: { fromState: pending, toState: shipped }\n          deliver: { fromState: shipped, toState: delivered }",
       "relationships": [
-        "Workflow handlers reference module names defined in the modules section",
-        "Routes can inline pipeline definitions or reference named pipelines"
-      ],
-      "parent": null
+        "`workflows` references module names declared in `modules`",
+        "`pipelines` have their own trigger mechanism and are independent of `workflows`"
+      ]
     },
     {
       "id": "workflows-http",
-      "title": "Workflows > HTTP",
-      "description": "HTTP workflow configuration defines an HTTP server, router, route table, and optional middleware chains. Routes map HTTP methods and paths to handler modules or inline pipelines.",
-      "requiredFields": [
-        { "name": "server", "type": "string", "description": "Name of the http.server module to bind routes to" }
-      ],
+      "title": "Workflows \u003e HTTP",
+      "description": "The `workflows.http` sub-section configures inbound HTTP routing. It links an `http.server` module to an `http.router` module and declares the route table.",
+      "requiredFields": null,
       "optionalFields": [
-        { "name": "router", "type": "string", "description": "Name of the http.router module" },
-        { "name": "routes", "type": "RouteConfig[]", "description": "List of route definitions (method, path, handler/pipeline)" },
-        { "name": "middleware", "type": "string[]", "description": "Ordered list of middleware module names applied to all routes" }
+        {
+          "name": "server",
+          "type": "string",
+          "description": "name of the `http.server` module (defaults to the first `http.server` found)"
+        },
+        {
+          "name": "router",
+          "type": "string",
+          "description": "name of the `http.router` module (defaults to the first `http.router` found)"
+        },
+        {
+          "name": "routes",
+          "type": "array",
+          "description": "list of route definitions"
+        }
       ],
-      "example": "workflows:\n  http:\n    server: api-server\n    router: api-router\n    middleware:\n      - auth-middleware\n    routes:\n      - method: POST\n        path: /users\n        pipeline:\n          steps:\n            - name: validate\n              type: step.validate\n            - name: create-user\n              type: step.db_query",
+      "example": "workflows:\n  http:\n    server: api-server\n    router: api-router\n    routes:\n      - method: GET\n        path: /health\n        handler: health-handler\n\n      - method: GET\n        path: /api/users\n        handler: users-handler\n        middlewares:\n          - auth-jwt\n          - authz-enforcer\n\n      - method: POST\n        path: /api/users\n        handler: users-handler\n        middlewares:\n          - auth-jwt\n\n      - method: GET\n        path: /api/users/:id\n        handler: users-handler",
       "relationships": [
-        "server must reference a module of type http.server",
-        "router must reference a module of type http.router",
-        "middleware entries must reference modules of a middleware-compatible type"
+        "`handler` and `middlewares` values reference module `name` fields in `modules`",
+        "`triggers.http` provides an alternative inline trigger mechanism for `pipelines` without needing a separate route entry"
       ],
       "parent": "workflows"
     },
     {
       "id": "workflows-messaging",
-      "title": "Workflows > Messaging",
-      "description": "Messaging workflows connect your application to message brokers. Define subscriptions that trigger pipelines when messages arrive on configured topics.",
-      "requiredFields": [
-        { "name": "broker", "type": "string", "description": "Name of the messaging broker module" }
-      ],
+      "title": "Workflows \u003e Messaging",
+      "description": "The `workflows.messaging` sub-section wires a message broker module to subscribers and declares which modules publish to which topics.",
+      "requiredFields": null,
       "optionalFields": [
-        { "name": "subscriptions", "type": "Subscription[]", "description": "List of topic subscriptions with pipeline handlers" },
-        { "name": "topics", "type": "TopicConfig[]", "description": "Topic definitions for publishing" }
+        {
+          "name": "broker",
+          "type": "string",
+          "description": "name of the `messaging.broker` module (defaults to first broker found)"
+        },
+        {
+          "name": "subscriptions",
+          "type": "array",
+          "description": "topic subscriptions"
+        },
+        {
+          "name": "producers",
+          "type": "array",
+          "description": "modules that publish events to topics"
+        }
       ],
-      "example": "workflows:\n  messaging:\n    broker: kafka-broker\n    subscriptions:\n      - topic: user-events\n        group: user-processor\n        pipeline:\n          steps:\n            - name: process\n              type: step.transform",
+      "example": "workflows:\n  messaging:\n    broker: event-broker\n    subscriptions:\n      - topic: order.created\n        handler: notification-handler\n      - topic: order.shipped\n        handler: fulfillment-handler\n      - topic: order.completed\n        handler: analytics-handler\n    producers:\n      - name: orders-handler\n        forwardTo:\n          - order.created\n          - order.updated",
       "relationships": [
-        "broker must reference a module of a messaging broker type",
-        "Subscription pipelines follow the same step schema as HTTP route pipelines"
+        "`broker`, `handler`, and `name` values reference module `name` fields in `modules`",
+        "Pipelines can publish to messaging topics using the `step.publish` step type"
       ],
       "parent": "workflows"
     },
     {
       "id": "workflows-statemachine",
-      "title": "Workflows > State Machine",
-      "description": "State machine workflows define finite state automata with named states and transition conditions. The engine processes events and drives state transitions.",
-      "requiredFields": [
-        { "name": "engine", "type": "string", "description": "Name of the state machine engine module" }
-      ],
+      "title": "Workflows \u003e State Machine",
+      "description": "The `workflows.statemachine` sub-section configures state machine engines with lifecycle definitions and transition tables.",
+      "requiredFields": null,
       "optionalFields": [
-        { "name": "definitions", "type": "StateMachineDefinition[]", "description": "Named state machine definitions with states and transitions" }
+        {
+          "name": "engine",
+          "type": "string",
+          "description": "name of the `statemachine.engine` module"
+        },
+        {
+          "name": "definitions",
+          "type": "array",
+          "description": "list of state machine definitions"
+        }
       ],
-      "example": "workflows:\n  statemachine:\n    engine: order-sm\n    definitions:\n      - name: order-lifecycle\n        initial: pending\n        states:\n          - name: pending\n            on:\n              CONFIRM: confirmed\n          - name: confirmed\n            on:\n              SHIP: shipped",
+      "example": "workflows:\n  statemachine:\n    engine: order-state\n    definitions:\n      - name: order-lifecycle\n        description: \"Manages order from creation to delivery\"\n        initialState: pending\n        states:\n          pending:\n            description: \"Awaiting confirmation\"\n          confirmed:\n            description: \"Payment verified\"\n          shipped:\n            description: \"In transit\"\n          delivered:\n            description: \"Delivered successfully\"\n            isFinal: true\n          cancelled:\n            description: \"Cancelled\"\n            isFinal: true\n            isError: true\n        transitions:\n          confirm_order:\n            fromState: pending\n            toState: confirmed\n          ship_order:\n            fromState: confirmed\n            toState: shipped\n          deliver_order:\n            fromState: shipped\n            toState: delivered\n          cancel_order:\n            fromState: pending\n            toState: cancelled",
       "relationships": [
-        "engine must reference a module of type statemachine.engine",
-        "State names must be unique within a definition"
+        "`engine` references a module `name` in `modules`",
+        "`api.handler` modules can reference a `workflowEngine` config key to bind REST CRUD to a state machine"
       ],
       "parent": "workflows"
     },
     {
       "id": "workflows-events",
-      "title": "Workflows > Events",
-      "description": "Event workflows respond to domain events via an event processor module. Handlers map event types to pipeline handlers.",
-      "requiredFields": [
-        { "name": "processor", "type": "string", "description": "Name of the event processor module" }
-      ],
+      "title": "Workflows \u003e Events",
+      "description": "The `workflows.event` sub-section configures event-driven processing with handlers and adapters.",
+      "requiredFields": null,
       "optionalFields": [
-        { "name": "handlers", "type": "EventHandler[]", "description": "List of event type to pipeline mappings" },
-        { "name": "adapters", "type": "string[]", "description": "Adapter module names for event source integration" }
+        {
+          "name": "processor",
+          "type": "string",
+          "description": "name of the event processor module"
+        },
+        {
+          "name": "handlers",
+          "type": "array",
+          "description": "event type to handler mappings"
+        },
+        {
+          "name": "adapters",
+          "type": "array",
+          "description": "event source adapters (e.g., webhook adapters, queue pollers)"
+        }
       ],
-      "example": "workflows:\n  events:\n    processor: event-bus\n    handlers:\n      - event: user.created\n        pipeline:\n          steps:\n            - name: send-welcome\n              type: step.http_request",
+      "example": "workflows:\n  event:\n    processor: event-processor\n    handlers:\n      - event: user.signup\n        handler: welcome-email-handler\n      - event: payment.failed\n        handler: retry-handler\n    adapters:\n      - name: stripe-webhook-adapter\n        type: http.webhook\n        config:\n          path: /webhooks/stripe\n          secret: \"${STRIPE_WEBHOOK_SECRET}\"",
       "relationships": [
-        "processor must reference a module of type events.processor",
-        "Event names are matched against the processor's configured event schema"
+        "Handler names reference module `name` fields in `modules`",
+        "Event triggers in `triggers` can route to event processors"
       ],
       "parent": "workflows"
     },
     {
       "id": "pipelines",
       "title": "Pipelines",
-      "description": "Pipelines are named sequences of steps that process data through transformations, queries, HTTP calls, and flow control. They can be defined inline in workflows or as named top-level reusable pipelines.",
-      "requiredFields": [
-        { "name": "steps", "type": "Step[]", "description": "Ordered list of pipeline steps" }
-      ],
-      "optionalFields": [
-        { "name": "timeout", "type": "string", "description": "Maximum duration for the entire pipeline (e.g. '30s')" },
-        { "name": "retry", "type": "RetryConfig", "description": "Retry policy for transient failures" }
-      ],
-      "example": "pipelines:\n  create-user:\n    steps:\n      - name: validate-input\n        type: step.validate\n        config:\n          schema: user-schema\n      - name: insert-record\n        type: step.db_query\n        config:\n          query: \"INSERT INTO users ...\"\n      - name: publish-event\n        type: step.publish\n        config:\n          topic: user-events",
+      "description": "Pipelines are composable step sequences that execute in response to a trigger. Each pipeline is independent of the `workflows` section and has its own trigger, step list, error policy, and timeout.",
+      "requiredFields": null,
+      "optionalFields": null,
+      "example": "pipelines:\n  stripe-payment:\n    trigger:\n      type: http\n      config:\n        path: /webhooks/stripe\n        method: POST\n\n    steps:\n      - name: validate-payload\n        type: step.validate\n        config:\n          strategy: required_fields\n          required_fields:\n            - type\n            - data\n\n      - name: extract-event\n        type: step.set\n        config:\n          values:\n            event_type: \"{{ .type }}\"\n            payload_id: \"{{ .data.id }}\"\n\n      - name: route-by-type\n        type: step.conditional\n        config:\n          field: \"{{ .event_type }}\"\n          routes:\n            \"payment_intent.succeeded\": process-success\n            \"payment_intent.failed\": process-failure\n          default: log-unknown\n\n      - name: process-success\n        type: step.json_response\n        config:\n          status: 200\n          body_from: \"steps.extract-event\"\n\n    on_error: stop\n    timeout: 30s",
       "relationships": [
-        "Named pipelines can be referenced by workflows using 'pipeline: ref: <name>'",
-        "Steps can use template expressions like '{{ .input.field }}' to reference previous step outputs",
-        "Steps of type step.branch enable conditional flow control"
-      ],
-      "parent": null
+        "Pipelines reference module names in step configs (e.g., `step.db_query` references a database module)",
+        "`workflows.messaging` can publish events consumed by pipelines with a `messaging` trigger type",
+        "`triggers` provides named trigger definitions that pipelines can reference"
+      ]
     },
     {
       "id": "triggers",
       "title": "Triggers",
-      "description": "Triggers define how external events initiate pipeline execution. Supported trigger types include HTTP (inline), cron schedules, and domain events.",
-      "requiredFields": [
-        { "name": "type", "type": "string", "description": "Trigger type: 'http', 'cron', or 'event'" }
-      ],
-      "optionalFields": [
-        { "name": "schedule", "type": "string", "description": "Cron expression for scheduled triggers (e.g. '0 * * * *')" },
-        { "name": "event", "type": "string", "description": "Event name to listen for (event triggers)" },
-        { "name": "pipeline", "type": "PipelineRef", "description": "Pipeline to execute when triggered" }
-      ],
-      "example": "triggers:\n  - type: cron\n    schedule: \"0 9 * * MON-FRI\"\n    pipeline:\n      ref: daily-report\n  - type: event\n    event: user.signup\n    pipeline:\n      ref: welcome-flow",
+      "description": "Triggers connect external events to pipelines or handlers. They can be defined inline within a pipeline's `trigger` field, or as named top-level entries under `triggers`.",
+      "requiredFields": null,
+      "optionalFields": null,
+      "example": "triggers:\n  http:\n    server: api-server\n\npipelines:\n  hourly-sync:\n    trigger:\n      type: cron\n      config:\n        schedule: \"0 * * * *\"\n        timezone: \"America/New_York\"\n    steps:\n      - name: sync\n        type: step.http_call\n        config:\n          url: \"http://data-service:8081/sync\"\n          method: POST\n    timeout: 5m\n\n  on-user-created:\n    trigger:\n      type: event\n      config:\n        event: user.created\n    steps:\n      - name: send-welcome\n        type: step.http_call\n        config:\n          url: \"http://email-service:8082/send\"\n          method: POST\n    timeout: 10s",
       "relationships": [
-        "Cron triggers run in the UTC timezone by default",
-        "Referenced pipelines must be defined in the top-level pipelines section"
-      ],
-      "parent": null
+        "HTTP triggers share the same `http.server` module declared in `modules`",
+        "`workflows.http.routes` and pipeline HTTP triggers are additive — both register routes on the same server",
+        "Cron triggers require a `scheduler.modular` module in `modules`"
+      ]
     },
     {
       "id": "imports",
       "title": "Imports",
-      "description": "Imports allow splitting a large workflow configuration across multiple YAML files. Imported files are merged at runtime, enabling modular organization of modules, pipelines, and workflows.",
-      "requiredFields": [
-        { "name": "file", "type": "string", "description": "Relative path to the imported YAML file" }
-      ],
-      "optionalFields": [
-        { "name": "alias", "type": "string", "description": "Optional namespace alias for imported resources" }
-      ],
-      "example": "imports:\n  - file: ./services/auth.yaml\n  - file: ./services/payments.yaml\n  - file: ./pipelines/notifications.yaml",
+      "description": "The `imports` section splits large configurations across multiple YAML files. Imported files are merged into the main config before validation.",
+      "requiredFields": null,
+      "optionalFields": null,
+      "example": "# main.yaml\nimports:\n  - infrastructure/modules.yaml\n  - api/routes.yaml\n  - pipelines/webhooks.yaml\n\nname: my-app\nversion: \"1.0.0\"\n\nmodules:\n  - name: app-server\n    type: http.server\n    config:\n      address: \":8080\"\n# infrastructure/modules.yaml\nmodules:\n  - name: db\n    type: database.workflow\n    config:\n      driver: sqlite\n      dsn: \"./data/app.db\"\n\n  - name: event-broker\n    type: messaging.broker",
       "relationships": [
-        "Imported files are resolved relative to the importing file's directory",
-        "Module names must remain unique across all imported files",
-        "Circular imports are not supported"
-      ],
-      "parent": null
+        "Module names must be unique across all imported files — collisions are rejected",
+        "`sourceMap` metadata in the management API tracks which file each module/pipeline originated from",
+        "Circular imports are detected and rejected"
+      ]
     },
     {
       "id": "config-providers",
       "title": "Config Providers",
-      "description": "Config providers supply configuration values to modules at startup. They support static defaults, environment variables, and external file sources. Multiple providers are merged in order.",
-      "requiredFields": [
-        { "name": "type", "type": "string", "description": "Provider type: 'defaults', 'env', or 'file'" }
-      ],
-      "optionalFields": [
-        { "name": "values", "type": "map", "description": "Static key-value pairs (type: defaults)" },
-        { "name": "prefix", "type": "string", "description": "Environment variable prefix to strip (type: env)" },
-        { "name": "path", "type": "string", "description": "Path to the config file (type: file)" },
-        { "name": "format", "type": "string", "description": "File format: 'yaml', 'json', 'toml' (type: file)" }
-      ],
-      "example": "configProviders:\n  - type: defaults\n    values:\n      port: 8080\n      logLevel: info\n  - type: env\n    prefix: APP_\n  - type: file\n    path: ./config.local.yaml\n    format: yaml",
+      "description": "Config providers supply runtime configuration values to module `config` blocks using `{{config \"key\"}}` template expressions. They run before any modules are initialised.",
+      "requiredFields": null,
+      "optionalFields": null,
+      "example": "modules:\n  - name: app-config\n    type: config.provider\n    config:\n      sources:\n        - type: defaults\n          values:\n            database_url: \"sqlite://./data/dev.db\"\n            jwt_secret: \"dev-secret-change-in-prod\"\n            log_level: \"info\"\n        - type: env\n          prefix: \"APP_\"\n        - type: file\n          path: \"./config/production.yaml\"\n      schema:\n        database_url:\n          required: true\n          description: \"Database connection string\"\n        jwt_secret:\n          required: true\n          description: \"JWT signing secret\"\n\n  - name: db\n    type: database.workflow\n    config:\n      dsn: \"{{config \\\"database_url\\\"}}\"\n\n  - name: auth-jwt\n    type: auth.jwt\n    config:\n      secret: \"{{config \\\"jwt_secret\\\"}}\"",
       "relationships": [
-        "Later providers override values from earlier providers",
-        "Environment variable names are uppercased and dots replaced with underscores"
-      ],
-      "parent": null
+        "Config providers must be declared in `modules` — the `config.provider` type is registered by the `configprovider` plugin",
+        "`{{config \"key\"}}` expressions are expanded in all `config` blocks across `modules`, `pipelines`, `workflows`, and `triggers`",
+        "Environment variable source reads `APP_DATABASE_URL` for key `database_url` when `prefix: \"APP_\"`"
+      ]
     },
     {
       "id": "platform",
       "title": "Platform / Infrastructure / Sidecars",
-      "description": "Infrastructure-as-code sections declare the deployment environment for your workflow application. These sections are consumed by the platform layer to provision resources, configure networking, and attach sidecar services.",
-      "requiredFields": [],
-      "optionalFields": [
-        { "name": "platform", "type": "PlatformConfig", "description": "Target runtime platform configuration" },
-        { "name": "infrastructure", "type": "InfrastructureConfig", "description": "Cloud resources (databases, queues, storage) to provision" },
-        { "name": "sidecars", "type": "SidecarConfig[]", "description": "Auxiliary containers to run alongside the application" }
-      ],
-      "example": "platform:\n  type: kubernetes\n  namespace: production\n  replicas: 3\n\ninfrastructure:\n  postgres:\n    type: rds\n    size: db.t3.medium\n\nsidecars:\n  - name: metrics-exporter\n    image: prom/node-exporter:latest",
+      "description": "These top-level sections describe infrastructure-as-code resources that the engine can provision or reference. They are used primarily with IaC plugins and deployment tooling.",
+      "requiredFields": null,
+      "optionalFields": null,
+      "example": "platform:\n  org: \"acme-corp\"\n  environment: \"production\"\n  templates:\n    - name: \"microservice\"\n      version: \"1.0.0\"\n      parameters:\n        - name: \"app_name\"\n          type: \"string\"\n          required: true\n        - name: \"replicas\"\n          type: \"int\"\n          default: 3\n      capabilities:\n        - name: \"${app_name}\"\n          type: \"container_runtime\"\n          properties:\n            replicas: \"${replicas}\"\n            ports:\n              - container_port: 8080\n\nsidecars:\n  - name: redis-cache\n    type: redis\n    config:\n      port: 6379\n  - name: jaeger-agent\n    type: jaeger\n    config:\n      port: 6831\n      endpoint: \"http://jaeger-collector:14268\"",
       "relationships": [
-        "Platform configuration is environment-specific and typically sourced via config providers",
-        "Infrastructure resources are referenced by modules via their names"
-      ],
-      "parent": null
+        "`platform.context` module type references the `platform` section org/environment values",
+        "Sidecars are deployed alongside the application container but are not addressable as workflow modules",
+        "`infrastructure` resources are provisioned by IaC plugins before application start"
+      ]
     }
   ]
 }
