@@ -15,16 +15,16 @@ workflows:
     routes:
       - method: POST
         path: /api/auth/login
-        handler: login
+        handler: login-handler
       - method: POST
         path: /api/auth/register
-        handler: register
+        handler: register-handler
       - method: POST
         path: /api/billing/charge
-        handler: charge
+        handler: charge-handler
       - method: POST
         path: /api/billing/refund
-        handler: refund
+        handler: refund-handler
       - method: POST
         path: /api/notify/email
-        handler: send-email
+        handler: send-email-handler

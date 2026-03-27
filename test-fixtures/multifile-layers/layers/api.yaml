@@ -6,6 +6,18 @@ modules:
   - name: router
     type: http.router
     config: {}
+  - name: user-handler
+    type: api.query
+    config:
+      pipeline: user-service
+  - name: order-handler
+    type: api.command
+    config:
+      pipeline: order-service
+  - name: product-handler
+    type: api.query
+    config:
+      pipeline: product-service
 
 workflows:
   http:
@@ -14,10 +26,10 @@ workflows:
     routes:
       - method: GET
         path: /api/users
-        handler: user-service
+        handler: user-handler
       - method: POST
         path: /api/orders
-        handler: order-service
+        handler: order-handler
       - method: GET
         path: /api/products
-        handler: product-service
+        handler: product-handler

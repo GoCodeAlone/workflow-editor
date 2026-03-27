@@ -598,7 +598,7 @@ test('clicking YAML line selects node on canvas', async ({ page }) => {
 
 | Task | Type | Files |
 |------|------|-------|
-| 1-3 | Test fixtures | 17 new YAML files across 3 fixture sets |
+| 1-3 | Test fixtures | 18 new YAML files across 3 fixture sets (domain=5, layers=5, nested=8) |
 | 4-6 | Serialization tests | 3 new test files (~30 test cases each) |
 | 7 | YAML line map | Extended yamlLineMap.ts + new test file |
 | 8 | Navigation hooks | Updated types + new navigation utils |

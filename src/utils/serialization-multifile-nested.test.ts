@@ -117,14 +117,22 @@ describe('nested-directory multi-file config — exportToFiles round-trip', () =
     expect(payYaml).toContain('refund');
   });
 
-  it('main file references only top-level import', async () => {
+  it('main file imports leaf files that contain modules and pipelines', async () => {
     const { config, sourceMap } = await resolveImports(FIXTURE_APP, resolver);
     const fileMap = exportToFiles(config, sourceMap);
     const mainYaml = fileMap.get(null)!;
 
     expect(mainYaml).toContain('imports:');
     expect(mainYaml).toMatch(/^modules:\s*\[\]/m);
-    // All modules are in imported files
+
+    // Export flattens the import graph — main file references leaf files directly,
+    // not the intermediate aggregator files (platform.yaml, core.yaml, features.yaml)
+    expect(mainYaml).toContain('platform/core/database.yaml');
+    expect(mainYaml).toContain('platform/core/cache.yaml');
+    expect(mainYaml).toContain('platform/features/auth.yaml');
+    expect(mainYaml).toContain('platform/features/payments.yaml');
+
+    // All modules are in imported files, not in the main file
     expect(mainYaml).not.toContain('primary-db');
     expect(mainYaml).not.toContain('auth-service');
   });

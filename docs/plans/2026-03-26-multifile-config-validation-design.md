@@ -181,9 +181,12 @@ IDE plugins do NOT use the built-in YAML pane. Instead, they use the **navigatio
 ```typescript
 interface WorkflowEditorProps {
   // ... existing props ...
-  /** Enhanced: now includes filePath for multi-file navigation.
-   *  Called when user clicks a node — host should navigate to the line in the specified file. */
-  onNavigateToSource?: (filePath: string | null, line: number, col: number) => void;
+  /** Enhanced navigation callback. When filePath is provided, navigate to
+   *  the specified line in that file. Backward-compatible: hosts that only
+   *  handle (line, col) can ignore the first argument.
+   *  Overloaded: (line: number, col: number) => void  — legacy single-file
+   *            | (filePath: string | null, line: number, col: number) => void  — multi-file */
+  onNavigateToSource?: (...args: [number, number] | [string | null, number, number]) => void;
   /** NEW: Called when the editor wants the host to reveal a specific node.
    *  The host should select the node on canvas (the editor handles this internally,
    *  but the host may also want to update its own UI). */
@@ -191,7 +194,7 @@ interface WorkflowEditorProps {
 }
 ```
 
-**Breaking change mitigation:** The `onNavigateToSource` signature changes from `(line, col)` to `(filePath, line, col)`. Since this is a callback the host provides, the host code already knows its signature. IDE plugins will need to update their bridge code to handle the new `filePath` parameter.
+**Backward compatibility:** The `onNavigateToSource` callback uses a discriminated overload: callers detect the arity or first-argument type to distinguish `(line, col)` from `(filePath, line, col)`. This means existing IDE plugins (workflow-vscode, workflow-jetbrains) continue to work without changes. They can adopt the `filePath` parameter incrementally by checking `typeof args[0] === 'string'` in their bridge handlers.
 
 ## 4. Visual File Boundaries on Canvas
 
@@ -302,10 +305,10 @@ For IDE plugins that use the webview bridge, add new message types:
 // Editor → Host (node clicked, navigate to source)
 interface NavigateToSourceMessage {
   type: 'navigateToSource';
-  filePath: string | null;   // null = main file
+  filePath?: string | null;   // optional — omitted for single-file configs
   line: number;
   col: number;
-  nodeName: string;
+  nodeName?: string;
 }
 
 // Host → Editor (user clicked in YAML, navigate to node)

@@ -44,6 +44,9 @@ describe('layer-split multi-file config — resolveImports', () => {
     // api layer
     expect(names).toContain('http-server');
     expect(names).toContain('router');
+    expect(names).toContain('user-handler');
+    expect(names).toContain('order-handler');
+    expect(names).toContain('product-handler');
   });
 
   it('resolves pipelines from middleware and services layers', async () => {
@@ -67,6 +70,9 @@ describe('layer-split multi-file config — resolveImports', () => {
     expect(sourceMap.get('logger')).toBe('layers/infrastructure.yaml');
     expect(sourceMap.get('http-server')).toBe('layers/api.yaml');
     expect(sourceMap.get('router')).toBe('layers/api.yaml');
+    expect(sourceMap.get('user-handler')).toBe('layers/api.yaml');
+    expect(sourceMap.get('order-handler')).toBe('layers/api.yaml');
+    expect(sourceMap.get('product-handler')).toBe('layers/api.yaml');
   });
 
   it('sourceMap assigns correct layer file for each pipeline', async () => {
@@ -108,6 +114,9 @@ describe('layer-split multi-file config — exportToFiles round-trip', () => {
     const apiYaml = fileMap.get('layers/api.yaml')!;
     expect(apiYaml).toContain('http-server');
     expect(apiYaml).toContain('router');
+    expect(apiYaml).toContain('user-handler');
+    expect(apiYaml).toContain('order-handler');
+    expect(apiYaml).toContain('product-handler');
   });
 
   it('pipelines stay in their layer file', async () => {
@@ -125,14 +134,14 @@ describe('layer-split multi-file config — exportToFiles round-trip', () => {
     expect(svcYaml).toContain('product-service');
   });
 
-  it('main file only has application metadata and imports', async () => {
+  it('main file has application metadata, imports, and merged workflows', async () => {
     const { config, sourceMap } = await resolveImports(FIXTURE_APP, resolver);
     const fileMap = exportToFiles(config, sourceMap);
     const mainYaml = fileMap.get(null)!;
 
     expect(mainYaml).toContain('imports:');
     expect(mainYaml).toMatch(/^modules:\s*\[\]/m);
-    expect(mainYaml).not.toMatch(/^pipelines:/m);
+    expect(mainYaml).toMatch(/^workflows:/m);
   });
 
   it('no cross-layer bleed', async () => {
@@ -148,6 +157,13 @@ describe('layer-split multi-file config — exportToFiles round-trip', () => {
     const svcYaml = fileMap.get('layers/services.yaml')!;
     expect(svcYaml).not.toContain('auth-middleware');
     expect(svcYaml).not.toContain('rate-limit');
+
+    // Infrastructure modules should not appear in api file
+    const apiYaml = fileMap.get('layers/api.yaml')!;
+    expect(apiYaml).not.toContain('primary-db');
+    expect(apiYaml).not.toContain('cache');
+    expect(apiYaml).not.toContain('message-queue');
+    expect(apiYaml).not.toContain('logger');
   });
 });
 
@@ -159,7 +175,7 @@ describe('layer-split multi-file config — configToNodes', () => {
     const { nodes } = configToNodes(config, MODULE_TYPE_MAP, sourceMap);
 
     const moduleNodes = nodes.filter((n) => !n.data.synthesized);
-    expect(moduleNodes.length).toBe(6); // 4 infra + 2 api
+    expect(moduleNodes.length).toBe(9); // 4 infra + 5 api
 
     const dbNode = moduleNodes.find((n) => n.data.label === 'primary-db');
     expect(dbNode?.data.sourceFile).toBe('layers/infrastructure.yaml');

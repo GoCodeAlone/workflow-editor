@@ -39,12 +39,17 @@ describe('domain-split multi-file config — resolveImports', () => {
     // auth domain
     expect(names).toContain('auth-db');
     expect(names).toContain('auth-cache');
+    expect(names).toContain('login-handler');
+    expect(names).toContain('register-handler');
     // billing domain
     expect(names).toContain('billing-db');
     expect(names).toContain('stripe');
+    expect(names).toContain('charge-handler');
+    expect(names).toContain('refund-handler');
     // notifications domain
     expect(names).toContain('email-svc');
     expect(names).toContain('sms-svc');
+    expect(names).toContain('send-email-handler');
     // shared infra
     expect(names).toContain('http-server');
     expect(names).toContain('router');
@@ -55,10 +60,15 @@ describe('domain-split multi-file config — resolveImports', () => {
     const { sourceMap } = await resolveImports(FIXTURE_APP, resolver);
     expect(sourceMap.get('auth-db')).toBe('domains/auth.yaml');
     expect(sourceMap.get('auth-cache')).toBe('domains/auth.yaml');
+    expect(sourceMap.get('login-handler')).toBe('domains/auth.yaml');
+    expect(sourceMap.get('register-handler')).toBe('domains/auth.yaml');
     expect(sourceMap.get('billing-db')).toBe('domains/billing.yaml');
     expect(sourceMap.get('stripe')).toBe('domains/billing.yaml');
+    expect(sourceMap.get('charge-handler')).toBe('domains/billing.yaml');
+    expect(sourceMap.get('refund-handler')).toBe('domains/billing.yaml');
     expect(sourceMap.get('email-svc')).toBe('domains/notifications.yaml');
     expect(sourceMap.get('sms-svc')).toBe('domains/notifications.yaml');
+    expect(sourceMap.get('send-email-handler')).toBe('domains/notifications.yaml');
     expect(sourceMap.get('http-server')).toBe('shared/infra.yaml');
     expect(sourceMap.get('router')).toBe('shared/infra.yaml');
     expect(sourceMap.get('logger')).toBe('shared/infra.yaml');
@@ -103,14 +113,19 @@ describe('domain-split multi-file config — exportToFiles round-trip', () => {
     const authYaml = fileMap.get('domains/auth.yaml')!;
     expect(authYaml).toContain('auth-db');
     expect(authYaml).toContain('auth-cache');
+    expect(authYaml).toContain('login-handler');
+    expect(authYaml).toContain('register-handler');
 
     const billingYaml = fileMap.get('domains/billing.yaml')!;
     expect(billingYaml).toContain('billing-db');
     expect(billingYaml).toContain('stripe');
+    expect(billingYaml).toContain('charge-handler');
+    expect(billingYaml).toContain('refund-handler');
 
     const notifyYaml = fileMap.get('domains/notifications.yaml')!;
     expect(notifyYaml).toContain('email-svc');
     expect(notifyYaml).toContain('sms-svc');
+    expect(notifyYaml).toContain('send-email-handler');
 
     const infraYaml = fileMap.get('shared/infra.yaml')!;
     expect(infraYaml).toContain('http-server');
@@ -155,10 +170,14 @@ describe('domain-split multi-file config — exportToFiles round-trip', () => {
     const billingYaml = fileMap.get('domains/billing.yaml')!;
     expect(billingYaml).not.toContain('auth-db');
     expect(billingYaml).not.toContain('auth-cache');
+    expect(billingYaml).not.toContain('login-handler');
+    expect(billingYaml).not.toContain('register-handler');
 
     const authYaml = fileMap.get('domains/auth.yaml')!;
     expect(authYaml).not.toContain('billing-db');
     expect(authYaml).not.toContain('stripe');
+    expect(authYaml).not.toContain('charge-handler');
+    expect(authYaml).not.toContain('refund-handler');
   });
 
   it('editing a domain module keeps it in its domain file', async () => {
@@ -190,7 +209,7 @@ describe('domain-split multi-file config — configToNodes', () => {
 
     // Module nodes (non-synthesized)
     const moduleNodes = nodes.filter((n) => !n.data.synthesized);
-    expect(moduleNodes.length).toBe(9); // 2+2+2+3 modules across all files
+    expect(moduleNodes.length).toBe(14); // 4+4+3+3 modules across all files
 
     const authDbNode = moduleNodes.find((n) => n.data.label === 'auth-db');
     expect(authDbNode?.data.sourceFile).toBe('domains/auth.yaml');
@@ -199,15 +218,30 @@ describe('domain-split multi-file config — configToNodes', () => {
     expect(httpServerNode?.data.sourceFile).toBe('shared/infra.yaml');
   });
 
-  it('creates edges for HTTP routes connecting to pipeline handlers', async () => {
+  it('creates edges for HTTP routes connecting to handler modules', async () => {
     const { config, sourceMap } = await resolveImports(FIXTURE_APP, resolver);
     const { edges } = configToNodes(config, MODULE_TYPE_MAP, sourceMap);
 
-    // Should have http-route edges connecting routes to pipeline handlers
+    // Filter for http-route edges (includes server→router "http" edge AND route→handler edges)
     const routeEdges = edges.filter((e) => {
       const data = e.data as Record<string, unknown> | undefined;
       return data?.edgeType === 'http-route';
     });
-    expect(routeEdges.length).toBeGreaterThan(0);
+
+    // Must have the server→router edge plus actual route→handler edges
+    expect(routeEdges.length).toBeGreaterThan(1);
+
+    // Route→handler edges carry "METHOD /path" labels (not just "http")
+    const handlerRouteEdges = routeEdges.filter((e) => {
+      const label = e.label as string | undefined;
+      return label && /^[A-Z]+ \//.test(label);
+    });
+    expect(handlerRouteEdges.length).toBeGreaterThan(0);
+
+    // Verify specific cross-file routes exist
+    const labels = handlerRouteEdges.map((e) => e.label);
+    expect(labels).toContain('POST /api/auth/login');
+    expect(labels).toContain('POST /api/billing/charge');
+    expect(labels).toContain('POST /api/notify/email');
   });
 });

@@ -10,6 +10,14 @@ modules:
     config:
       host: localhost
       port: 6379
+  - name: login-handler
+    type: api.query
+    config:
+      pipeline: login
+  - name: register-handler
+    type: api.command
+    config:
+      pipeline: register
 
 pipelines:
   login:

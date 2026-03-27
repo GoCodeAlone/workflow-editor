@@ -9,6 +9,14 @@ modules:
     type: integration.http_client
     config:
       base_url: https://api.stripe.com
+  - name: charge-handler
+    type: api.command
+    config:
+      pipeline: charge
+  - name: refund-handler
+    type: api.command
+    config:
+      pipeline: refund
 
 pipelines:
   charge:
