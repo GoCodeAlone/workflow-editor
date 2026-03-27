@@ -195,6 +195,12 @@ export function WorkflowEditor(props: WorkflowEditorProps) {
   // Derive currentSection from the selected node's pipelineName if available
   const currentSection = selectedNode?.data?.pipelineName as string | undefined;
 
+  // Partial config: all nodes are synthesized (pipeline steps) and no real modules
+  const isPartialConfig = useMemo(
+    () => nodes.length > 0 && nodes.every((n) => n.data?.synthesized),
+    [nodes],
+  );
+
   return (
     <ReactFlowProvider>
       <div style={{ display: 'flex', height: '100%', width: '100%', overflow: 'hidden' }}>
@@ -213,6 +219,17 @@ export function WorkflowEditor(props: WorkflowEditorProps) {
               if (onNavigateToSource) onNavigateToSource(filePath, 1, 0);
             }}
           />
+          {isPartialConfig && rootFile && onNavigateToSource && (
+            <div style={{ display: 'flex', justifyContent: 'flex-end', padding: '2px 8px', backgroundColor: '#16161e', borderBottom: '1px solid #2a2a3a' }}>
+              <button
+                className="view-full-config-btn"
+                onClick={() => onNavigateToSource(rootFile, 1, 0)}
+                style={{ fontSize: 11, padding: '2px 8px', cursor: 'pointer', background: '#1e3a5f', color: '#60a5fa', border: '1px solid #2563eb', borderRadius: 4 }}
+              >
+                View full config →
+              </button>
+            </div>
+          )}
           <Toolbar
             onSave={(onSave || onSaveToFile) ? async (yamlContent: string) => {
               if (onSaveToFile && (hasMultiFileRef.current || sourceMap.size > 0)) {

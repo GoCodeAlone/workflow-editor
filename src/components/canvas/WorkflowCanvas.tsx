@@ -183,6 +183,9 @@ export default function WorkflowCanvas(props: WorkflowCanvasProps) {
           label: group.filePath.split('/').pop() ?? group.filePath,
           filePath: group.filePath,
           color: group.color,
+          onNavigate: props.onNavigateToSource
+            ? (filePath: string) => props.onNavigateToSource!(filePath, 1, 0)
+            : undefined,
         },
         selectable: false,
         draggable: false,

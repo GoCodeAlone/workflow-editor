@@ -1,6 +1,6 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, fireEvent } from '@testing-library/react';
 import { ReactFlowProvider } from '@xyflow/react';
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import FileGroupNode from './FileGroupNode.tsx';
 import type { NodeProps } from '@xyflow/react';
 import type { FileGroupNodeData } from './FileGroupNode.tsx';
@@ -84,5 +84,89 @@ describe('FileGroupNode', () => {
     );
     const outer = container.firstChild as HTMLElement;
     expect(outer.style.border).toContain('dashed');
+  });
+
+  it('clicking the file label calls onNavigate with the file path', () => {
+    const onNavigate = vi.fn();
+    render(
+      <ReactFlowProvider>
+        <FileGroupNode
+          {...makeProps({
+            label: 'auth.yaml',
+            filePath: 'domains/auth.yaml',
+            color: { bg: '#1a2332', border: '#93C5FD' },
+            onNavigate,
+          })}
+        />
+      </ReactFlowProvider>,
+    );
+    fireEvent.click(screen.getByText('auth.yaml'));
+    expect(onNavigate).toHaveBeenCalledWith('domains/auth.yaml');
+  });
+
+  it('file label has pointer cursor on hover', () => {
+    render(
+      <ReactFlowProvider>
+        <FileGroupNode
+          {...makeProps({
+            label: 'auth.yaml',
+            filePath: 'domains/auth.yaml',
+            color: { bg: '#1a2332', border: '#93C5FD' },
+          })}
+        />
+      </ReactFlowProvider>,
+    );
+    const label = screen.getByText('auth.yaml');
+    expect(label.style.cursor).toBe('pointer');
+  });
+
+  it('group background has pointer-events none', () => {
+    const { container } = render(
+      <ReactFlowProvider>
+        <FileGroupNode
+          {...makeProps({
+            label: 'auth.yaml',
+            filePath: 'domains/auth.yaml',
+            color: { bg: '#1a2332', border: '#93C5FD' },
+          })}
+        />
+      </ReactFlowProvider>,
+    );
+    const bg = container.firstChild as HTMLElement;
+    expect(bg.style.pointerEvents).toBe('none');
+  });
+
+  it('double-clicking file label calls onNavigate', () => {
+    const onNavigate = vi.fn();
+    render(
+      <ReactFlowProvider>
+        <FileGroupNode
+          {...makeProps({
+            label: 'auth.yaml',
+            filePath: 'domains/auth.yaml',
+            color: { bg: '#1a2332', border: '#93C5FD' },
+            onNavigate,
+          })}
+        />
+      </ReactFlowProvider>,
+    );
+    fireEvent.dblClick(screen.getByText('auth.yaml'));
+    expect(onNavigate).toHaveBeenCalledWith('domains/auth.yaml');
+  });
+
+  it('file label area has pointer-events auto', () => {
+    render(
+      <ReactFlowProvider>
+        <FileGroupNode
+          {...makeProps({
+            label: 'auth.yaml',
+            filePath: 'domains/auth.yaml',
+            color: { bg: '#1a2332', border: '#93C5FD' },
+          })}
+        />
+      </ReactFlowProvider>,
+    );
+    const label = screen.getByText('auth.yaml');
+    expect(label.style.pointerEvents).toBe('auto');
   });
 });

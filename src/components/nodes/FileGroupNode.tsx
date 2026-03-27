@@ -5,6 +5,7 @@ export interface FileGroupNodeData extends Record<string, unknown> {
   label: string;
   filePath: string;
   color: { bg: string; border: string };
+  onNavigate?: (filePath: string) => void;
 }
 
 function FileGroupNode({ data }: NodeProps) {
@@ -24,6 +25,9 @@ function FileGroupNode({ data }: NodeProps) {
       }}
     >
       <span
+        className="file-group-label"
+        onClick={d.onNavigate ? () => d.onNavigate!(d.filePath) : undefined}
+        onDoubleClick={d.onNavigate ? () => d.onNavigate!(d.filePath) : undefined}
         style={{
           position: 'absolute',
           top: 8,
@@ -35,7 +39,8 @@ function FileGroupNode({ data }: NodeProps) {
           padding: '2px 6px',
           borderRadius: 4,
           letterSpacing: '0.02em',
-          pointerEvents: 'none',
+          pointerEvents: 'auto',
+          cursor: 'pointer',
         }}
         title={d.filePath}
       >
