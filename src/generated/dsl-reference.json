@@ -254,11 +254,13 @@
       "description": "These top-level sections describe infrastructure-as-code resources that the engine can provision or reference. They are used primarily with IaC plugins and deployment tooling.",
       "requiredFields": null,
       "optionalFields": null,
-      "example": "platform:\n  org: \"acme-corp\"\n  environment: \"production\"\n  templates:\n    - name: \"microservice\"\n      version: \"1.0.0\"\n      parameters:\n        - name: \"app_name\"\n          type: \"string\"\n          required: true\n        - name: \"replicas\"\n          type: \"int\"\n          default: 3\n      capabilities:\n        - name: \"${app_name}\"\n          type: \"container_runtime\"\n          properties:\n            replicas: \"${replicas}\"\n            ports:\n              - container_port: 8080\n\nsidecars:\n  - name: redis-cache\n    type: redis\n    config:\n      port: 6379\n  - name: jaeger-agent\n    type: jaeger\n    config:\n      port: 6831\n      endpoint: \"http://jaeger-collector:14268\"",
+      "example": "platform:\n  org: \"acme-corp\"\n  environment: \"production\"\n  templates:\n    - name: \"microservice\"\n      version: \"1.0.0\"\n      parameters:\n        - name: \"app_name\"\n          type: \"string\"\n          required: true\n        - name: \"replicas\"\n          type: \"int\"\n          default: 3\n      capabilities:\n        - name: \"${app_name}\"\n          type: \"container_runtime\"\n          properties:\n            replicas: \"${replicas}\"\n            ports:\n              - container_port: 8080\n\ninfrastructure:\n  resources:\n    - name: db\n      type: postgresql\n      provider: aws\n      config:\n        instanceClass: db.t3.micro\n      environments:\n        local:\n          strategy: container\n          dockerImage: postgres:16\n          port: 5432\n        staging:\n          strategy: provision\n          provider: aws\n        production:\n          strategy: provision\n          provider: aws\n          config:\n            instanceClass: db.r6g.large\n    - name: cache\n      type: redis\n      environments:\n        local:\n          strategy: container\n          dockerImage: redis:7\n          port: 6379\n        staging:\n          strategy: existing\n          connection:\n            host: redis.internal.staging.example.com\n            port: 6379\n            auth: REDIS_PASSWORD\n        production:\n          strategy: provision\n          provider: aws\n\nsidecars:\n  - name: redis-cache\n    type: redis\n    config:\n      port: 6379\n  - name: jaeger-agent\n    type: jaeger\n    config:\n      port: 6831\n      endpoint: \"http://jaeger-collector:14268\"",
       "relationships": [
         "`platform.context` module type references the `platform` section org/environment values",
         "Sidecars are deployed alongside the application container but are not addressable as workflow modules",
-        "`infrastructure` resources are provisioned by IaC plugins before application start"
+        "`infrastructure` resources are provisioned by IaC plugins before application start",
+        "`infrastructure.resources[*].environments` per-env strategies control `wfctl dev up` container lifecycle",
+        "Plugins declare their infra requirements in `plugin.json` via `moduleInfraRequirements`"
       ]
     },
     {
@@ -280,14 +282,28 @@
       "relationships": null
     },
     {
-      "id": "secrets",
-      "title": "Secrets",
-      "description": "The optional `secrets:` section declares the application's secret management configuration: which provider to use, rotation policy, and what secrets the application needs.",
+      "id": "secretStores",
+      "title": "Secret Stores",
+      "description": "The optional `secretStores:` section declares named secret storage backends. This enables routing different secrets to different backends (e.g., application secrets in environment variables, payment keys in AWS Secrets Manager).",
       "requiredFields": null,
       "optionalFields": null,
-      "example": "secrets:\n  provider: env\n  rotation:\n    enabled: true\n    interval: 30d\n    strategy: dual-credential\n  entries:\n    - name: DATABASE_URL\n      description: PostgreSQL connection string\n    - name: JWT_SECRET\n      description: JWT signing key\n      rotation:\n        enabled: true\n        interval: 7d\n        strategy: graceful\n    - name: STRIPE_SECRET_KEY\n      description: Stripe payment API key",
+      "example": "secretStores:\n  primary:\n    provider: env\n  payment-vault:\n    provider: aws-secrets-manager\n    config:\n      region: us-east-1",
       "relationships": [
-        "`environments[*].secretsProvider` overrides the top-level provider per environment",
+        "`secrets.defaultStore` references a named store from `secretStores`",
+        "`secrets.entries[*].store` routes an individual secret to a specific store",
+        "`environments[*].secretsProvider` overrides the store name for all secrets in that environment"
+      ]
+    },
+    {
+      "id": "secrets",
+      "title": "Secrets",
+      "description": "The optional `secrets:` section declares the application's secret management configuration: which stores to use, rotation policy, and what secrets the application needs.",
+      "requiredFields": null,
+      "optionalFields": null,
+      "example": "secretStores:\n  primary:\n    provider: env\n  payment-vault:\n    provider: aws-secrets-manager\n    config:\n      region: us-east-1\n\nsecrets:\n  defaultStore: primary\n  entries:\n    - name: DATABASE_URL\n      description: PostgreSQL connection string\n    - name: JWT_SECRET\n      description: JWT signing key\n      rotation:\n        enabled: true\n        interval: 7d\n        strategy: graceful\n    - name: STRIPE_SECRET_KEY\n      description: Stripe payment API key\n      store: payment-vault\nsecrets:\n  provider: env\n  rotation:\n    enabled: true\n    interval: 30d\n    strategy: dual-credential\n  entries:\n    - name: DATABASE_URL\n      description: PostgreSQL connection string\n    - name: JWT_SECRET\n      description: JWT signing key",
+      "relationships": [
+        "`secretStores` must be declared before referencing store names in `secrets.defaultStore` or `secrets.entries[*].store`",
+        "`environments[*].secretsProvider` overrides the store for all secrets in that environment",
         "`environments[*].secretsPrefix` is prepended to secret names when resolving in that environment",
         "`ci.deploy.environments` can reference secrets from the `secrets:` section"
       ]
