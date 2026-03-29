@@ -260,6 +260,37 @@
         "Sidecars are deployed alongside the application container but are not addressable as workflow modules",
         "`infrastructure` resources are provisioned by IaC plugins before application start"
       ]
+    },
+    {
+      "id": "ci",
+      "title": "CI",
+      "description": "The optional `ci:` section declares the CI/CD lifecycle: what to build, how to test, and where to deploy.",
+      "requiredFields": null,
+      "optionalFields": null,
+      "example": "ci:\n  build:\n    binaries:\n      - name: server\n        path: ./cmd/server\n        os: [linux]\n        arch: [amd64, arm64]\n        ldflags: \"-X main.version=${VERSION}\"\n    containers:\n      - name: my-app\n        registry: ghcr.io/myorg\n        tag: \"${VERSION}\"\n  test:\n    unit:\n      command: go test ./... -race -count=1\n      coverage: true\n    integration:\n      command: go test ./... -tags=integration\n      needs: [postgres, redis]\n  deploy:\n    environments:\n      staging:\n        provider: k8s\n        namespace: staging\n        strategy: rolling\n      production:\n        provider: k8s\n        namespace: production\n        strategy: blue-green\n        requireApproval: true\n        healthCheck:\n          path: /healthz\n          timeout: 60s",
+      "relationships": null
+    },
+    {
+      "id": "environments",
+      "title": "Environments",
+      "description": "The optional `environments:` section declares named deployment environments with provider, region, env vars, and exposure config.",
+      "requiredFields": null,
+      "optionalFields": null,
+      "example": "environments:\n  local:\n    provider: docker\n    envVars:\n      LOG_LEVEL: debug\n      DATABASE_URL: postgres://localhost/dev\n    exposure:\n      method: port-forward\n      portForward:\n        \"8080\": \"8080\"\n\n  staging:\n    provider: k8s\n    region: us-east-1\n    secretsProvider: env\n    secretsPrefix: STAGING_\n    exposure:\n      method: tailscale\n      tailscale:\n        funnel: true\n        hostname: my-app-staging\n\n  production:\n    provider: k8s\n    region: us-east-1\n    approvalRequired: true\n    secretsProvider: env\n    exposure:\n      method: cloudflare-tunnel\n      cloudflareTunnel:\n        tunnelName: my-app-prod\n        domain: api.myapp.com",
+      "relationships": null
+    },
+    {
+      "id": "secrets",
+      "title": "Secrets",
+      "description": "The optional `secrets:` section declares the application's secret management configuration: which provider to use, rotation policy, and what secrets the application needs.",
+      "requiredFields": null,
+      "optionalFields": null,
+      "example": "secrets:\n  provider: env\n  rotation:\n    enabled: true\n    interval: 30d\n    strategy: dual-credential\n  entries:\n    - name: DATABASE_URL\n      description: PostgreSQL connection string\n    - name: JWT_SECRET\n      description: JWT signing key\n      rotation:\n        enabled: true\n        interval: 7d\n        strategy: graceful\n    - name: STRIPE_SECRET_KEY\n      description: Stripe payment API key",
+      "relationships": [
+        "`environments[*].secretsProvider` overrides the top-level provider per environment",
+        "`environments[*].secretsPrefix` is prepended to secret names when resolving in that environment",
+        "`ci.deploy.environments` can reference secrets from the `secrets:` section"
+      ]
     }
   ]
 }
