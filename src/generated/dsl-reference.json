@@ -291,6 +291,61 @@
         "`environments[*].secretsPrefix` is prepended to secret names when resolving in that environment",
         "`ci.deploy.environments` can reference secrets from the `secrets:` section"
       ]
+    },
+    {
+      "id": "services",
+      "title": "Services",
+      "description": "The optional `services:` section defines a multi-service application where each key is a service name. Each service can have its own binary, scaling policy, exposed ports, modules, pipelines, and plugins.",
+      "requiredFields": null,
+      "optionalFields": null,
+      "example": "services:\n  api:\n    description: \"Public REST API\"\n    binary: ./cmd/api\n    scaling:\n      replicas: 2\n      min: 1\n      max: 10\n      metric: cpu\n      target: 70\n    expose:\n      - port: 8080\n        protocol: http\n    plugins:\n      - workflow-plugin-auth\n\n  worker:\n    description: \"Background job processor\"\n    binary: ./cmd/worker\n    scaling:\n      replicas: 1\n      min: 1\n      max: 5\n    expose:\n      - port: 9090\n        protocol: grpc",
+      "relationships": [
+        "`networking.ingress` entries reference service names declared here",
+        "`mesh.routes` `from`/`to` fields reference service names",
+        "`wfctl ports list` scans `services[*].expose` for port bindings",
+        "`wfctl validate` checks scaling constraints (min ≤ max) and port ranges"
+      ]
+    },
+    {
+      "id": "mesh",
+      "title": "Mesh",
+      "description": "The optional `mesh:` section configures inter-service communication for multi-service applications.",
+      "requiredFields": null,
+      "optionalFields": null,
+      "example": "mesh:\n  transport: nats\n  discovery: dns\n  nats:\n    url: nats://nats:4222\n    clusterId: my-cluster\n  routes:\n    - from: api\n      to: worker\n      via: nats\n      subject: tasks.process\n    - from: api\n      to: worker\n      via: http\n      endpoint: /internal/jobs",
+      "relationships": [
+        "`mesh.routes` `from`/`to` must reference services declared in `services:`",
+        "`wfctl security generate-network-policies` uses `mesh.routes` to generate Kubernetes `NetworkPolicy` YAML",
+        "`wfctl validate` warns when `from`/`to` reference unknown services"
+      ]
+    },
+    {
+      "id": "networking",
+      "title": "Networking",
+      "description": "The optional `networking:` section configures how services are exposed externally, what inter-service traffic is permitted, and DNS records.",
+      "requiredFields": null,
+      "optionalFields": null,
+      "example": "networking:\n  ingress:\n    - service: api\n      port: 8080\n      externalPort: 443\n      protocol: https\n      path: /\n      tls:\n        provider: letsencrypt\n        domain: api.example.com\n        minVersion: \"1.2\"\n  policies:\n    - from: api\n      to: [worker, db]\n    - from: worker\n      to: [db]\n  dns:\n    provider: cloudflare\n    zone: example.com\n    records:\n      - name: api\n        type: CNAME\n        target: lb.example.com",
+      "relationships": [
+        "`networking.ingress[*].service` must reference a service from `services:` that exposes the given port",
+        "`networking.policies` are used by `wfctl security generate-network-policies` to generate Kubernetes `NetworkPolicy` YAML",
+        "`wfctl ports list` includes ingress entries as `public` exposure",
+        "`wfctl validate` checks that ingress services exist, ports are actually exposed, and TLS providers are valid"
+      ]
+    },
+    {
+      "id": "security",
+      "title": "Security",
+      "description": "The optional `security:` section declares security policies for the application, including TLS requirements, network isolation, service identity, container runtime hardening, and automated scanning configuration.",
+      "requiredFields": null,
+      "optionalFields": null,
+      "example": "security:\n  tls:\n    internal: true\n    external: true\n    provider: letsencrypt\n    minVersion: \"1.3\"\n  network:\n    defaultPolicy: deny\n  identity:\n    provider: spiffe\n    perService: true\n  runtime:\n    readOnlyFilesystem: true\n    noNewPrivileges: true\n    runAsNonRoot: true\n    dropCapabilities: [ALL]\n    addCapabilities: [NET_BIND_SERVICE]\n  scanning:\n    containerScan: true\n    dependencyScan: true\n    sast: false",
+      "relationships": [
+        "`security.tls.provider` must be one of `letsencrypt`, `manual`, `acm`, `cloudflare`",
+        "`security.network.defaultPolicy: deny` causes `wfctl security generate-network-policies` to include `Egress` in policy types",
+        "`networking.ingress` entries without a `tls` block are flagged as `HIGH` by `wfctl security audit`",
+        "`wfctl validate` checks `security.tls.provider` for valid values"
+      ]
     }
   ]
 }
