@@ -12,6 +12,7 @@ import type {
   EventWorkflowConfig,
   WorkflowTab,
   ModuleTypeInfo,
+  ApplicationConfigMeta,
 } from '../types/workflow.ts';
 import { MODULE_TYPE_MAP } from '../types/workflow.ts';
 import { layoutNodes } from './autoLayout.ts';
@@ -810,9 +811,7 @@ export function nodeComponentType(moduleType: string): string {
  * Used to preserve the ApplicationConfig structure on export instead of converting
  * to the flat WorkflowConfig format.
  */
-export function buildApplicationConfigYaml(
-  appConfig: import('../types/workflow.ts').ApplicationConfigMeta,
-): string {
+export function buildApplicationConfigYaml(appConfig: ApplicationConfigMeta): string {
   const appBlock: Record<string, unknown> = {};
   if (appConfig.name !== undefined) appBlock.name = appConfig.name;
   if (appConfig.version !== undefined) appBlock.version = appConfig.version;
@@ -1238,7 +1237,7 @@ export async function resolveImports(
 
   // Handle `application.workflows[].file:` directive — conflicts are reported as errors
   const application = parsed.application as Record<string, unknown> | undefined;
-  let applicationConfig: import('../types/workflow.ts').ApplicationConfigMeta | undefined;
+  let applicationConfig: ApplicationConfigMeta | undefined;
   if (application && typeof application === 'object') {
     const appWorkflows = (application.workflows ?? []) as Array<Record<string, unknown>>;
     if (Array.isArray(appWorkflows)) {
@@ -1385,17 +1384,18 @@ function buildMainFileContent(
       ...(config.version !== undefined ? { version: config.version } : {}),
     };
     // Collect ALL files that have content (direct + transitively imported).
-    // The direct application.workflows[].file references are included first so
-    // they are processed; any additional transitively imported files are appended.
-    const directFiles = new Set(config._applicationConfig.workflows.map((w) => w.file));
-    const allImportedFiles = [
-      ...directFiles,
-      ...[...fileModules.keys()].filter((k) => k !== null && !directFiles.has(k as string)),
-      ...[...filePipelines.keys()].filter((k) => k !== null && !directFiles.has(k as string)),
-    ] as string[];
+    // Start with direct application.workflows[].file references for ordering,
+    // then append any additional files from the sourceMap (transitively imported).
+    const allFiles = new Set<string>(config._applicationConfig.workflows.map((w) => w.file));
+    for (const k of fileModules.keys()) {
+      if (k !== null) allFiles.add(k);
+    }
+    for (const k of filePipelines.keys()) {
+      if (k !== null) allFiles.add(k);
+    }
     return {
       yaml: buildApplicationConfigYaml(appConfig),
-      importedFiles: allImportedFiles,
+      importedFiles: [...allFiles],
     };
   }
 
