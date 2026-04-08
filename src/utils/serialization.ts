@@ -540,6 +540,9 @@ export function nodesToConfig(
   if (originalKeys) {
     result._originalKeys = originalKeys;
   }
+  if (originalConfig?._extraTopLevelKeys && Object.keys(originalConfig._extraTopLevelKeys).length > 0) {
+    result._extraTopLevelKeys = originalConfig._extraTopLevelKeys;
+  }
   return result;
 }
 
@@ -809,29 +812,74 @@ export function configToYaml(config: WorkflowConfig): string {
   // Strip internal tracking fields and omit empty top-level arrays/objects
   // that were not present in the original YAML
   const originalKeys = config._originalKeys;
-  const out: Record<string, unknown> = {};
 
-  // Field order: name, version, imports, requires, modules, workflows, triggers, pipelines, platform, infrastructure, sidecars
-  if (config.name !== undefined) out.name = config.name;
-  if (config.version !== undefined) out.version = config.version;
-  if (config.imports && config.imports.length > 0) out.imports = config.imports;
-  if (config.requires && Object.keys(config.requires).length > 0) out.requires = config.requires;
-
+  // Determine which known fields to include
   const includeModules = !originalKeys || originalKeys.includes('modules') || (config.modules?.length ?? 0) > 0;
-  if (includeModules && config.modules !== undefined) out.modules = config.modules;
-
   const includeWorkflows = !originalKeys || originalKeys.includes('workflows') || Object.keys(config.workflows ?? {}).length > 0;
-  if (includeWorkflows && config.workflows !== undefined) out.workflows = config.workflows;
-
   const includeTriggers = !originalKeys || originalKeys.includes('triggers') || Object.keys(config.triggers ?? {}).length > 0;
-  if (includeTriggers && config.triggers !== undefined) out.triggers = config.triggers;
 
-  if (config.pipelines && Object.keys(config.pipelines).length > 0) out.pipelines = config.pipelines;
-  if (config.platform && Object.keys(config.platform).length > 0) out.platform = config.platform;
-  if (config.infrastructure && Object.keys(config.infrastructure).length > 0) out.infrastructure = config.infrastructure;
-  if (config.sidecars && config.sidecars.length > 0) out.sidecars = config.sidecars;
+  // Build a map of all key→value pairs that should be emitted
+  const valueMap: Record<string, unknown> = {};
+  if (config.name !== undefined) valueMap.name = config.name;
+  if (config.version !== undefined) valueMap.version = config.version;
+  if (config.imports && config.imports.length > 0) valueMap.imports = config.imports;
+  if (config.requires && Object.keys(config.requires).length > 0) valueMap.requires = config.requires;
+  if (includeModules && config.modules !== undefined) valueMap.modules = config.modules;
+  if (includeWorkflows && config.workflows !== undefined) valueMap.workflows = config.workflows;
+  if (includeTriggers && config.triggers !== undefined) valueMap.triggers = config.triggers;
+  if (config.pipelines && Object.keys(config.pipelines).length > 0) valueMap.pipelines = config.pipelines;
+  if (config.platform && Object.keys(config.platform).length > 0) valueMap.platform = config.platform;
+  if (config.infrastructure && Object.keys(config.infrastructure).length > 0) valueMap.infrastructure = config.infrastructure;
+  if (config.sidecars && config.sidecars.length > 0) valueMap.sidecars = config.sidecars;
+  // Include any extra/unknown top-level keys (e.g. engine:, custom config blocks)
+  if (config._extraTopLevelKeys) {
+    for (const [k, v] of Object.entries(config._extraTopLevelKeys)) {
+      valueMap[k] = v;
+    }
+  }
+
+  // Build the output object — if we have the original key order, honour it so that
+  // the serialised YAML preserves the author's top-level key ordering.
+  const out: Record<string, unknown> = {};
+  if (originalKeys && originalKeys.length > 0) {
+    // First: emit keys in their original order
+    for (const key of originalKeys) {
+      if (key in valueMap) {
+        out[key] = valueMap[key];
+      }
+    }
+    // Then: emit any new keys that weren't in the original (e.g. added by the editor)
+    for (const [key, value] of Object.entries(valueMap)) {
+      if (!originalKeys.includes(key)) {
+        out[key] = value;
+      }
+    }
+  } else {
+    // No original key order — use the fixed default order:
+    // name, version, imports, requires, modules, workflows, triggers, pipelines, platform, infrastructure, sidecars, [extra]
+    for (const [key, value] of Object.entries(valueMap)) {
+      out[key] = value;
+    }
+  }
 
   return yaml.dump(out, { lineWidth: -1, noRefs: true, sortKeys: false });
+}
+
+/** Known top-level keys in WorkflowConfig — anything else is preserved as an extra key. */
+const KNOWN_TOP_LEVEL_KEYS = new Set([
+  'name', 'version', 'modules', 'workflows', 'triggers',
+  'pipelines', 'imports', 'requires', 'platform', 'infrastructure', 'sidecars',
+]);
+
+/** Extract unknown top-level keys from a parsed YAML object into _extraTopLevelKeys. */
+function extractExtraTopLevelKeys(parsed: Record<string, unknown>): Record<string, unknown> | undefined {
+  const extra: Record<string, unknown> = {};
+  for (const key of Object.keys(parsed)) {
+    if (!KNOWN_TOP_LEVEL_KEYS.has(key)) {
+      extra[key] = parsed[key];
+    }
+  }
+  return Object.keys(extra).length > 0 ? extra : undefined;
 }
 
 export function parseYaml(text: string): WorkflowConfig {
@@ -871,6 +919,10 @@ export function parseYaml(text: string): WorkflowConfig {
     if (parsed.sidecars) {
       config.sidecars = parsed.sidecars as unknown[];
     }
+    const extraTopLevelKeys = extractExtraTopLevelKeys(parsed);
+    if (extraTopLevelKeys) {
+      config._extraTopLevelKeys = extraTopLevelKeys;
+    }
     return config;
   } catch {
     return { modules: [], workflows: {}, triggers: {}, _originalKeys: [] };
@@ -898,6 +950,25 @@ export function parseYamlSafe(text: string): { config: WorkflowConfig; error?: s
     }
     if (parsed.pipelines) {
       config.pipelines = parsed.pipelines as Record<string, unknown>;
+    }
+    if (parsed.imports) {
+      config.imports = parsed.imports as string[];
+    }
+    if (parsed.requires) {
+      config.requires = parsed.requires as Record<string, unknown>;
+    }
+    if (parsed.platform) {
+      config.platform = parsed.platform as Record<string, unknown>;
+    }
+    if (parsed.infrastructure) {
+      config.infrastructure = parsed.infrastructure as Record<string, unknown>;
+    }
+    if (parsed.sidecars) {
+      config.sidecars = parsed.sidecars as unknown[];
+    }
+    const extraTopLevelKeys = extractExtraTopLevelKeys(parsed);
+    if (extraTopLevelKeys) {
+      config._extraTopLevelKeys = extraTopLevelKeys;
     }
     return { config };
   } catch (e) {
@@ -1187,6 +1258,12 @@ export async function resolveImports(
   const configVersion = (parsed.version ?? application?.version) as string | undefined;
   if (configName) config.name = configName;
   if (configVersion) config.version = configVersion;
+  // Preserve top-level key ordering and unknown keys from the main file
+  config._originalKeys = Object.keys(parsed);
+  const extraTopLevelKeys = extractExtraTopLevelKeys(parsed);
+  if (extraTopLevelKeys) {
+    config._extraTopLevelKeys = extraTopLevelKeys;
+  }
 
   return {
     config,

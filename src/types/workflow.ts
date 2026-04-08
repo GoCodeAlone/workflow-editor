@@ -23,6 +23,8 @@ export interface WorkflowConfig {
   infrastructure?: Record<string, unknown>;
   sidecars?: unknown[];
   _originalKeys?: string[];
+  /** Preserves unknown top-level keys that are not part of the known schema (e.g. engine:, custom config blocks). */
+  _extraTopLevelKeys?: Record<string, unknown>;
 }
 
 // Workflow section types for edge extraction
