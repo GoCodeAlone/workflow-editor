@@ -1386,10 +1386,11 @@ function buildMainFileContent(
   // always includes the modules section (even if empty, since sub-files provide modules
   // via imports:). Without this, configs whose original main file had no top-level
   // 'modules:' key (e.g. application: format) would omit modules from the export.
-  let computedOriginalKeys = config._originalKeys;
-  if (computedOriginalKeys && !computedOriginalKeys.includes('modules')) {
-    computedOriginalKeys = [...computedOriginalKeys, 'modules'];
-  }
+  const sourceKeys = config._originalKeys;
+  const adjustedOriginalKeys =
+    sourceKeys && !sourceKeys.includes('modules')
+      ? [...sourceKeys, 'modules']
+      : sourceKeys;
 
   // Build a temporary config that represents only the main-file content.
   // By reusing the full config (with its _originalKeys, _extraTopLevelKeys, workflows,
@@ -1399,11 +1400,12 @@ function buildMainFileContent(
   const mainOnlyConfig: WorkflowConfig = {
     ...config,
     modules: mainModules,
-    // Override imports with the computed list of imported file paths
-    imports: importedFiles.length > 0 ? importedFiles : undefined,
+    // Override imports with the computed list of imported file paths (omit the property
+    // entirely when there are no sub-files so configToYaml does not emit `imports: []`)
+    ...(importedFiles.length > 0 ? { imports: importedFiles } : { imports: undefined }),
     // Only include main-file pipelines
     pipelines: mainPipelines && Object.keys(mainPipelines).length > 0 ? mainPipelines : undefined,
-    _originalKeys: computedOriginalKeys,
+    _originalKeys: adjustedOriginalKeys,
   };
 
   return { yaml: configToYaml(mainOnlyConfig), importedFiles };
