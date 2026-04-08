@@ -110,8 +110,9 @@ interface WorkflowStore {
    * Stores non-visual top-level fields (name, version, _originalKeys, _extraTopLevelKeys, imports,
    * requires, platform, infrastructure, sidecars) so that exportToConfig() can reconstruct
    * a complete WorkflowConfig without losing unknown keys or reformatting structure.
+   * Pipelines are excluded here because they are tracked separately via importedPipelines.
    */
-  importedPassthrough: Omit<WorkflowConfig, 'modules' | 'workflows' | 'triggers'> | null;
+  importedPassthrough: Omit<WorkflowConfig, 'modules' | 'workflows' | 'triggers' | 'pipelines'> | null;
 
   // Multi-file resolution: maps module name → source file path
   sourceMap: Map<string, string>;
@@ -520,7 +521,7 @@ const useWorkflowStore = create<WorkflowStore>()(
 
   clearCanvas: () => {
     get().pushHistory();
-    set({ nodes: [], edges: [], selectedNodeId: null, selectedEdgeId: null, nodeCounter: 0, importedWorkflows: {}, importedTriggers: {}, importedPipelines: {} });
+    set({ nodes: [], edges: [], selectedNodeId: null, selectedEdgeId: null, nodeCounter: 0, importedWorkflows: {}, importedTriggers: {}, importedPipelines: {}, importedPassthrough: null });
   },
 
   exportLayout: (): LayoutData => {
