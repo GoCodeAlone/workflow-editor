@@ -1386,11 +1386,10 @@ function buildMainFileContent(
   // always includes the modules section (even if empty, since sub-files provide modules
   // via imports:). Without this, configs whose original main file had no top-level
   // 'modules:' key (e.g. application: format) would omit modules from the export.
-  const computedOriginalKeys = config._originalKeys
-    ? (config._originalKeys.includes('modules')
-        ? config._originalKeys
-        : [...config._originalKeys, 'modules'])
-    : undefined;
+  let computedOriginalKeys = config._originalKeys;
+  if (computedOriginalKeys && !computedOriginalKeys.includes('modules')) {
+    computedOriginalKeys = [...computedOriginalKeys, 'modules'];
+  }
 
   // Build a temporary config that represents only the main-file content.
   // By reusing the full config (with its _originalKeys, _extraTopLevelKeys, workflows,
