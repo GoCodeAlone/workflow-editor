@@ -10,7 +10,7 @@ import {
   applyEdgeChanges,
   addEdge as rfAddEdge,
 } from '@xyflow/react';
-import type { WorkflowConfig, WorkflowTab, CrossWorkflowLink } from '../types/workflow.ts';
+import type { WorkflowConfig, WorkflowTab, CrossWorkflowLink, ApplicationConfigMeta } from '../types/workflow.ts';
 import { MODULE_TYPE_MAP } from '../types/workflow.ts';
 import useModuleSchemaStore from './moduleSchemaStore.ts';
 import { nodesToConfig, configToNodes, nodeComponentType, exportToFiles, exportMainFileYaml } from '../utils/serialization.ts';
@@ -104,6 +104,10 @@ interface WorkflowStore {
   importedWorkflows: Record<string, unknown>;
   importedTriggers: Record<string, unknown>;
   importedPipelines: Record<string, unknown>;
+
+  // ApplicationConfig format metadata — preserved so the main file can be
+  // round-tripped back to the original `application:` structure on export.
+  applicationConfig: ApplicationConfigMeta | null;
 
   // Multi-file resolution: maps module name → source file path
   sourceMap: Map<string, string>;
@@ -218,6 +222,9 @@ const useWorkflowStore = create<WorkflowStore>()(
   importedWorkflows: {},
   importedTriggers: {},
   importedPipelines: {},
+
+  // ApplicationConfig format metadata (null = flat WorkflowConfig format)
+  applicationConfig: null,
 
   // Multi-file resolution
   sourceMap: new Map<string, string>(),
@@ -453,7 +460,7 @@ const useWorkflowStore = create<WorkflowStore>()(
   },
 
   exportToConfig: () => {
-    const { nodes, edges, importedWorkflows, importedTriggers, importedPipelines } = get();
+    const { nodes, edges, importedWorkflows, importedTriggers, importedPipelines, applicationConfig } = get();
     const moduleTypeMap = useModuleSchemaStore.getState().moduleTypeMap;
     const config = nodesToConfig(nodes, edges, moduleTypeMap);
     if (Object.keys(config.workflows).length === 0 && Object.keys(importedWorkflows).length > 0) {
@@ -464,6 +471,11 @@ const useWorkflowStore = create<WorkflowStore>()(
     }
     if (Object.keys(importedPipelines).length > 0) {
       config.pipelines = importedPipelines;
+    }
+    // Reattach ApplicationConfig metadata so configToYaml / exportMainFileYaml
+    // can reconstruct the original `application:` format on export.
+    if (applicationConfig) {
+      config._applicationConfig = applicationConfig;
     }
     return config;
   },
@@ -491,6 +503,8 @@ const useWorkflowStore = create<WorkflowStore>()(
       importedWorkflows: config.workflows ?? {},
       importedTriggers: config.triggers ?? {},
       importedPipelines: config.pipelines ?? {},
+      // Preserve ApplicationConfig metadata (null clears it for flat WorkflowConfig files)
+      applicationConfig: config._applicationConfig ?? null,
     };
     if (sourceMap) {
       updates.sourceMap = sourceMap;
@@ -501,7 +515,7 @@ const useWorkflowStore = create<WorkflowStore>()(
 
   clearCanvas: () => {
     get().pushHistory();
-    set({ nodes: [], edges: [], selectedNodeId: null, selectedEdgeId: null, nodeCounter: 0, importedWorkflows: {}, importedTriggers: {}, importedPipelines: {} });
+    set({ nodes: [], edges: [], selectedNodeId: null, selectedEdgeId: null, nodeCounter: 0, importedWorkflows: {}, importedTriggers: {}, importedPipelines: {}, applicationConfig: null });
   },
 
   exportLayout: (): LayoutData => {

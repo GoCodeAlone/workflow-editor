@@ -12,6 +12,7 @@ export {
   exportToFiles,
   exportMainFileYaml,
   hasFileReferences,
+  buildApplicationConfigYaml,
 } from './serialization';
 export { layoutNodes } from './autoLayout';
 export {

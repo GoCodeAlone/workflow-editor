@@ -10,6 +10,18 @@ export interface ModuleConfig {
   ui_position?: { x: number; y: number };
 }
 
+/**
+ * Metadata preserved when a YAML file uses the ApplicationConfig format
+ * (`application:` top-level key with `workflows[].file` references).
+ * Stored alongside the merged WorkflowConfig so the original structure can be
+ * reconstructed on export without converting to the flat WorkflowConfig format.
+ */
+export interface ApplicationConfigMeta {
+  name?: string;
+  version?: string;
+  workflows: Array<{ file: string }>;
+}
+
 export interface WorkflowConfig {
   name?: string;
   version?: string;
@@ -23,6 +35,8 @@ export interface WorkflowConfig {
   infrastructure?: Record<string, unknown>;
   sidecars?: unknown[];
   _originalKeys?: string[];
+  /** Present when the source file used the ApplicationConfig format. */
+  _applicationConfig?: ApplicationConfigMeta;
 }
 
 // Workflow section types for edge extraction

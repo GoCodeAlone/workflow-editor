@@ -805,7 +805,27 @@ export function nodeComponentType(moduleType: string): string {
   return 'infrastructureNode';
 }
 
+/**
+ * Serialise an ApplicationConfigMeta back to the original `application:` format YAML.
+ * Used to preserve the ApplicationConfig structure on export instead of converting
+ * to the flat WorkflowConfig format.
+ */
+export function buildApplicationConfigYaml(
+  appConfig: import('../types/workflow.ts').ApplicationConfigMeta,
+): string {
+  const appBlock: Record<string, unknown> = {};
+  if (appConfig.name !== undefined) appBlock.name = appConfig.name;
+  if (appConfig.version !== undefined) appBlock.version = appConfig.version;
+  appBlock.workflows = appConfig.workflows;
+  return yaml.dump({ application: appBlock }, { lineWidth: -1, noRefs: true, sortKeys: false });
+}
+
 export function configToYaml(config: WorkflowConfig): string {
+  // If this config was originally in ApplicationConfig format, preserve that structure.
+  if (config._applicationConfig) {
+    return buildApplicationConfigYaml(config._applicationConfig);
+  }
+
   // Strip internal tracking fields and omit empty top-level arrays/objects
   // that were not present in the original YAML
   const originalKeys = config._originalKeys;
@@ -841,6 +861,34 @@ export function parseYaml(text: string): WorkflowConfig {
       return { modules: [], workflows: {}, triggers: {}, _originalKeys: [] };
     }
     const _originalKeys = Object.keys(parsed);
+
+    // Detect ApplicationConfig format: top-level `application:` key with `workflows[].file` refs
+    const application = parsed.application as Record<string, unknown> | undefined;
+    if (application && typeof application === 'object') {
+      const appWorkflows = application.workflows as Array<Record<string, unknown>> | undefined;
+      if (Array.isArray(appWorkflows) && appWorkflows.some((w) => typeof w.file === 'string')) {
+        const fileRefs = appWorkflows
+          .filter((w) => typeof w.file === 'string')
+          .map((w) => ({ file: w.file as string }));
+        const _applicationConfig = {
+          name: application.name as string | undefined,
+          version: application.version !== undefined ? String(application.version) : undefined,
+          workflows: fileRefs,
+        };
+        const config: WorkflowConfig = {
+          modules: (parsed.modules ?? []) as ModuleConfig[],
+          workflows: (parsed.workflows ?? {}) as Record<string, unknown>,
+          triggers: (parsed.triggers ?? {}) as Record<string, unknown>,
+          imports: fileRefs.map((r) => r.file),
+          _originalKeys,
+          _applicationConfig,
+        };
+        if (_applicationConfig.name) config.name = _applicationConfig.name;
+        if (_applicationConfig.version) config.version = _applicationConfig.version;
+        return config;
+      }
+    }
+
     const config: WorkflowConfig = {
       modules: (parsed.modules ?? []) as ModuleConfig[],
       workflows: (parsed.workflows ?? {}) as Record<string, unknown>,
@@ -884,6 +932,34 @@ export function parseYamlSafe(text: string): { config: WorkflowConfig; error?: s
       return { config: { modules: [], workflows: {}, triggers: {}, _originalKeys: [] }, error: 'YAML parsed to non-object value' };
     }
     const _originalKeys = Object.keys(parsed);
+
+    // Detect ApplicationConfig format: top-level `application:` key with `workflows[].file` refs
+    const application = parsed.application as Record<string, unknown> | undefined;
+    if (application && typeof application === 'object') {
+      const appWorkflows = application.workflows as Array<Record<string, unknown>> | undefined;
+      if (Array.isArray(appWorkflows) && appWorkflows.some((w) => typeof w.file === 'string')) {
+        const fileRefs = appWorkflows
+          .filter((w) => typeof w.file === 'string')
+          .map((w) => ({ file: w.file as string }));
+        const _applicationConfig = {
+          name: application.name as string | undefined,
+          version: application.version !== undefined ? String(application.version) : undefined,
+          workflows: fileRefs,
+        };
+        const config: WorkflowConfig = {
+          modules: (parsed.modules ?? []) as ModuleConfig[],
+          workflows: (parsed.workflows ?? {}) as Record<string, unknown>,
+          triggers: (parsed.triggers ?? {}) as Record<string, unknown>,
+          imports: fileRefs.map((r) => r.file),
+          _originalKeys,
+          _applicationConfig,
+        };
+        if (_applicationConfig.name) config.name = _applicationConfig.name;
+        if (_applicationConfig.version) config.version = _applicationConfig.version;
+        return { config };
+      }
+    }
+
     const config: WorkflowConfig = {
       modules: (parsed.modules ?? []) as ModuleConfig[],
       workflows: (parsed.workflows ?? {}) as Record<string, unknown>,
@@ -1162,9 +1238,20 @@ export async function resolveImports(
 
   // Handle `application.workflows[].file:` directive — conflicts are reported as errors
   const application = parsed.application as Record<string, unknown> | undefined;
+  let applicationConfig: import('../types/workflow.ts').ApplicationConfigMeta | undefined;
   if (application && typeof application === 'object') {
     const appWorkflows = (application.workflows ?? []) as Array<Record<string, unknown>>;
     if (Array.isArray(appWorkflows)) {
+      const fileRefs = appWorkflows
+        .filter((entry) => typeof entry.file === 'string')
+        .map((entry) => ({ file: entry.file as string }));
+      if (fileRefs.length > 0) {
+        applicationConfig = {
+          name: application.name as string | undefined,
+          version: application.version !== undefined ? String(application.version) : undefined,
+          workflows: fileRefs,
+        };
+      }
       for (const entry of appWorkflows) {
         const filePath = entry.file as string | undefined;
         if (!filePath) continue;
@@ -1187,6 +1274,12 @@ export async function resolveImports(
   const configVersion = (parsed.version ?? application?.version) as string | undefined;
   if (configName) config.name = configName;
   if (configVersion) config.version = configVersion;
+
+  // Preserve ApplicationConfig structure so round-trip export can reconstruct
+  // the original `application:` format instead of converting to flat imports:.
+  if (applicationConfig) {
+    config._applicationConfig = applicationConfig;
+  }
 
   return {
     config,
@@ -1280,7 +1373,32 @@ function buildMainFileContent(
   fileModules: Map<string | null, ModuleConfig[]>,
   filePipelines: Map<string | null, Record<string, unknown>>,
 ): { yaml: string; importedFiles: string[] } {
+  // If the original config was ApplicationConfig format, preserve that structure.
+  // Only fall back to flat format if there are main-file modules (newly added nodes
+  // that don't belong to any sub-file) — in that case we can't emit pure ApplicationConfig.
   const mainModules = fileModules.get(null) ?? [];
+  if (config._applicationConfig && mainModules.length === 0) {
+    // Reconstruct the application: block, updating name/version from the live config
+    const appConfig = {
+      ...config._applicationConfig,
+      ...(config.name !== undefined ? { name: config.name } : {}),
+      ...(config.version !== undefined ? { version: config.version } : {}),
+    };
+    // Collect ALL files that have content (direct + transitively imported).
+    // The direct application.workflows[].file references are included first so
+    // they are processed; any additional transitively imported files are appended.
+    const directFiles = new Set(config._applicationConfig.workflows.map((w) => w.file));
+    const allImportedFiles = [
+      ...directFiles,
+      ...[...fileModules.keys()].filter((k) => k !== null && !directFiles.has(k as string)),
+      ...[...filePipelines.keys()].filter((k) => k !== null && !directFiles.has(k as string)),
+    ] as string[];
+    return {
+      yaml: buildApplicationConfigYaml(appConfig),
+      importedFiles: allImportedFiles,
+    };
+  }
+
   const mainConfig: Record<string, unknown> = {};
   if (config.name !== undefined) mainConfig.name = config.name;
   if (config.version !== undefined) mainConfig.version = config.version;

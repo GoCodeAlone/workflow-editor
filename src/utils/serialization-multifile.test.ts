@@ -351,9 +351,10 @@ describe('resolveImports — pipeline sourceMap enables correct round-trip expor
 
     const fileMap = exportToFiles(config, sourceMap);
 
-    // Main file modules list must be empty (all modules belong to imported files)
+    // Main file preserves the original ApplicationConfig format — it has no modules: block.
     const mainYaml = fileMap.get(null)!;
-    expect(mainYaml).toMatch(/^modules:\s*\[\]/m);
+    expect(mainYaml).toContain('application:');
+    expect(mainYaml).not.toContain('modules:');
 
     // Modules appear in their respective source files
     expect(fileMap.get('api.yaml')).toContain('http-server');
@@ -372,10 +373,11 @@ describe('resolveImports — pipeline sourceMap enables correct round-trip expor
     const fileMap = exportToFiles(config, sourceMap);
     const mainYaml = fileMap.get(null)!;
 
-    // Main file should reference imported files, not inline their content
-    expect(mainYaml).toContain('imports:');
+    // Main file preserves ApplicationConfig format with application.workflows[].file references
+    expect(mainYaml).toContain('application:');
+    expect(mainYaml).toContain('workflows:');
     // Each imported file path must appear as a reference
-    const importedFiles = ['api.yaml', 'base.yaml', 'database.yaml'];
+    const importedFiles = ['api.yaml', 'base.yaml'];
     const hasAtLeastOneRef = importedFiles.some((f) => mainYaml.includes(f));
     expect(hasAtLeastOneRef).toBe(true);
   });
