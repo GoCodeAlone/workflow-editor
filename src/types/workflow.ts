@@ -37,6 +37,8 @@ export interface WorkflowConfig {
   _originalKeys?: string[];
   /** Present when the source file used the ApplicationConfig format. */
   _applicationConfig?: ApplicationConfigMeta;
+  /** Preserves unknown top-level keys that are not part of the known schema (e.g. engine:, custom config blocks). */
+  _extraTopLevelKeys?: Record<string, unknown>;
 }
 
 // Workflow section types for edge extraction

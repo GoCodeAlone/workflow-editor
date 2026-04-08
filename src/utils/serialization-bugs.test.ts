@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { configToNodes, nodesToConfig, configToYaml, parseYamlSafe } from './serialization.ts';
+import { configToNodes, nodesToConfig, configToYaml, parseYamlSafe, parseYaml } from './serialization.ts';
 import { MODULE_TYPE_MAP } from '../types/workflow.ts';
 
 describe('Bug 1: name and version round-trip', () => {
@@ -134,5 +134,163 @@ triggers: {}
       config.modules.length === 0 &&
       Object.keys(config.pipelines ?? {}).length > 0;
     expect(isPartial).toBe(false);
+  });
+});
+
+describe('Bug 4: unknown top-level keys (e.g. engine:) must not be dropped', () => {
+  it('parseYaml captures unknown top-level keys in _extraTopLevelKeys', () => {
+    const yamlText = `
+name: my-service
+engine:
+  validation:
+    templateRefs: warn
+modules: []
+workflows: {}
+`;
+    const config = parseYaml(yamlText);
+    expect(config._extraTopLevelKeys).toBeDefined();
+    expect(config._extraTopLevelKeys!['engine']).toEqual({ validation: { templateRefs: 'warn' } });
+  });
+
+  it('parseYamlSafe captures unknown top-level keys in _extraTopLevelKeys', () => {
+    const yamlText = `
+name: my-service
+engine:
+  validation:
+    templateRefs: warn
+modules: []
+`;
+    const { config } = parseYamlSafe(yamlText);
+    expect(config._extraTopLevelKeys).toBeDefined();
+    expect(config._extraTopLevelKeys!['engine']).toEqual({ validation: { templateRefs: 'warn' } });
+  });
+
+  it('configToYaml emits unknown top-level keys', () => {
+    const yamlText = `
+name: my-service
+engine:
+  validation:
+    templateRefs: warn
+modules: []
+workflows: {}
+`;
+    const config = parseYaml(yamlText);
+    const out = configToYaml(config);
+    expect(out).toContain('engine:');
+    expect(out).toContain('templateRefs: warn');
+  });
+
+  it('nodesToConfig passes through _extraTopLevelKeys from originalConfig', () => {
+    const yamlText = `
+name: my-service
+engine:
+  validation:
+    templateRefs: warn
+modules:
+  - name: server
+    type: http.server
+    config:
+      address: ":8080"
+workflows: {}
+`;
+    const config = parseYaml(yamlText);
+    const { nodes, edges } = configToNodes(config, MODULE_TYPE_MAP);
+    const exported = nodesToConfig(nodes, edges, MODULE_TYPE_MAP, config);
+    expect(exported._extraTopLevelKeys).toBeDefined();
+    expect(exported._extraTopLevelKeys!['engine']).toEqual({ validation: { templateRefs: 'warn' } });
+    const out = configToYaml(exported);
+    expect(out).toContain('engine:');
+  });
+
+  it('full round-trip preserves engine block and original key ordering', () => {
+    const yamlText = `name: my-service
+version: "1.0"
+engine:
+  validation:
+    templateRefs: warn
+modules:
+  - name: server
+    type: http.server
+    config:
+      address: ':8080'
+pipelines:
+  health:
+    trigger:
+      type: http
+      method: GET
+      path: /healthz
+`;
+    const config = parseYaml(yamlText);
+    const { nodes, edges } = configToNodes(config, MODULE_TYPE_MAP);
+    const exported = nodesToConfig(nodes, edges, MODULE_TYPE_MAP, config);
+    const out = configToYaml(exported);
+
+    // engine block must be present
+    expect(out).toContain('engine:');
+    expect(out).toContain('templateRefs: warn');
+
+    // Key ordering: name comes before engine comes before modules
+    const nameIdx = out.indexOf('name:');
+    const engineIdx = out.indexOf('engine:');
+    const modulesIdx = out.indexOf('modules:');
+    expect(nameIdx).toBeGreaterThanOrEqual(0);
+    expect(engineIdx).toBeGreaterThan(nameIdx);
+    expect(modulesIdx).toBeGreaterThan(engineIdx);
+  });
+});
+
+describe('Bug 5: triggers: {} must not be injected when not in original', () => {
+  it('does not add triggers: {} when original YAML had no triggers key', () => {
+    const yamlText = `
+name: my-service
+modules:
+  - name: server
+    type: http.server
+    config:
+      address: ":8080"
+pipelines:
+  health:
+    trigger:
+      type: http
+      method: GET
+      path: /healthz
+`;
+    const config = parseYaml(yamlText);
+    // triggers not in original keys
+    expect(config._originalKeys).not.toContain('triggers');
+
+    const { nodes, edges } = configToNodes(config, MODULE_TYPE_MAP);
+    const exported = nodesToConfig(nodes, edges, MODULE_TYPE_MAP, config);
+    const out = configToYaml(exported);
+
+    // triggers: {} must NOT appear in output
+    expect(out).not.toMatch(/^triggers:/m);
+  });
+});
+
+describe('Bug 6: parseYamlSafe is consistent with parseYaml for all fields', () => {
+  it('parseYamlSafe preserves imports, requires, platform, infrastructure, sidecars', () => {
+    const yamlText = `
+name: my-service
+imports:
+  - other.yaml
+requires:
+  some-service: ">=1.0"
+platform:
+  target: kubernetes
+infrastructure:
+  database:
+    type: postgres
+sidecars:
+  - name: proxy
+    image: envoy:latest
+modules: []
+`;
+    const { config } = parseYamlSafe(yamlText);
+    expect(config.imports).toEqual(['other.yaml']);
+    expect(config.requires).toEqual({ 'some-service': '>=1.0' });
+    expect(config.platform).toEqual({ target: 'kubernetes' });
+    expect(config.infrastructure).toEqual({ database: { type: 'postgres' } });
+    expect(config.sidecars).toHaveLength(1);
   });
 });

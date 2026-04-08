@@ -541,6 +541,10 @@ export function nodesToConfig(
   if (originalKeys) {
     result._originalKeys = originalKeys;
   }
+  const extraTopLevelKeys = originalConfig?._extraTopLevelKeys;
+  if (extraTopLevelKeys && Object.keys(extraTopLevelKeys).length > 0) {
+    result._extraTopLevelKeys = extraTopLevelKeys;
+  }
   return result;
 }
 
@@ -806,6 +810,25 @@ export function nodeComponentType(moduleType: string): string {
   return 'infrastructureNode';
 }
 
+/** Known top-level keys in WorkflowConfig — anything else is preserved as an extra key. */
+const KNOWN_TOP_LEVEL_KEYS = new Set([
+  'name', 'version', 'modules', 'workflows', 'triggers',
+  'pipelines', 'imports', 'requires', 'platform', 'infrastructure', 'sidecars',
+  // application: is the legacy multi-file format key — handled by resolveImports, not a passthrough extra
+  'application',
+]);
+
+/** Extract unknown top-level keys from a parsed YAML object into _extraTopLevelKeys. */
+function extractExtraTopLevelKeys(parsed: Record<string, unknown>): Record<string, unknown> | undefined {
+  const extra: Record<string, unknown> = {};
+  for (const key of Object.keys(parsed)) {
+    if (!KNOWN_TOP_LEVEL_KEYS.has(key)) {
+      extra[key] = parsed[key];
+    }
+  }
+  return Object.keys(extra).length > 0 ? extra : undefined;
+}
+
 /**
  * Serialise an ApplicationConfigMeta back to the original `application:` format YAML.
  * Used to preserve the ApplicationConfig structure on export instead of converting
@@ -838,27 +861,64 @@ export function configToYaml(config: WorkflowConfig): string {
   // Strip internal tracking fields and omit empty top-level arrays/objects
   // that were not present in the original YAML
   const originalKeys = config._originalKeys;
-  const out: Record<string, unknown> = {};
 
-  // Field order: name, version, imports, requires, modules, workflows, triggers, pipelines, platform, infrastructure, sidecars
-  if (config.name !== undefined) out.name = config.name;
-  if (config.version !== undefined) out.version = config.version;
-  if (config.imports && config.imports.length > 0) out.imports = config.imports;
-  if (config.requires && Object.keys(config.requires).length > 0) out.requires = config.requires;
-
+  // Determine which known fields to include
   const includeModules = !originalKeys || originalKeys.includes('modules') || (config.modules?.length ?? 0) > 0;
-  if (includeModules && config.modules !== undefined) out.modules = config.modules;
-
   const includeWorkflows = !originalKeys || originalKeys.includes('workflows') || Object.keys(config.workflows ?? {}).length > 0;
-  if (includeWorkflows && config.workflows !== undefined) out.workflows = config.workflows;
-
   const includeTriggers = !originalKeys || originalKeys.includes('triggers') || Object.keys(config.triggers ?? {}).length > 0;
-  if (includeTriggers && config.triggers !== undefined) out.triggers = config.triggers;
 
-  if (config.pipelines && Object.keys(config.pipelines).length > 0) out.pipelines = config.pipelines;
-  if (config.platform && Object.keys(config.platform).length > 0) out.platform = config.platform;
-  if (config.infrastructure && Object.keys(config.infrastructure).length > 0) out.infrastructure = config.infrastructure;
-  if (config.sidecars && config.sidecars.length > 0) out.sidecars = config.sidecars;
+  // Build a map of all key→value pairs that should be emitted
+  const valueMap: Record<string, unknown> = {};
+  if (config.name !== undefined) valueMap.name = config.name;
+  if (config.version !== undefined) valueMap.version = config.version;
+  if (config.imports && config.imports.length > 0) valueMap.imports = config.imports;
+  if (config.requires && Object.keys(config.requires).length > 0) valueMap.requires = config.requires;
+  if (includeModules && config.modules !== undefined) valueMap.modules = config.modules;
+  if (includeWorkflows && config.workflows !== undefined) valueMap.workflows = config.workflows;
+  if (includeTriggers && config.triggers !== undefined) valueMap.triggers = config.triggers;
+  if (config.pipelines && Object.keys(config.pipelines).length > 0) valueMap.pipelines = config.pipelines;
+  if (config.platform && Object.keys(config.platform).length > 0) valueMap.platform = config.platform;
+  if (config.infrastructure && Object.keys(config.infrastructure).length > 0) valueMap.infrastructure = config.infrastructure;
+  if (config.sidecars && config.sidecars.length > 0) valueMap.sidecars = config.sidecars;
+  // Include any extra/unknown top-level keys (e.g. engine:, custom config blocks)
+  if (config._extraTopLevelKeys) {
+    for (const [k, v] of Object.entries(config._extraTopLevelKeys)) {
+      valueMap[k] = v;
+    }
+  }
+
+  // Build the output object — if we have the original key order, honour it so that
+  // the serialised YAML preserves the author's top-level key ordering.
+  const out: Record<string, unknown> = {};
+  if (originalKeys && originalKeys.length > 0) {
+    // First: emit keys in their original order
+    for (const key of originalKeys) {
+      if (key in valueMap) {
+        out[key] = valueMap[key];
+      }
+    }
+    // Then: emit any new keys that weren't in the original (e.g. added by the editor)
+    for (const [key, value] of Object.entries(valueMap)) {
+      if (!originalKeys.includes(key)) {
+        out[key] = value;
+      }
+    }
+  } else {
+    // No original key order — use the fixed default order:
+    // name, version, imports, requires, modules, workflows, triggers, pipelines, platform, infrastructure, sidecars, [extra]
+    const DEFAULT_ORDER = ['name', 'version', 'imports', 'requires', 'modules', 'workflows', 'triggers', 'pipelines', 'platform', 'infrastructure', 'sidecars'];
+    for (const key of DEFAULT_ORDER) {
+      if (key in valueMap) {
+        out[key] = valueMap[key];
+      }
+    }
+    // Append any extra top-level keys after the known fields
+    for (const [key, value] of Object.entries(valueMap)) {
+      if (!DEFAULT_ORDER.includes(key)) {
+        out[key] = value;
+      }
+    }
+  }
 
   return yaml.dump(out, { lineWidth: -1, noRefs: true, sortKeys: false });
 }
@@ -928,6 +988,10 @@ export function parseYaml(text: string): WorkflowConfig {
     if (parsed.sidecars) {
       config.sidecars = parsed.sidecars as unknown[];
     }
+    const extraTopLevelKeys = extractExtraTopLevelKeys(parsed);
+    if (extraTopLevelKeys) {
+      config._extraTopLevelKeys = extraTopLevelKeys;
+    }
     return config;
   } catch {
     return { modules: [], workflows: {}, triggers: {}, _originalKeys: [] };
@@ -983,6 +1047,25 @@ export function parseYamlSafe(text: string): { config: WorkflowConfig; error?: s
     }
     if (parsed.pipelines) {
       config.pipelines = parsed.pipelines as Record<string, unknown>;
+    }
+    if (parsed.imports) {
+      config.imports = parsed.imports as string[];
+    }
+    if (parsed.requires) {
+      config.requires = parsed.requires as Record<string, unknown>;
+    }
+    if (parsed.platform) {
+      config.platform = parsed.platform as Record<string, unknown>;
+    }
+    if (parsed.infrastructure) {
+      config.infrastructure = parsed.infrastructure as Record<string, unknown>;
+    }
+    if (parsed.sidecars) {
+      config.sidecars = parsed.sidecars as unknown[];
+    }
+    const extraTopLevelKeys = extractExtraTopLevelKeys(parsed);
+    if (extraTopLevelKeys) {
+      config._extraTopLevelKeys = extraTopLevelKeys;
     }
     return { config };
   } catch (e) {
@@ -1283,6 +1366,12 @@ export async function resolveImports(
   const configVersion = (parsed.version ?? application?.version) as string | undefined;
   if (configName) config.name = configName;
   if (configVersion) config.version = configVersion;
+  // Preserve top-level key ordering and unknown keys from the main file
+  config._originalKeys = Object.keys(parsed);
+  const extraTopLevelKeys = extractExtraTopLevelKeys(parsed);
+  if (extraTopLevelKeys) {
+    config._extraTopLevelKeys = extraTopLevelKeys;
+  }
 
   // Preserve ApplicationConfig structure so round-trip export can reconstruct
   // the original `application:` format instead of converting to flat imports:.
@@ -1376,71 +1465,16 @@ export function exportMainFileYaml(
 
 /**
  * Internal helper: build the main-file YAML string and collect imported file paths.
+ * Delegates to configToYaml so that _extraTopLevelKeys and _originalKeys ordering
+ * are honoured for the main-file content (same as single-file round-trips).
  */
 function buildMainFileContent(
   config: WorkflowConfig,
   fileModules: Map<string | null, ModuleConfig[]>,
   filePipelines: Map<string | null, Record<string, unknown>>,
 ): { yaml: string; importedFiles: string[] } {
-  // If the original config was ApplicationConfig format, preserve that structure.
-  // Only fall back to flat format if there are main-file modules (newly added nodes
-  // that don't belong to any sub-file) — in that case we can't emit pure ApplicationConfig.
   const mainModules = fileModules.get(null) ?? [];
-  if (config._applicationConfig && mainModules.length === 0) {
-    // Reconstruct the application: block, updating name/version from the live config
-    const appConfig = {
-      ...config._applicationConfig,
-      ...(config.name !== undefined ? { name: config.name } : {}),
-      ...(config.version !== undefined ? { version: config.version } : {}),
-    };
-    // Collect only files that actually have exported content (modules or pipelines).
-    // Preserve direct application.workflows[].file ordering first, then append any
-    // additional transitive files discovered through the source maps.
-    const hasExportedContent = (file: string): boolean => {
-      const modules = fileModules.get(file) ?? [];
-      const pipelines = filePipelines.get(file) ?? {};
-      return modules.length > 0 || Object.keys(pipelines).length > 0;
-    };
-    const importedFiles: string[] = [];
-    const seenFiles = new Set<string>();
-    for (const workflow of config._applicationConfig.workflows) {
-      if (hasExportedContent(workflow.file) && !seenFiles.has(workflow.file)) {
-        seenFiles.add(workflow.file);
-        importedFiles.push(workflow.file);
-      }
-    }
-    for (const k of fileModules.keys()) {
-      if (k !== null && hasExportedContent(k) && !seenFiles.has(k)) {
-        seenFiles.add(k);
-        importedFiles.push(k);
-      }
-    }
-    for (const k of filePipelines.keys()) {
-      if (k !== null && hasExportedContent(k) && !seenFiles.has(k)) {
-        seenFiles.add(k);
-        importedFiles.push(k);
-      }
-    }
-    return {
-      yaml: buildApplicationConfigYaml(appConfig),
-      importedFiles,
-    };
-  }
-
-  const mainConfig: Record<string, unknown> = {};
-  if (config.name !== undefined) mainConfig.name = config.name;
-  if (config.version !== undefined) mainConfig.version = config.version;
-  mainConfig.modules = mainModules;
-  if (Object.keys(config.workflows).length > 0) {
-    mainConfig.workflows = config.workflows;
-  }
-  if (Object.keys(config.triggers).length > 0) {
-    mainConfig.triggers = config.triggers;
-  }
   const mainPipelines = filePipelines.get(null);
-  if (mainPipelines && Object.keys(mainPipelines).length > 0) {
-    mainConfig.pipelines = mainPipelines;
-  }
 
   // Collect all non-null file paths across modules and pipelines
   const importedFiles = [
@@ -1449,11 +1483,38 @@ function buildMainFileContent(
       ...[...filePipelines.keys()].filter((k) => k !== null),
     ]),
   ] as string[];
-  if (importedFiles.length > 0) {
-    mainConfig.imports = importedFiles;
-  }
 
-  return { yaml: yaml.dump(mainConfig, { lineWidth: -1, noRefs: true, sortKeys: false }), importedFiles };
+  // For multi-file main files, ensure 'modules' is in _originalKeys so configToYaml
+  // always includes the modules section (even if empty, since sub-files provide modules
+  // via imports:). Without this, configs whose original main file had no top-level
+  // 'modules:' key (e.g. application: format) would omit modules from the export.
+  const sourceKeys = config._originalKeys;
+  const adjustedOriginalKeys =
+    sourceKeys && !sourceKeys.includes('modules')
+      ? [...sourceKeys, 'modules']
+      : sourceKeys;
+
+  // Build a temporary config that represents only the main-file content.
+  // By reusing the full config (with its _originalKeys, _extraTopLevelKeys, workflows,
+  // triggers, name, version, etc.) but substituting the main-file-only modules, pipelines,
+  // and the dynamically computed imports list, we can delegate to configToYaml and get
+  // correct key ordering and unknown-key preservation for free.
+  const mainOnlyConfig: WorkflowConfig = {
+    ...config,
+    modules: mainModules,
+    // For ApplicationConfig format, all workflows and triggers live exclusively in sub-files.
+    // Clear them from the main-file view so isMetadataOnlyApplicationConfig can correctly
+    // identify the main file as metadata-only and emit application: format.
+    ...(config._applicationConfig ? { workflows: {}, triggers: {} } : {}),
+    // Override imports with the computed list of imported file paths (omit the property
+    // entirely when there are no sub-files so configToYaml does not emit `imports: []`)
+    ...(importedFiles.length > 0 ? { imports: importedFiles } : { imports: undefined }),
+    // Only include main-file pipelines
+    pipelines: mainPipelines && Object.keys(mainPipelines).length > 0 ? mainPipelines : undefined,
+    _originalKeys: adjustedOriginalKeys,
+  };
+
+  return { yaml: configToYaml(mainOnlyConfig), importedFiles };
 }
 
 /**
