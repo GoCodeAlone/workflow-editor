@@ -809,6 +809,23 @@ export function nodeComponentType(moduleType: string): string {
   return 'infrastructureNode';
 }
 
+/** Known top-level keys in WorkflowConfig — anything else is preserved as an extra key. */
+const KNOWN_TOP_LEVEL_KEYS = new Set([
+  'name', 'version', 'modules', 'workflows', 'triggers',
+  'pipelines', 'imports', 'requires', 'platform', 'infrastructure', 'sidecars',
+]);
+
+/** Extract unknown top-level keys from a parsed YAML object into _extraTopLevelKeys. */
+function extractExtraTopLevelKeys(parsed: Record<string, unknown>): Record<string, unknown> | undefined {
+  const extra: Record<string, unknown> = {};
+  for (const key of Object.keys(parsed)) {
+    if (!KNOWN_TOP_LEVEL_KEYS.has(key)) {
+      extra[key] = parsed[key];
+    }
+  }
+  return Object.keys(extra).length > 0 ? extra : undefined;
+}
+
 export function configToYaml(config: WorkflowConfig): string {
   // Strip internal tracking fields and omit empty top-level arrays/objects
   // that were not present in the original YAML
@@ -873,23 +890,6 @@ export function configToYaml(config: WorkflowConfig): string {
   }
 
   return yaml.dump(out, { lineWidth: -1, noRefs: true, sortKeys: false });
-}
-
-/** Known top-level keys in WorkflowConfig — anything else is preserved as an extra key. */
-const KNOWN_TOP_LEVEL_KEYS = new Set([
-  'name', 'version', 'modules', 'workflows', 'triggers',
-  'pipelines', 'imports', 'requires', 'platform', 'infrastructure', 'sidecars',
-]);
-
-/** Extract unknown top-level keys from a parsed YAML object into _extraTopLevelKeys. */
-function extractExtraTopLevelKeys(parsed: Record<string, unknown>): Record<string, unknown> | undefined {
-  const extra: Record<string, unknown> = {};
-  for (const key of Object.keys(parsed)) {
-    if (!KNOWN_TOP_LEVEL_KEYS.has(key)) {
-      extra[key] = parsed[key];
-    }
-  }
-  return Object.keys(extra).length > 0 ? extra : undefined;
 }
 
 export function parseYaml(text: string): WorkflowConfig {

@@ -500,7 +500,7 @@ const useWorkflowStore = create<WorkflowStore>()(
     const moduleTypeMap = useModuleSchemaStore.getState().moduleTypeMap;
     const { nodes, edges } = configToNodes(config, moduleTypeMap, sourceMap);
     // Extract passthrough metadata (everything except the visual module/workflow/trigger data)
-    const { modules: _m, workflows: _w, triggers: _t, pipelines: _p, ...passthroughFields } = config;
+    const { modules: _modules, workflows: _workflows, triggers: _triggers, pipelines: _pipelines, ...passthroughFields } = config;
     const importedPassthrough: WorkflowStore['importedPassthrough'] = passthroughFields;
     const updates: Partial<WorkflowStore> = {
       nodes,
