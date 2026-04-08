@@ -105,6 +105,15 @@ interface WorkflowStore {
   importedTriggers: Record<string, unknown>;
   importedPipelines: Record<string, unknown>;
 
+  /**
+   * Passthrough metadata from the most recently imported WorkflowConfig.
+   * Stores non-visual top-level fields (name, version, _originalKeys, _extraTopLevelKeys, imports,
+   * requires, platform, infrastructure, sidecars) so that exportToConfig() can reconstruct
+   * a complete WorkflowConfig without losing unknown keys or reformatting structure.
+   * Pipelines are excluded here because they are tracked separately via importedPipelines.
+   */
+  importedPassthrough: Omit<WorkflowConfig, 'modules' | 'workflows' | 'triggers' | 'pipelines'> | null;
+
   // Multi-file resolution: maps module name → source file path
   sourceMap: Map<string, string>;
   setSourceMap: (sourceMap: Map<string, string>) => void;
@@ -218,6 +227,7 @@ const useWorkflowStore = create<WorkflowStore>()(
   importedWorkflows: {},
   importedTriggers: {},
   importedPipelines: {},
+  importedPassthrough: null,
 
   // Multi-file resolution
   sourceMap: new Map<string, string>(),
@@ -453,9 +463,15 @@ const useWorkflowStore = create<WorkflowStore>()(
   },
 
   exportToConfig: () => {
-    const { nodes, edges, importedWorkflows, importedTriggers, importedPipelines } = get();
+    const { nodes, edges, importedWorkflows, importedTriggers, importedPipelines, importedPassthrough } = get();
     const moduleTypeMap = useModuleSchemaStore.getState().moduleTypeMap;
-    const config = nodesToConfig(nodes, edges, moduleTypeMap);
+    // Pass importedPassthrough as originalConfig so that nodesToConfig can restore
+    // non-visual fields: name, version, _originalKeys, _extraTopLevelKeys, imports,
+    // requires, platform, infrastructure, sidecars.
+    const originalConfig: import('../types/workflow.ts').WorkflowConfig | undefined = importedPassthrough
+      ? { modules: [], workflows: {}, triggers: {}, ...importedPassthrough }
+      : undefined;
+    const config = nodesToConfig(nodes, edges, moduleTypeMap, originalConfig);
     if (Object.keys(config.workflows).length === 0 && Object.keys(importedWorkflows).length > 0) {
       config.workflows = importedWorkflows;
     }
@@ -484,6 +500,9 @@ const useWorkflowStore = create<WorkflowStore>()(
     get().pushHistory();
     const moduleTypeMap = useModuleSchemaStore.getState().moduleTypeMap;
     const { nodes, edges } = configToNodes(config, moduleTypeMap, sourceMap);
+    // Extract passthrough metadata (everything except the visual module/workflow/trigger data)
+    const { modules: _modules, workflows: _workflows, triggers: _triggers, pipelines: _pipelines, ...passthroughFields } = config;
+    const importedPassthrough: WorkflowStore['importedPassthrough'] = passthroughFields;
     const updates: Partial<WorkflowStore> = {
       nodes,
       edges,
@@ -491,6 +510,7 @@ const useWorkflowStore = create<WorkflowStore>()(
       importedWorkflows: config.workflows ?? {},
       importedTriggers: config.triggers ?? {},
       importedPipelines: config.pipelines ?? {},
+      importedPassthrough,
     };
     if (sourceMap) {
       updates.sourceMap = sourceMap;
@@ -501,7 +521,7 @@ const useWorkflowStore = create<WorkflowStore>()(
 
   clearCanvas: () => {
     get().pushHistory();
-    set({ nodes: [], edges: [], selectedNodeId: null, selectedEdgeId: null, nodeCounter: 0, importedWorkflows: {}, importedTriggers: {}, importedPipelines: {} });
+    set({ nodes: [], edges: [], selectedNodeId: null, selectedEdgeId: null, nodeCounter: 0, importedWorkflows: {}, importedTriggers: {}, importedPipelines: {}, importedPassthrough: null });
   },
 
   exportLayout: (): LayoutData => {
