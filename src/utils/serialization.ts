@@ -540,8 +540,9 @@ export function nodesToConfig(
   if (originalKeys) {
     result._originalKeys = originalKeys;
   }
-  if (originalConfig?._extraTopLevelKeys && Object.keys(originalConfig._extraTopLevelKeys).length > 0) {
-    result._extraTopLevelKeys = originalConfig._extraTopLevelKeys;
+  const extraTopLevelKeys = originalConfig?._extraTopLevelKeys;
+  if (extraTopLevelKeys && Object.keys(extraTopLevelKeys).length > 0) {
+    result._extraTopLevelKeys = extraTopLevelKeys;
   }
   return result;
 }
@@ -857,8 +858,17 @@ export function configToYaml(config: WorkflowConfig): string {
   } else {
     // No original key order — use the fixed default order:
     // name, version, imports, requires, modules, workflows, triggers, pipelines, platform, infrastructure, sidecars, [extra]
+    const DEFAULT_ORDER = ['name', 'version', 'imports', 'requires', 'modules', 'workflows', 'triggers', 'pipelines', 'platform', 'infrastructure', 'sidecars'];
+    for (const key of DEFAULT_ORDER) {
+      if (key in valueMap) {
+        out[key] = valueMap[key];
+      }
+    }
+    // Append any extra top-level keys after the known fields
     for (const [key, value] of Object.entries(valueMap)) {
-      out[key] = value;
+      if (!DEFAULT_ORDER.includes(key)) {
+        out[key] = value;
+      }
     }
   }
 
