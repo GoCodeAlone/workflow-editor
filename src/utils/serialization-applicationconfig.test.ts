@@ -195,7 +195,7 @@ describe('buildApplicationConfigYaml', () => {
 // ---------------------------------------------------------------------------
 
 describe('configToYaml — ApplicationConfig round-trip', () => {
-  it('emits application: format when _applicationConfig is set', () => {
+  it('emits application: format when _applicationConfig is set and config is metadata-only', () => {
     const config = parseYaml(APPLICATION_CONFIG_YAML);
     const output = configToYaml(config);
     expect(output).toContain('application:');
@@ -207,6 +207,18 @@ describe('configToYaml — ApplicationConfig round-trip', () => {
     // Must NOT convert to flat format
     expect(output).not.toContain('imports:');
     expect(output).not.toContain('modules:');
+  });
+
+  it('falls back to flat WorkflowConfig when _applicationConfig is set but config has real content', () => {
+    // Simulate a resolved ApplicationConfig that has merged sub-file modules
+    const config = parseYaml(APPLICATION_CONFIG_YAML);
+    config.modules = [{ name: 'cache', type: 'nosql.redis' }];
+    const output = configToYaml(config);
+    // Must NOT emit pure application: format since there is real module content
+    expect(output).not.toBe(buildApplicationConfigYaml(config._applicationConfig!));
+    // Instead serialises the full WorkflowConfig (modules are present)
+    expect(output).toContain('cache');
+    expect(output).toContain('modules:');
   });
 
   it('round-trips the ApplicationConfig YAML with minimal whitespace changes', () => {
@@ -356,5 +368,21 @@ describe('exportToFiles — preserves ApplicationConfig for main file', () => {
 
     expect(mainYaml).toContain('name: my-service');
     expect(mainYaml).toContain('version: 1.0.0');
+  });
+
+  it('does not write empty YAML files for sub-files that have no exported content', async () => {
+    // Only base.yaml has content; users.yaml and billing.yaml are missing from the resolver
+    const resolver = makeResolver({
+      'base.yaml': BASE_YAML,
+      // users.yaml and billing.yaml are intentionally unresolvable
+    });
+    const { config, sourceMap } = await resolveImports(APPLICATION_CONFIG_YAML, resolver);
+    const fileMap = exportToFiles(config, sourceMap);
+
+    // base.yaml has content and should be included
+    expect(fileMap.has('base.yaml')).toBe(true);
+    // users.yaml and billing.yaml had no resolvable content — should NOT be in the file map
+    expect(fileMap.has('users.yaml')).toBe(false);
+    expect(fileMap.has('billing.yaml')).toBe(false);
   });
 });

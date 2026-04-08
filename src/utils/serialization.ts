@@ -819,9 +819,19 @@ export function buildApplicationConfigYaml(appConfig: ApplicationConfigMeta): st
   return yaml.dump({ application: appBlock }, { lineWidth: -1, noRefs: true, sortKeys: false });
 }
 
+function isMetadataOnlyApplicationConfig(config: WorkflowConfig): boolean {
+  const hasModules = (config.modules?.length ?? 0) > 0;
+  const hasWorkflows = Object.keys(config.workflows ?? {}).length > 0;
+  const hasTriggers = Object.keys(config.triggers ?? {}).length > 0;
+  const hasPipelines = Object.keys(config.pipelines ?? {}).length > 0;
+  return !hasModules && !hasWorkflows && !hasTriggers && !hasPipelines;
+}
+
 export function configToYaml(config: WorkflowConfig): string {
-  // If this config was originally in ApplicationConfig format, preserve that structure.
-  if (config._applicationConfig) {
+  // Preserve `application:` output only while the config is still metadata-only.
+  // If real main-file content exists, serialise the full WorkflowConfig instead
+  // so top-level modules/workflows/triggers/pipelines are not dropped.
+  if (config._applicationConfig && isMetadataOnlyApplicationConfig(config)) {
     return buildApplicationConfigYaml(config._applicationConfig);
   }
 
@@ -1383,19 +1393,37 @@ function buildMainFileContent(
       ...(config.name !== undefined ? { name: config.name } : {}),
       ...(config.version !== undefined ? { version: config.version } : {}),
     };
-    // Collect ALL files that have content (direct + transitively imported).
-    // Start with direct application.workflows[].file references for ordering,
-    // then append any additional files from the sourceMap (transitively imported).
-    const allFiles = new Set<string>(config._applicationConfig.workflows.map((w) => w.file));
+    // Collect only files that actually have exported content (modules or pipelines).
+    // Preserve direct application.workflows[].file ordering first, then append any
+    // additional transitive files discovered through the source maps.
+    const hasExportedContent = (file: string): boolean => {
+      const modules = fileModules.get(file) ?? [];
+      const pipelines = filePipelines.get(file) ?? {};
+      return modules.length > 0 || Object.keys(pipelines).length > 0;
+    };
+    const importedFiles: string[] = [];
+    const seenFiles = new Set<string>();
+    for (const workflow of config._applicationConfig.workflows) {
+      if (hasExportedContent(workflow.file) && !seenFiles.has(workflow.file)) {
+        seenFiles.add(workflow.file);
+        importedFiles.push(workflow.file);
+      }
+    }
     for (const k of fileModules.keys()) {
-      if (k !== null) allFiles.add(k);
+      if (k !== null && hasExportedContent(k) && !seenFiles.has(k)) {
+        seenFiles.add(k);
+        importedFiles.push(k);
+      }
     }
     for (const k of filePipelines.keys()) {
-      if (k !== null) allFiles.add(k);
+      if (k !== null && hasExportedContent(k) && !seenFiles.has(k)) {
+        seenFiles.add(k);
+        importedFiles.push(k);
+      }
     }
     return {
       yaml: buildApplicationConfigYaml(appConfig),
-      importedFiles: [...allFiles],
+      importedFiles,
     };
   }
 

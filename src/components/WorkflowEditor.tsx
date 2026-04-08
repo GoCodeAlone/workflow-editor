@@ -69,7 +69,7 @@ export function WorkflowEditor(props: WorkflowEditorProps) {
         }
         // ApplicationConfig format detected but no file resolver provided — warn the user
         // rather than silently converting the format.
-        if (config._applicationConfig && !sourceMapProp) {
+        if (config._applicationConfig && !onResolveFile) {
           addToast(
             'ApplicationConfig format detected. Configure a workspace file resolver to render the full application graph from referenced sub-files.',
             'warning',

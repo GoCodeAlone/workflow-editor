@@ -378,8 +378,9 @@ describe('resolveImports — pipeline sourceMap enables correct round-trip expor
     expect(mainYaml).toContain('workflows:');
     // Each imported file path must appear as a reference
     const importedFiles = ['api.yaml', 'base.yaml'];
-    const hasAtLeastOneRef = importedFiles.some((f) => mainYaml.includes(f));
-    expect(hasAtLeastOneRef).toBe(true);
+    importedFiles.forEach((file) => {
+      expect(mainYaml).toContain(file);
+    });
   });
 });
 
