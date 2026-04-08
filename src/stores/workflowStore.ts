@@ -481,6 +481,11 @@ const useWorkflowStore = create<WorkflowStore>()(
     if (Object.keys(importedPipelines).length > 0) {
       config.pipelines = importedPipelines;
     }
+    // Reattach ApplicationConfig metadata so configToYaml / exportMainFileYaml
+    // can reconstruct the original `application:` format on export.
+    if (originalConfig?._applicationConfig) {
+      config._applicationConfig = originalConfig._applicationConfig;
+    }
     return config;
   },
 

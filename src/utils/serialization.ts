@@ -12,6 +12,7 @@ import type {
   EventWorkflowConfig,
   WorkflowTab,
   ModuleTypeInfo,
+  ApplicationConfigMeta,
 } from '../types/workflow.ts';
 import { MODULE_TYPE_MAP } from '../types/workflow.ts';
 import { layoutNodes } from './autoLayout.ts';
@@ -828,7 +829,35 @@ function extractExtraTopLevelKeys(parsed: Record<string, unknown>): Record<strin
   return Object.keys(extra).length > 0 ? extra : undefined;
 }
 
+/**
+ * Serialise an ApplicationConfigMeta back to the original `application:` format YAML.
+ * Used to preserve the ApplicationConfig structure on export instead of converting
+ * to the flat WorkflowConfig format.
+ */
+export function buildApplicationConfigYaml(appConfig: ApplicationConfigMeta): string {
+  const appBlock: Record<string, unknown> = {};
+  if (appConfig.name !== undefined) appBlock.name = appConfig.name;
+  if (appConfig.version !== undefined) appBlock.version = appConfig.version;
+  appBlock.workflows = appConfig.workflows;
+  return yaml.dump({ application: appBlock }, { lineWidth: -1, noRefs: true, sortKeys: false });
+}
+
+function isMetadataOnlyApplicationConfig(config: WorkflowConfig): boolean {
+  const hasModules = (config.modules?.length ?? 0) > 0;
+  const hasWorkflows = Object.keys(config.workflows ?? {}).length > 0;
+  const hasTriggers = Object.keys(config.triggers ?? {}).length > 0;
+  const hasPipelines = Object.keys(config.pipelines ?? {}).length > 0;
+  return !hasModules && !hasWorkflows && !hasTriggers && !hasPipelines;
+}
+
 export function configToYaml(config: WorkflowConfig): string {
+  // Preserve `application:` output only while the config is still metadata-only.
+  // If real main-file content exists, serialise the full WorkflowConfig instead
+  // so top-level modules/workflows/triggers/pipelines are not dropped.
+  if (config._applicationConfig && isMetadataOnlyApplicationConfig(config)) {
+    return buildApplicationConfigYaml(config._applicationConfig);
+  }
+
   // Strip internal tracking fields and omit empty top-level arrays/objects
   // that were not present in the original YAML
   const originalKeys = config._originalKeys;
@@ -901,6 +930,34 @@ export function parseYaml(text: string): WorkflowConfig {
       return { modules: [], workflows: {}, triggers: {}, _originalKeys: [] };
     }
     const _originalKeys = Object.keys(parsed);
+
+    // Detect ApplicationConfig format: top-level `application:` key with `workflows[].file` refs
+    const application = parsed.application as Record<string, unknown> | undefined;
+    if (application && typeof application === 'object') {
+      const appWorkflows = application.workflows as Array<Record<string, unknown>> | undefined;
+      if (Array.isArray(appWorkflows) && appWorkflows.some((w) => typeof w.file === 'string')) {
+        const fileRefs = appWorkflows
+          .filter((w) => typeof w.file === 'string')
+          .map((w) => ({ file: w.file as string }));
+        const _applicationConfig = {
+          name: application.name as string | undefined,
+          version: application.version !== undefined ? String(application.version) : undefined,
+          workflows: fileRefs,
+        };
+        const config: WorkflowConfig = {
+          modules: (parsed.modules ?? []) as ModuleConfig[],
+          workflows: (parsed.workflows ?? {}) as Record<string, unknown>,
+          triggers: (parsed.triggers ?? {}) as Record<string, unknown>,
+          imports: fileRefs.map((r) => r.file),
+          _originalKeys,
+          _applicationConfig,
+        };
+        if (_applicationConfig.name) config.name = _applicationConfig.name;
+        if (_applicationConfig.version) config.version = _applicationConfig.version;
+        return config;
+      }
+    }
+
     const config: WorkflowConfig = {
       modules: (parsed.modules ?? []) as ModuleConfig[],
       workflows: (parsed.workflows ?? {}) as Record<string, unknown>,
@@ -948,6 +1005,34 @@ export function parseYamlSafe(text: string): { config: WorkflowConfig; error?: s
       return { config: { modules: [], workflows: {}, triggers: {}, _originalKeys: [] }, error: 'YAML parsed to non-object value' };
     }
     const _originalKeys = Object.keys(parsed);
+
+    // Detect ApplicationConfig format: top-level `application:` key with `workflows[].file` refs
+    const application = parsed.application as Record<string, unknown> | undefined;
+    if (application && typeof application === 'object') {
+      const appWorkflows = application.workflows as Array<Record<string, unknown>> | undefined;
+      if (Array.isArray(appWorkflows) && appWorkflows.some((w) => typeof w.file === 'string')) {
+        const fileRefs = appWorkflows
+          .filter((w) => typeof w.file === 'string')
+          .map((w) => ({ file: w.file as string }));
+        const _applicationConfig = {
+          name: application.name as string | undefined,
+          version: application.version !== undefined ? String(application.version) : undefined,
+          workflows: fileRefs,
+        };
+        const config: WorkflowConfig = {
+          modules: (parsed.modules ?? []) as ModuleConfig[],
+          workflows: (parsed.workflows ?? {}) as Record<string, unknown>,
+          triggers: (parsed.triggers ?? {}) as Record<string, unknown>,
+          imports: fileRefs.map((r) => r.file),
+          _originalKeys,
+          _applicationConfig,
+        };
+        if (_applicationConfig.name) config.name = _applicationConfig.name;
+        if (_applicationConfig.version) config.version = _applicationConfig.version;
+        return { config };
+      }
+    }
+
     const config: WorkflowConfig = {
       modules: (parsed.modules ?? []) as ModuleConfig[],
       workflows: (parsed.workflows ?? {}) as Record<string, unknown>,
@@ -1245,9 +1330,20 @@ export async function resolveImports(
 
   // Handle `application.workflows[].file:` directive — conflicts are reported as errors
   const application = parsed.application as Record<string, unknown> | undefined;
+  let applicationConfig: ApplicationConfigMeta | undefined;
   if (application && typeof application === 'object') {
     const appWorkflows = (application.workflows ?? []) as Array<Record<string, unknown>>;
     if (Array.isArray(appWorkflows)) {
+      const fileRefs = appWorkflows
+        .filter((entry) => typeof entry.file === 'string')
+        .map((entry) => ({ file: entry.file as string }));
+      if (fileRefs.length > 0) {
+        applicationConfig = {
+          name: application.name as string | undefined,
+          version: application.version !== undefined ? String(application.version) : undefined,
+          workflows: fileRefs,
+        };
+      }
       for (const entry of appWorkflows) {
         const filePath = entry.file as string | undefined;
         if (!filePath) continue;
@@ -1275,6 +1371,12 @@ export async function resolveImports(
   const extraTopLevelKeys = extractExtraTopLevelKeys(parsed);
   if (extraTopLevelKeys) {
     config._extraTopLevelKeys = extraTopLevelKeys;
+  }
+
+  // Preserve ApplicationConfig structure so round-trip export can reconstruct
+  // the original `application:` format instead of converting to flat imports:.
+  if (applicationConfig) {
+    config._applicationConfig = applicationConfig;
   }
 
   return {
@@ -1400,6 +1502,10 @@ function buildMainFileContent(
   const mainOnlyConfig: WorkflowConfig = {
     ...config,
     modules: mainModules,
+    // For ApplicationConfig format, all workflows and triggers live exclusively in sub-files.
+    // Clear them from the main-file view so isMetadataOnlyApplicationConfig can correctly
+    // identify the main file as metadata-only and emit application: format.
+    ...(config._applicationConfig ? { workflows: {}, triggers: {} } : {}),
     // Override imports with the computed list of imported file paths (omit the property
     // entirely when there are no sub-files so configToYaml does not emit `imports: []`)
     ...(importedFiles.length > 0 ? { imports: importedFiles } : { imports: undefined }),

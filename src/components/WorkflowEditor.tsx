@@ -67,6 +67,14 @@ export function WorkflowEditor(props: WorkflowEditorProps) {
             'info',
           );
         }
+        // ApplicationConfig format detected but no file resolver provided — warn the user
+        // rather than silently converting the format.
+        if (config._applicationConfig && !onResolveFile) {
+          addToast(
+            'ApplicationConfig format detected. Configure a workspace file resolver to render the full application graph from referenced sub-files.',
+            'warning',
+          );
+        }
       }
       const mapFromProp = sourceMapProp ? new Map(Object.entries(sourceMapProp)) : undefined;
       importFromConfig(config, mapFromProp);
