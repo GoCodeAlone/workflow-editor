@@ -12906,6 +12906,13 @@
           "label": "",
           "type": "map",
           "description": "Authentication config (type, token, client_id, client_secret, token_url for OAuth2)"
+        },
+        {
+          "key": "error_on_status",
+          "label": "",
+          "type": "boolean",
+          "description": "When true (default), non-2xx responses fail the pipeline. When false, the response is returned as normal step output so downstream steps can inspect status_code and shape error responses.",
+          "defaultValue": "true"
         }
       ],
       "outputs": [
