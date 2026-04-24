@@ -1,6 +1,6 @@
 {
   "name": "@gocodealone/workflow-editor",
-  "version": "0.18.10",
+  "version": "0.18.1-0.1",
   "type": "module",
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",
