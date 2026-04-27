@@ -1,5 +1,10 @@
 import { describe, it, expect } from 'vitest';
-import { getEngineModuleTypes, getEngineCoercionRules, getEngineStepTypes } from './load-schemas';
+import {
+  getEngineModuleTypes,
+  getEngineCoercionRules,
+  getEngineStepTypes,
+  normalizeEditorContractBundle,
+} from './load-schemas';
 
 describe('getEngineModuleTypes', () => {
   it('loads http.server from engine schemas', () => {
@@ -49,5 +54,80 @@ describe('getEngineStepTypes', () => {
     const anyStep = Object.values(steps)[0];
     expect(anyStep).toBeDefined();
     expect(Array.isArray(anyStep.outputs)).toBe(true);
+  });
+});
+
+describe('normalizeEditorContractBundle', () => {
+  it('normalizes all editor bundle schema sections', () => {
+    const bundle = normalizeEditorContractBundle({
+      version: 'editor-bundle/v1',
+      workflowVersion: '0.0.0-test',
+      moduleSchemas: {
+        'plugin.greeter': {
+          type: 'plugin.greeter',
+          label: 'Greeter',
+          category: 'integration',
+          configFields: [],
+          defaultConfig: {},
+        },
+      },
+      stepSchemas: {
+        'step.sayHello': {
+          type: 'step.sayHello',
+          plugin: 'greeter',
+          description: 'Say hello',
+          configFields: [],
+          outputs: [{ key: 'reply', type: 'demo.GreetResponse' }],
+        },
+      },
+      coercionRules: {
+        'demo.GreetResponse': ['any'],
+      },
+      contracts: {
+        'greeter:module:plugin.greeter': {
+          id: 'greeter:module:plugin.greeter',
+          ownerType: 'module',
+          ownerKey: 'plugin.greeter',
+          mode: 'strict',
+          requestMessage: 'demo.GreetRequest',
+          responseMessage: 'demo.GreetResponse',
+          configMessage: 'demo.GreeterConfig',
+          source: 'plugin-contracts-json',
+        },
+      },
+      messages: {
+        'demo.GreetRequest': { id: 'demo.GreetRequest', name: 'GreetRequest', fullName: 'demo.GreetRequest', fields: [] },
+      },
+      schemas: {
+        app: { type: 'object' },
+        infra: { type: 'object' },
+        wfctl: { type: 'object' },
+      },
+    });
+
+    expect(bundle.moduleSchemas['plugin.greeter'].label).toBe('Greeter');
+    expect(bundle.stepSchemas['step.sayHello'].outputs?.[0]?.type).toBe('demo.GreetResponse');
+    expect(bundle.coercionRules['demo.GreetResponse']).toEqual(['any']);
+    expect(bundle.contracts['greeter:module:plugin.greeter'].mode).toBe('strict');
+    expect(bundle.messages['demo.GreetRequest'].fullName).toBe('demo.GreetRequest');
+    expect(bundle.schemas.wfctl).toEqual({ type: 'object' });
+  });
+
+  it('does not throw when optional bundle sections are missing', () => {
+    const bundle = normalizeEditorContractBundle({
+      version: 'editor-bundle/v1',
+      moduleSchemas: {},
+      coercionRules: {},
+      schemas: {
+        app: { type: 'object' },
+      },
+    });
+
+    expect(bundle.stepSchemas).toEqual({});
+    expect(bundle.contracts).toEqual({});
+    expect(bundle.messages).toEqual({});
+    expect(bundle.schemas.app).toEqual({ type: 'object' });
+    expect(bundle.schemas.infra).toBeUndefined();
+    expect(bundle.schemas.wfctl).toBeUndefined();
   });
 });

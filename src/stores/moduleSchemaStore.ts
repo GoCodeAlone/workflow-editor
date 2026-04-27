@@ -1,7 +1,21 @@
 import { create } from 'zustand';
 import type { ModuleTypeInfo, ConfigFieldDef, ModuleCategory, IOSignature } from '../types/workflow.ts';
-import type { PluginSchemaData, ServerModuleSchema as EditorServerModuleSchema } from '../types/editor.ts';
-import { getEngineModuleTypes } from '../generated/load-schemas';
+import type {
+  EditorContractBundle,
+  EditorContractDescriptor,
+  EditorMessageDescriptor,
+  EditorYamlSchemas,
+  EngineBundleModuleSchema,
+  PluginSchemaData,
+  ServerModuleSchema as EditorServerModuleSchema,
+} from '../types/editor.ts';
+import {
+  getEngineCoercionRules,
+  getEngineModuleTypes,
+  getEngineStepTypes,
+  normalizeEditorContractBundle,
+  type StepTypeInfo,
+} from '../generated/load-schemas';
 
 // Shape of a server-side I/O port definition
 interface ServerIODef {
@@ -18,6 +32,7 @@ interface ServerModuleSchema {
   description?: string;
   inputs?: ServerIODef[];
   outputs?: ServerIODef[];
+  ioSignature?: IOSignature;
   configFields: ServerConfigField[];
   defaultConfig?: Record<string, unknown>;
   maxIncoming?: number | null;
@@ -58,6 +73,20 @@ interface ModuleSchemaState {
   moduleTypes: ModuleTypeInfo[];
   /** Module type map keyed by type string */
   moduleTypeMap: Record<string, ModuleTypeInfo>;
+  /** Step type map keyed by step type string */
+  stepTypeMap: Record<string, StepTypeInfo>;
+  /** Coercion rules keyed by source type */
+  coercionRules: Record<string, string[]>;
+  /** Strict contract descriptors keyed by descriptor id */
+  contracts: Record<string, EditorContractDescriptor>;
+  /** Contract descriptor id by "ownerType:ownerKey" */
+  contractOwnerIndex: Record<string, string>;
+  /** Message descriptors keyed by descriptor id/full name */
+  messages: Record<string, EditorMessageDescriptor>;
+  /** YAML schemas from the editor bundle */
+  yamlSchemas: EditorYamlSchemas;
+  /** Whether a host bundle has been loaded */
+  bundleLoaded: boolean;
   /** Available services from the engine */
   services: ServiceInfo[];
   /** Whether services have been loaded */
@@ -70,6 +99,16 @@ interface ModuleSchemaState {
   loadSchemas: (schemas: Record<string, ServerModuleSchema>) => void;
   /** Append plugin schemas to the existing module type map */
   loadPluginSchemas: (plugins: PluginSchemaData[]) => void;
+  /** Load the canonical editor contract bundle provided by the host */
+  loadEditorBundle: (bundle: EditorContractBundle) => void;
+  /** Lookup a contract descriptor by owner type and owner key */
+  getContractByOwner: (ownerType: EditorContractDescriptor['ownerType'], ownerKey: string) => EditorContractDescriptor | undefined;
+  /** Lookup a message descriptor by id/full name */
+  getMessage: (messageId: string) => EditorMessageDescriptor | undefined;
+  /** Lookup a YAML schema by bundle schema key */
+  getYamlSchema: (schemaName: keyof EditorYamlSchemas | string) => Record<string, unknown> | undefined;
+  /** Reset transient schema state to generated defaults */
+  resetSchemaState: () => void;
 }
 
 /** Map server field types to UI field types */
@@ -159,7 +198,7 @@ function mergeSchemas(
     seen.add(staticType.type);
     const server = serverSchemas[staticType.type];
     if (server) {
-      const serverIO = convertIOSignature(server.inputs, server.outputs);
+      const serverIO = server.ioSignature ?? convertIOSignature(server.inputs, server.outputs);
       merged.push({
         ...staticType,
         label: server.label || staticType.label,
@@ -184,7 +223,7 @@ function mergeSchemas(
         category: normalizeCategory(server.category),
         configFields: convertFields(server.configFields),
         defaultConfig: server.defaultConfig ?? {},
-        ioSignature: convertIOSignature(server.inputs, server.outputs),
+        ioSignature: server.ioSignature ?? convertIOSignature(server.inputs, server.outputs),
         maxIncoming: server.maxIncoming,
         maxOutgoing: server.maxOutgoing,
       });
@@ -213,8 +252,63 @@ function editorSchemaToModuleTypeInfo(
   };
 }
 
+function bundleSchemaToServerSchema(type: string, schema: EngineBundleModuleSchema): ServerModuleSchema {
+  return {
+    type: schema.type ?? type,
+    label: schema.label ?? type,
+    category: schema.category ?? 'integration',
+    description: schema.description,
+    inputs: schema.inputs,
+    outputs: schema.outputs,
+    ioSignature: schema.ioSignature,
+    configFields: schema.configFields ?? [],
+    defaultConfig: schema.defaultConfig,
+    maxIncoming: schema.maxIncoming,
+    maxOutgoing: schema.maxOutgoing,
+  };
+}
+
+function bundleStepToStepTypeInfo(type: string, schema: NonNullable<EditorContractBundle['stepSchemas']>[string]): StepTypeInfo {
+  return {
+    type: schema.type ?? type,
+    plugin: schema.plugin,
+    description: schema.description ?? '',
+    configFields: schema.configFields ?? [],
+    outputs: schema.outputs ?? [],
+  };
+}
+
+function contractOwnerKey(ownerType: EditorContractDescriptor['ownerType'], ownerKey: string): string {
+  return `${ownerType}:${ownerKey}`;
+}
+
+function mergeContractsByOwner(
+  currentContracts: Record<string, EditorContractDescriptor>,
+  currentIndex: Record<string, string>,
+  incoming: Record<string, EditorContractDescriptor>,
+): { contracts: Record<string, EditorContractDescriptor>; contractOwnerIndex: Record<string, string> } {
+  const contracts = { ...currentContracts };
+  const contractOwnerIndex = { ...currentIndex };
+
+  for (const [id, descriptor] of Object.entries(incoming)) {
+    const ownerIndexKey = contractOwnerKey(descriptor.ownerType, descriptor.ownerKey);
+    const previousId = contractOwnerIndex[ownerIndexKey];
+    if (previousId && previousId !== id) {
+      delete contracts[previousId];
+    }
+    contracts[id] = descriptor;
+    contractOwnerIndex[ownerIndexKey] = id;
+  }
+
+  return { contracts, contractOwnerIndex };
+}
+
 const initialModuleTypeMap = getEngineModuleTypes();
 const initialModuleTypes = Object.values(initialModuleTypeMap);
+const initialStepTypeMap = getEngineStepTypes();
+const initialCoercionRules = getEngineCoercionRules();
+
+const initialYamlSchemas: EditorYamlSchemas = { app: {} };
 
 const useModuleSchemaStore = create<ModuleSchemaState>((set, get) => ({
   loaded: false,
@@ -222,6 +316,13 @@ const useModuleSchemaStore = create<ModuleSchemaState>((set, get) => ({
   serverSchemas: {},
   moduleTypes: initialModuleTypes,
   moduleTypeMap: initialModuleTypeMap,
+  stepTypeMap: initialStepTypeMap,
+  coercionRules: initialCoercionRules,
+  contracts: {},
+  contractOwnerIndex: {},
+  messages: {},
+  yamlSchemas: initialYamlSchemas,
+  bundleLoaded: false,
   services: [],
   servicesLoaded: false,
 
@@ -241,6 +342,10 @@ const useModuleSchemaStore = create<ModuleSchemaState>((set, get) => ({
         return;
       }
       const schemas: Record<string, ServerModuleSchema> = await res.json();
+      if (get().bundleLoaded) {
+        set({ loaded: true, loading: false });
+        return;
+      }
       const merged = mergeSchemas(initialModuleTypes, schemas);
       const mergedMap = Object.fromEntries(merged.map((t) => [t.type, t]));
       set({
@@ -282,6 +387,13 @@ const useModuleSchemaStore = create<ModuleSchemaState>((set, get) => ({
   },
 
   loadSchemas: (schemas) => {
+    if (get().bundleLoaded) {
+      set({
+        loaded: true,
+        loading: false,
+      });
+      return;
+    }
     const merged = mergeSchemas(initialModuleTypes, schemas);
     const mergedMap = Object.fromEntries(merged.map((t) => [t.type, t]));
     set({
@@ -294,6 +406,8 @@ const useModuleSchemaStore = create<ModuleSchemaState>((set, get) => ({
   },
 
   loadPluginSchemas: (plugins) => {
+    if (get().bundleLoaded) return;
+
     const { moduleTypes, moduleTypeMap } = get();
     const newTypes = [...moduleTypes];
     const newMap = { ...moduleTypeMap };
@@ -312,6 +426,75 @@ const useModuleSchemaStore = create<ModuleSchemaState>((set, get) => ({
     }
 
     set({ moduleTypes: newTypes, moduleTypeMap: newMap });
+  },
+
+  loadEditorBundle: (bundle) => {
+    const normalized = normalizeEditorContractBundle(bundle);
+    const bundleServerSchemas = Object.fromEntries(
+      Object.entries(normalized.moduleSchemas).map(([type, schema]) => [
+        type,
+        bundleSchemaToServerSchema(type, schema),
+      ]),
+    );
+    const merged = mergeSchemas(initialModuleTypes, bundleServerSchemas);
+    const mergedMap = Object.fromEntries(merged.map((t) => [t.type, t]));
+    const stepTypeMap = {
+      ...initialStepTypeMap,
+      ...Object.fromEntries(
+        Object.entries(normalized.stepSchemas).map(([type, schema]) => [
+          type,
+          bundleStepToStepTypeInfo(type, schema),
+        ]),
+      ),
+    };
+    const { contracts, contractOwnerIndex } = mergeContractsByOwner(
+      get().contracts,
+      get().contractOwnerIndex,
+      normalized.contracts,
+    );
+
+    set({
+      serverSchemas: bundleServerSchemas,
+      moduleTypes: merged,
+      moduleTypeMap: mergedMap,
+      stepTypeMap,
+      coercionRules: { ...initialCoercionRules, ...normalized.coercionRules },
+      contracts,
+      contractOwnerIndex,
+      messages: { ...get().messages, ...normalized.messages },
+      yamlSchemas: normalized.schemas,
+      loaded: true,
+      loading: false,
+      bundleLoaded: true,
+    });
+  },
+
+  getContractByOwner: (ownerType, ownerKey) => {
+    const id = get().contractOwnerIndex[contractOwnerKey(ownerType, ownerKey)];
+    return id ? get().contracts[id] : undefined;
+  },
+
+  getMessage: (messageId) => get().messages[messageId],
+
+  getYamlSchema: (schemaName) => get().yamlSchemas[schemaName],
+
+  resetSchemaState: () => {
+    set({
+      loaded: false,
+      loading: false,
+      serverSchemas: {},
+      moduleTypes: initialModuleTypes,
+      moduleTypeMap: initialModuleTypeMap,
+      stepTypeMap: initialStepTypeMap,
+      coercionRules: initialCoercionRules,
+      contracts: {},
+      contractOwnerIndex: {},
+      messages: {},
+      yamlSchemas: initialYamlSchemas,
+      bundleLoaded: false,
+      services: [],
+      servicesLoaded: false,
+    });
   },
 }));
 

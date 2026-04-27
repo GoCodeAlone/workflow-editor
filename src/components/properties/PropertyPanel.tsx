@@ -63,6 +63,8 @@ export default function PropertyPanel() {
   const setSelectedNode = useWorkflowStore((s) => s.setSelectedNode);
 
   const moduleTypeMap = useModuleSchemaStore((s) => s.moduleTypeMap);
+  const stepTypeMap = useModuleSchemaStore((s) => s.stepTypeMap);
+  const getContractByOwner = useModuleSchemaStore((s) => s.getContractByOwner);
   const getFieldEditor = useFieldEditorRegistry((s) => s.getEditor);
   const fetchSchemas = useModuleSchemaStore((s) => s.fetchSchemas);
   const schemasLoaded = useModuleSchemaStore((s) => s.loaded);
@@ -74,6 +76,11 @@ export default function PropertyPanel() {
   const node = nodes.find((n) => n.id === selectedNodeId);
 
   const info = node ? moduleTypeMap[node.data.moduleType] : undefined;
+  const stepInfo = node?.data.moduleType.startsWith('step.') ? stepTypeMap[node.data.moduleType] : undefined;
+  const contract = node
+    ? (stepInfo ? getContractByOwner('step', node.data.moduleType) : undefined)
+      ?? getContractByOwner('module', node.data.moduleType)
+    : undefined;
   const fields: ConfigFieldDef[] = useMemo(() => info?.configFields ?? [], [info]);
 
   // Compute preceding steps for pipeline step nodes (for FieldPicker)
@@ -242,6 +249,31 @@ export default function PropertyPanel() {
             {node.data.moduleType}
           </span>
         </div>
+
+        {contract && (
+          <section
+            aria-label="Contract metadata"
+            role="region"
+            style={{
+              marginBottom: 16,
+              padding: '10px 12px',
+              border: '1px solid #313244',
+              borderRadius: 6,
+              background: '#1e1e2e',
+            }}
+          >
+            <span style={{ color: '#a6adc8', fontSize: 11, display: 'block', marginBottom: 8, fontWeight: 600 }}>
+              Contract
+            </span>
+            <ContractMetadataRow label="Mode" value={contract.mode} />
+            <ContractMetadataRow label="Plugin" value={contract.plugin ?? stepInfo?.plugin ?? info?.pluginSource} />
+            <ContractMetadataRow label="Source" value={contract.source} />
+            <ContractMetadataRow label="Request" value={contract.requestMessage} />
+            <ContractMetadataRow label="Response" value={contract.responseMessage} />
+            <ContractMetadataRow label="Config" value={contract.configMessage} />
+            <ContractMetadataRow label="Descriptor" value={contract.descriptorSetRef} />
+          </section>
+        )}
 
         {/* Config fields */}
         {fields.length > 0 && (
@@ -531,6 +563,16 @@ export default function PropertyPanel() {
           Delete Node
         </button>
       </div>
+    </div>
+  );
+}
+
+function ContractMetadataRow({ label, value }: { label: string; value?: string }) {
+  if (!value) return null;
+  return (
+    <div style={{ display: 'grid', gridTemplateColumns: '72px minmax(0, 1fr)', gap: 8, fontSize: 11, lineHeight: 1.4, marginBottom: 4 }}>
+      <span style={{ color: '#585b70' }}>{label}</span>
+      <span style={{ color: '#cdd6f4', overflowWrap: 'anywhere' }}>{value}</span>
     </div>
   );
 }

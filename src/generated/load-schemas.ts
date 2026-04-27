@@ -1,5 +1,13 @@
 import engineData from './engine-schemas.json';
 import type { ModuleTypeInfo, IOPort, ConfigFieldDef } from '../types/workflow';
+import type {
+  EditorContractBundle,
+  EditorContractDescriptor,
+  EditorMessageDescriptor,
+  EditorYamlSchemas,
+  EngineBundleModuleSchema,
+  EngineBundleStepSchema,
+} from '../types/editor';
 
 interface EngineModuleSchema {
   type: string;
@@ -27,6 +35,17 @@ interface EngineSchemas {
   moduleSchemas: Record<string, EngineModuleSchema>;
   stepSchemas: Record<string, EngineStepSchema>;
   coercionRules: Record<string, string[]>;
+}
+
+export interface NormalizedEditorContractBundle {
+  version: string;
+  workflowVersion?: string;
+  moduleSchemas: Record<string, EngineBundleModuleSchema>;
+  stepSchemas: Record<string, EngineBundleStepSchema>;
+  coercionRules: Record<string, string[]>;
+  contracts: Record<string, EditorContractDescriptor>;
+  messages: Record<string, EditorMessageDescriptor>;
+  schemas: EditorYamlSchemas;
 }
 
 const data = engineData as EngineSchemas;
@@ -80,4 +99,17 @@ export function getEngineStepTypes(): Record<string, StepTypeInfo> {
     };
   }
   return result;
+}
+
+export function normalizeEditorContractBundle(bundle: EditorContractBundle): NormalizedEditorContractBundle {
+  return {
+    version: bundle.version,
+    workflowVersion: bundle.workflowVersion,
+    moduleSchemas: bundle.moduleSchemas ?? {},
+    stepSchemas: bundle.stepSchemas ?? {},
+    coercionRules: bundle.coercionRules ?? {},
+    contracts: bundle.contracts ?? {},
+    messages: bundle.messages ?? {},
+    schemas: bundle.schemas ?? { app: {} },
+  };
 }

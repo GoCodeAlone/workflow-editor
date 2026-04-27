@@ -19,7 +19,7 @@ import dslReferenceData from '../generated/dsl-reference.json';
 import { useEffect, useRef, useState, useMemo } from 'react';
 
 export function WorkflowEditor(props: WorkflowEditorProps) {
-  const { initialYaml, onSave, onNavigateToSource, onSchemaRequest, onPluginSchemaRequest, embedded, onAIRequest, onChange, onResolveFile, mode, testResults, onTestRun, sourceMap: sourceMapProp, onSaveToFile, showYamlPane, showDslReference } = props;
+  const { initialYaml, onSave, onNavigateToSource, onSchemaRequest, onPluginSchemaRequest, onEditorBundleRequest, embedded, onAIRequest, onChange, onResolveFile, mode, testResults, onTestRun, sourceMap: sourceMapProp, onSaveToFile, showYamlPane, showDslReference } = props;
   const importFromConfig = useWorkflowStore((s) => s.importFromConfig);
   const exportToConfig = useWorkflowStore((s) => s.exportToConfig);
   const exportToFileMap = useWorkflowStore((s) => s.exportToFileMap);
@@ -29,6 +29,7 @@ export function WorkflowEditor(props: WorkflowEditorProps) {
   const setTestResults = useWorkflowStore((s) => s.setTestResults);
   const loadSchemas = useModuleSchemaStore((s) => s.loadSchemas);
   const loadPluginSchemas = useModuleSchemaStore((s) => s.loadPluginSchemas);
+  const loadEditorBundle = useModuleSchemaStore((s) => s.loadEditorBundle);
   const importingRef = useRef(false);
   const hasMultiFileRef = useRef(false);
 
@@ -111,17 +112,41 @@ export function WorkflowEditor(props: WorkflowEditorProps) {
 
   // Request schemas from host
   useEffect(() => {
-    if (onSchemaRequest) {
-      onSchemaRequest().then((data) => {
-        if (data) loadSchemas(data.modules as Parameters<typeof loadSchemas>[0]);
-      });
-    }
-    if (onPluginSchemaRequest) {
-      onPluginSchemaRequest().then((plugins) => {
-        if (plugins) loadPluginSchemas(plugins);
-      });
-    }
-  }, [onSchemaRequest, onPluginSchemaRequest, loadSchemas, loadPluginSchemas]);
+    let cancelled = false;
+
+    const loadLegacySchemas = async () => {
+      const [schemaData, pluginData] = await Promise.all([
+        onSchemaRequest ? onSchemaRequest() : Promise.resolve(null),
+        onPluginSchemaRequest ? onPluginSchemaRequest() : Promise.resolve(null),
+      ]);
+      if (cancelled) return;
+      if (schemaData) loadSchemas(schemaData.modules as Parameters<typeof loadSchemas>[0]);
+      if (pluginData) loadPluginSchemas(pluginData);
+    };
+
+    const loadHostSchemas = async () => {
+      if (onEditorBundleRequest) {
+        try {
+          const bundle = await onEditorBundleRequest();
+          if (cancelled) return;
+          if (bundle) {
+            loadEditorBundle(bundle);
+            return;
+          }
+        } catch (error) {
+          console.warn('Failed to load editor contract bundle, falling back to legacy schemas:', error);
+          if (cancelled) return;
+        }
+      }
+
+      await loadLegacySchemas();
+    };
+
+    void loadHostSchemas();
+    return () => {
+      cancelled = true;
+    };
+  }, [onSchemaRequest, onPluginSchemaRequest, onEditorBundleRequest, loadSchemas, loadPluginSchemas, loadEditorBundle]);
 
   const nodePaletteCollapsed = useUILayoutStore((s) => s.nodePaletteCollapsed);
   const propertyPanelCollapsed = useUILayoutStore((s) => s.propertyPanelCollapsed);
