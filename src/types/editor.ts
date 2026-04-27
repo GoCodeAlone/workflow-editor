@@ -75,6 +75,8 @@ export interface WorkflowEditorProps {
   onSchemaRequest?: () => Promise<ModuleSchemaData | null>;
   /** Called when editor needs plugin schemas */
   onPluginSchemaRequest?: () => Promise<PluginSchemaData[] | null>;
+  /** Called when editor needs the canonical Workflow editor contract bundle */
+  onEditorBundleRequest?: () => Promise<EditorContractBundle | null>;
   /** Called when editor detects file: references in YAML and needs the host to resolve them.
    *  The host reads the file at the given path (relative to the open document) and returns its content.
    *  Returns null if file not found. */
@@ -128,6 +130,92 @@ export interface PluginSchemaData {
   pluginIcon?: string;
   pluginColor?: string;
   modules: Record<string, ServerModuleSchema>;
+}
+
+export type EditorContractMode = 'strict' | 'proto_with_legacy' | 'legacy';
+
+export type JsonSchemaObject = Record<string, unknown>;
+
+export interface EditorYamlSchemas {
+  app: JsonSchemaObject;
+  infra?: JsonSchemaObject;
+  wfctl?: JsonSchemaObject;
+  [schemaName: string]: JsonSchemaObject | undefined;
+}
+
+export interface EditorContractDescriptor {
+  id: string;
+  plugin?: string;
+  ownerType: 'module' | 'step' | 'service';
+  ownerKey: string;
+  mode: EditorContractMode;
+  requestMessage?: string;
+  responseMessage?: string;
+  configMessage?: string;
+  descriptorSetRef?: string;
+  source: 'builtin' | 'plugin-manifest' | 'plugin-contracts-json' | 'live-plugin';
+  [field: string]: unknown;
+}
+
+export interface EditorMessageFieldDescriptor {
+  name: string;
+  type?: string;
+  label?: string;
+  number?: number;
+  repeated?: boolean;
+  required?: boolean;
+  description?: string;
+  defaultValue?: unknown;
+  [field: string]: unknown;
+}
+
+export interface EditorMessageDescriptor {
+  id: string;
+  name: string;
+  fullName?: string;
+  package?: string;
+  fields?: EditorMessageFieldDescriptor[];
+  [field: string]: unknown;
+}
+
+export interface EditorContractBundle {
+  version: string;
+  workflowVersion?: string;
+  moduleSchemas: Record<string, EngineBundleModuleSchema>;
+  stepSchemas?: Record<string, EngineBundleStepSchema>;
+  coercionRules: Record<string, string[]>;
+  contracts?: Record<string, EditorContractDescriptor>;
+  messages?: Record<string, EditorMessageDescriptor>;
+  schemas: EditorYamlSchemas;
+  snippets?: unknown[];
+  descriptorSets?: Record<string, unknown>;
+  dslReference?: unknown;
+  [field: string]: unknown;
+}
+
+export interface EngineBundleModuleSchema {
+  type?: string;
+  label?: string;
+  category?: string;
+  description?: string;
+  inputs?: { name: string; type: string; description?: string }[];
+  outputs?: { name: string; type: string; description?: string }[];
+  configFields?: import('./workflow').ConfigFieldDef[];
+  defaultConfig?: Record<string, unknown>;
+  maxIncoming?: number | null;
+  maxOutgoing?: number | null;
+  ioSignature?: import('./workflow').IOSignature;
+  [field: string]: unknown;
+}
+
+export interface EngineBundleStepSchema {
+  type?: string;
+  plugin?: string;
+  description?: string;
+  configFields?: import('./workflow').ConfigFieldDef[];
+  outputs?: { key: string; type: string; description?: string }[];
+  readKeys?: string[];
+  [field: string]: unknown;
 }
 
 /** Server-side module schema (matches moduleSchemaStore's existing format) */

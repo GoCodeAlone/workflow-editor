@@ -3,6 +3,7 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import { act } from '@testing-library/react';
 import PropertyPanel from './PropertyPanel.tsx';
 import useWorkflowStore from '../../stores/workflowStore.ts';
+import { useModuleSchemaStore } from '../../stores/moduleSchemaStore.ts';
 
 function resetStore() {
   useWorkflowStore.setState({
@@ -194,5 +195,54 @@ describe('PropertyPanel', () => {
     expect(screen.getByText('Requests Per Minute')).toBeInTheDocument();
     const rpsInput = screen.getByDisplayValue('60');
     expect(rpsInput).toHaveAttribute('type', 'number');
+  });
+
+  it('shows contract metadata for the selected node when a descriptor exists', () => {
+    act(() => {
+      useModuleSchemaStore.getState().loadEditorBundle({
+        version: 'editor-bundle/v1',
+        moduleSchemas: {
+          'plugin.greeter': {
+            type: 'plugin.greeter',
+            label: 'Greeter',
+            category: 'integration',
+            configFields: [],
+            defaultConfig: {},
+          },
+        },
+        coercionRules: {},
+        contracts: {
+          'greeter:module:plugin.greeter': {
+            id: 'greeter:module:plugin.greeter',
+            plugin: 'greeter',
+            ownerType: 'module',
+            ownerKey: 'plugin.greeter',
+            mode: 'proto_with_legacy',
+            requestMessage: 'demo.GreetRequest',
+            responseMessage: 'demo.GreetResponse',
+            configMessage: 'demo.GreeterConfig',
+            descriptorSetRef: 'buf.build/demo/greeter',
+            source: 'plugin-contracts-json',
+          },
+        },
+        messages: {},
+        schemas: { app: {} },
+      });
+      useWorkflowStore.getState().addNode('plugin.greeter', { x: 0, y: 0 });
+      useWorkflowStore.getState().setSelectedNode(
+        useWorkflowStore.getState().nodes[0].id
+      );
+    });
+
+    render(<PropertyPanel />);
+
+    const section = screen.getByRole('region', { name: 'Contract metadata' });
+    expect(section).toHaveTextContent('proto_with_legacy');
+    expect(section).toHaveTextContent('greeter');
+    expect(section).toHaveTextContent('plugin-contracts-json');
+    expect(section).toHaveTextContent('demo.GreetRequest');
+    expect(section).toHaveTextContent('demo.GreetResponse');
+    expect(section).toHaveTextContent('demo.GreeterConfig');
+    expect(section).toHaveTextContent('buf.build/demo/greeter');
   });
 });
