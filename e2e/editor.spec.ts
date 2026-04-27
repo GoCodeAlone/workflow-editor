@@ -153,7 +153,7 @@ test.describe('YAML line click selects canvas node', () => {
     await authTab.click();
     await expect(authTab).toHaveClass(/yaml-tab-active/);
 
-    const nodeLine = page.locator('.yaml-line code').filter({ hasText: 'auth-server' }).first();
+    const nodeLine = page.locator('.yaml-line').filter({ hasText: 'auth-server' }).first();
     await expect(nodeLine).toBeVisible();
     await nodeLine.click();
     await expect(page.locator('.yaml-line-highlighted').first()).toBeVisible();
