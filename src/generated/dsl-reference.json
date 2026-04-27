@@ -351,7 +351,7 @@
     },
     {
       "id": "security",
-      "title": "Security",
+      "title": "Engine Config Migrations",
       "description": "The optional `security:` section declares security policies for the application, including TLS requirements, network isolation, service identity, container runtime hardening, and automated scanning configuration.",
       "requiredFields": null,
       "optionalFields": null,
@@ -362,6 +362,15 @@
         "`networking.ingress` entries without a `tls` block are flagged as `HIGH` by `wfctl security audit`",
         "`wfctl validate` checks `security.tls.provider` for valid values"
       ]
+    },
+    {
+      "id": "wfctl-infra-align",
+      "title": "Security Check Findings",
+      "description": "Cross-validates the IaC config (and an optional plan JSON) across 8 rule families. Writes a markdown findings table to stdout and to `$GITHUB_STEP_SUMMARY` when running in CI.",
+      "requiredFields": null,
+      "optionalFields": null,
+      "example": "\n\nExample output when a finding is detected:\n",
+      "relationships": null
     }
   ]
 }
