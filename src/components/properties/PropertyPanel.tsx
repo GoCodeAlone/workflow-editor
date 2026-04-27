@@ -63,6 +63,7 @@ export default function PropertyPanel() {
   const setSelectedNode = useWorkflowStore((s) => s.setSelectedNode);
 
   const moduleTypeMap = useModuleSchemaStore((s) => s.moduleTypeMap);
+  const stepTypeMap = useModuleSchemaStore((s) => s.stepTypeMap);
   const getContractByOwner = useModuleSchemaStore((s) => s.getContractByOwner);
   const getFieldEditor = useFieldEditorRegistry((s) => s.getEditor);
   const fetchSchemas = useModuleSchemaStore((s) => s.fetchSchemas);
@@ -75,7 +76,11 @@ export default function PropertyPanel() {
   const node = nodes.find((n) => n.id === selectedNodeId);
 
   const info = node ? moduleTypeMap[node.data.moduleType] : undefined;
-  const contract = node ? getContractByOwner('module', node.data.moduleType) : undefined;
+  const stepInfo = node?.data.moduleType.startsWith('step.') ? stepTypeMap[node.data.moduleType] : undefined;
+  const contract = node
+    ? (stepInfo ? getContractByOwner('step', node.data.moduleType) : undefined)
+      ?? getContractByOwner('module', node.data.moduleType)
+    : undefined;
   const fields: ConfigFieldDef[] = useMemo(() => info?.configFields ?? [], [info]);
 
   // Compute preceding steps for pipeline step nodes (for FieldPicker)
@@ -261,7 +266,7 @@ export default function PropertyPanel() {
               Contract
             </span>
             <ContractMetadataRow label="Mode" value={contract.mode} />
-            <ContractMetadataRow label="Plugin" value={contract.plugin ?? info?.pluginSource} />
+            <ContractMetadataRow label="Plugin" value={contract.plugin ?? stepInfo?.plugin ?? info?.pluginSource} />
             <ContractMetadataRow label="Source" value={contract.source} />
             <ContractMetadataRow label="Request" value={contract.requestMessage} />
             <ContractMetadataRow label="Response" value={contract.responseMessage} />

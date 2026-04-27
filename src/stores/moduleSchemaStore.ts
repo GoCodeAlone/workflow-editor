@@ -32,6 +32,7 @@ interface ServerModuleSchema {
   description?: string;
   inputs?: ServerIODef[];
   outputs?: ServerIODef[];
+  ioSignature?: IOSignature;
   configFields: ServerConfigField[];
   defaultConfig?: Record<string, unknown>;
   maxIncoming?: number | null;
@@ -197,7 +198,7 @@ function mergeSchemas(
     seen.add(staticType.type);
     const server = serverSchemas[staticType.type];
     if (server) {
-      const serverIO = convertIOSignature(server.inputs, server.outputs);
+      const serverIO = server.ioSignature ?? convertIOSignature(server.inputs, server.outputs);
       merged.push({
         ...staticType,
         label: server.label || staticType.label,
@@ -222,7 +223,7 @@ function mergeSchemas(
         category: normalizeCategory(server.category),
         configFields: convertFields(server.configFields),
         defaultConfig: server.defaultConfig ?? {},
-        ioSignature: convertIOSignature(server.inputs, server.outputs),
+        ioSignature: server.ioSignature ?? convertIOSignature(server.inputs, server.outputs),
         maxIncoming: server.maxIncoming,
         maxOutgoing: server.maxOutgoing,
       });
@@ -259,6 +260,7 @@ function bundleSchemaToServerSchema(type: string, schema: EngineBundleModuleSche
     description: schema.description,
     inputs: schema.inputs,
     outputs: schema.outputs,
+    ioSignature: schema.ioSignature,
     configFields: schema.configFields ?? [],
     defaultConfig: schema.defaultConfig,
     maxIncoming: schema.maxIncoming,
@@ -341,7 +343,7 @@ const useModuleSchemaStore = create<ModuleSchemaState>((set, get) => ({
       }
       const schemas: Record<string, ServerModuleSchema> = await res.json();
       if (get().bundleLoaded) {
-        set({ serverSchemas: schemas, loaded: true, loading: false });
+        set({ loaded: true, loading: false });
         return;
       }
       const merged = mergeSchemas(initialModuleTypes, schemas);
@@ -387,7 +389,6 @@ const useModuleSchemaStore = create<ModuleSchemaState>((set, get) => ({
   loadSchemas: (schemas) => {
     if (get().bundleLoaded) {
       set({
-        serverSchemas: schemas,
         loaded: true,
         loading: false,
       });

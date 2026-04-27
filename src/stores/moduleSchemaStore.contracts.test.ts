@@ -75,6 +75,34 @@ describe('moduleSchemaStore contract bundle loading', () => {
     expect(state.getYamlSchema('wfctl')).toEqual({ type: 'object' });
   });
 
+  it('preserves bundle module ioSignature when no input/output arrays are present', () => {
+    useModuleSchemaStore.getState().loadEditorBundle({
+      version: 'editor-bundle/v1',
+      moduleSchemas: {
+        'plugin.stream': {
+          type: 'plugin.stream',
+          label: 'Stream',
+          category: 'integration',
+          configFields: [],
+          defaultConfig: {},
+          ioSignature: {
+            inputs: [{ name: 'in', type: 'demo.StreamRequest' }],
+            outputs: [{ name: 'out', type: 'demo.StreamResponse' }],
+          },
+        },
+      },
+      coercionRules: {},
+      contracts: {},
+      messages: {},
+      schemas: { app: {} },
+    });
+
+    expect(useModuleSchemaStore.getState().moduleTypeMap['plugin.stream']?.ioSignature).toEqual({
+      inputs: [{ name: 'in', type: 'demo.StreamRequest' }],
+      outputs: [{ name: 'out', type: 'demo.StreamResponse' }],
+    });
+  });
+
   it('preserves built-in contract overlays when plugin contracts own a different key', () => {
     useModuleSchemaStore.getState().loadEditorBundle({
       version: 'editor-bundle/v1',
@@ -160,10 +188,18 @@ describe('moduleSchemaStore contract bundle loading', () => {
     expect(contract?.responseMessage).toBe('plugin.http.Response');
   });
 
-  it('does not erase bundle contracts when legacy schema loaders run later', () => {
+  it('does not erase bundle contracts or active bundle schemas when legacy schema loaders run later', () => {
     useModuleSchemaStore.getState().loadEditorBundle({
       version: 'editor-bundle/v1',
-      moduleSchemas: {},
+      moduleSchemas: {
+        'plugin.greeter': {
+          type: 'plugin.greeter',
+          label: 'Bundle Greeter',
+          category: 'integration',
+          configFields: [],
+          defaultConfig: { source: 'bundle' },
+        },
+      },
       coercionRules: {},
       contracts: {
         'plugin:greeter': {
@@ -181,11 +217,21 @@ describe('moduleSchemaStore contract bundle loading', () => {
       schemas: { app: {} },
     });
 
-    useModuleSchemaStore.getState().loadSchemas({});
+    useModuleSchemaStore.getState().loadSchemas({
+      'plugin.greeter': {
+        type: 'plugin.greeter',
+        label: 'Legacy Greeter',
+        category: 'integration',
+        configFields: [],
+        defaultConfig: { source: 'legacy' },
+      },
+    });
     useModuleSchemaStore.getState().loadPluginSchemas([]);
 
     const state = useModuleSchemaStore.getState();
     expect(state.getContractByOwner('module', 'plugin.greeter')?.responseMessage).toBe('demo.GreetResponse');
     expect(state.getMessage('demo.GreetResponse')?.name).toBe('GreetResponse');
+    expect(state.moduleTypeMap['plugin.greeter']?.label).toBe('Bundle Greeter');
+    expect(state.serverSchemas['plugin.greeter']?.label).toBe('Bundle Greeter');
   });
 });
