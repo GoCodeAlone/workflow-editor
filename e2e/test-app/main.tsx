@@ -62,6 +62,13 @@ const MULTIFILE_SOURCE_MAP: Record<string, string> = {
   'billing-service': 'billing.yaml',
 };
 
+const DEFAULT_YAML = `modules:
+  - name: my-server
+    type: http.server
+    config:
+      address: :8080
+`;
+
 function getScenario(): string {
   return new URLSearchParams(window.location.search).get('scenario') ?? 'default';
 }
@@ -111,7 +118,10 @@ function App() {
   return (
     <div style={{ width: '100vw', height: '100vh' }}>
       <WorkflowEditor
-        initialYaml={`modules:\n  - name: my-server\n    type: http.server\n    config:\n      address: :8080\n`}
+        initialYaml={DEFAULT_YAML}
+        onSave={async (yaml) => {
+          document.body.dataset.savedYaml = yaml;
+        }}
       />
     </div>
   );
