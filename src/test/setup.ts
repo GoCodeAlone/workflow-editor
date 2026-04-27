@@ -1,5 +1,5 @@
 import '@testing-library/jest-dom';
-import { vi } from 'vitest';
+import { beforeEach, vi } from 'vitest';
 
 function createLocalStorageMock(): Storage {
   let items: Record<string, string> = {};
@@ -39,6 +39,10 @@ if (globalThis.window) {
     configurable: true,
   });
 }
+
+beforeEach(() => {
+  localStorageMock.clear();
+});
 
 const openMock = vi.fn();
 globalThis.open = openMock;
