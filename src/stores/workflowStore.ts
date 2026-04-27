@@ -472,10 +472,10 @@ const useWorkflowStore = create<WorkflowStore>()(
       ? { modules: [], workflows: {}, triggers: {}, ...importedPassthrough }
       : undefined;
     const config = nodesToConfig(nodes, edges, moduleTypeMap, originalConfig);
-    if (Object.keys(config.workflows).length === 0 && Object.keys(importedWorkflows).length > 0) {
+    if (Object.keys(config.workflows ?? {}).length === 0 && Object.keys(importedWorkflows).length > 0) {
       config.workflows = importedWorkflows;
     }
-    if (Object.keys(config.triggers).length === 0 && Object.keys(importedTriggers).length > 0) {
+    if (Object.keys(config.triggers ?? {}).length === 0 && Object.keys(importedTriggers).length > 0) {
       config.triggers = importedTriggers;
     }
     if (Object.keys(importedPipelines).length > 0) {

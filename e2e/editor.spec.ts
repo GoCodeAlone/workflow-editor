@@ -1,33 +1,48 @@
 import { test, expect } from '@playwright/test';
-
 // E2E tests for the workflow editor.
 // Run with: npx playwright test
 // The playwright.config.ts webServer starts the test harness on http://localhost:5174
 
 test.describe('Workflow Editor E2E', () => {
-  test('editor loads and renders canvas', async ({ page }) => {
+  test.beforeEach(async ({ page }) => {
     await page.goto('/');
     await page.waitForSelector('.react-flow__viewport', { timeout: 10_000 });
-    expect(page.url()).toContain('localhost');
+    await expect(page.locator('.react-flow__node').filter({ hasText: 'my-server' })).toBeVisible();
+  });
+
+  test('editor loads and renders canvas', async ({ page }) => {
+    await expect(page.locator('.react-flow__viewport')).toBeVisible();
+    await expect(page.getByText('Modules')).toBeVisible();
+    await expect(page.getByText('Properties')).toBeVisible();
   });
 
   test('loads YAML and renders nodes', async ({ page }) => {
-    await page.goto('/');
-    await page.waitForSelector('.react-flow__viewport', { timeout: 10_000 });
-    // TODO: Load a sample workflow config via UI or API
-    expect(true).toBe(true); // placeholder
+    const serverNode = page.locator('.react-flow__node').filter({ hasText: 'my-server' });
+    await expect(serverNode).toContainText('http.server');
+    await expect(serverNode).toContainText(':8080');
   });
 
   test('add node from palette updates canvas', async ({ page }) => {
-    await page.goto('/');
-    // TODO: Open node palette, double-click an item to add a node
-    expect(true).toBe(true); // placeholder
+    const nodes = page.locator('.react-flow__node');
+    const initialCount = await nodes.count();
+
+    await page.getByPlaceholder('Filter modules...').fill('http.router');
+    await page.getByText('▶HTTP1').click();
+    await page.locator('[title="Drag to canvas or double-click to add"]').filter({ hasText: 'HTTP Router' }).dblclick();
+
+    await expect.poll(async () => nodes.count()).toBeGreaterThan(initialCount);
+    await expect(nodes.filter({ hasText: 'HTTP Router' })).toBeVisible();
   });
 
   test('editing node config updates YAML', async ({ page }) => {
-    await page.goto('/');
-    // TODO: Select a node, edit a config field in property panel
-    expect(true).toBe(true); // placeholder
+    await page.locator('.react-flow__node').filter({ hasText: 'my-server' }).click();
+    await page.locator('input[value=":8080"]').fill(':9090');
+
+    await page.getByText('Save').click();
+
+    await expect.poll(
+      async () => page.evaluate(() => document.body.dataset.savedYaml ?? ''),
+    ).toContain(':9090');
   });
 });
 
