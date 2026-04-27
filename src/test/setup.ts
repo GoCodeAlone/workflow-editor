@@ -1,4 +1,50 @@
 import '@testing-library/jest-dom';
+import { vi } from 'vitest';
+
+function createLocalStorageMock(): Storage {
+  let items: Record<string, string> = {};
+
+  return {
+    get length() {
+      return Object.keys(items).length;
+    },
+    clear: () => {
+      items = {};
+    },
+    getItem: (key: string) => {
+      return Object.prototype.hasOwnProperty.call(items, key) ? items[key] : null;
+    },
+    key: (index: number) => {
+      return Object.keys(items)[index] ?? null;
+    },
+    removeItem: (key: string) => {
+      delete items[key];
+    },
+    setItem: (key: string, value: string) => {
+      items[key] = String(value);
+    },
+  };
+}
+
+const localStorageMock = createLocalStorageMock();
+
+Object.defineProperty(globalThis, 'localStorage', {
+  value: localStorageMock,
+  configurable: true,
+});
+
+if (globalThis.window) {
+  Object.defineProperty(globalThis.window, 'localStorage', {
+    value: localStorageMock,
+    configurable: true,
+  });
+}
+
+const openMock = vi.fn();
+globalThis.open = openMock;
+if (globalThis.window) {
+  globalThis.window.open = openMock;
+}
 
 // Mock fetch for jsdom — relative URLs like /api/... throw ERR_INVALID_URL without a base.
 // Return 404 so components fall back to static defaults cleanly.
