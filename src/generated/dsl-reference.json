@@ -287,7 +287,7 @@
       "description": "The optional `secretStores:` section declares named secret storage backends. This enables routing different secrets to different backends (e.g., application secrets in environment variables, payment keys in AWS Secrets Manager).",
       "requiredFields": null,
       "optionalFields": null,
-      "example": "secretStores:\n  primary:\n    provider: env\n  payment-vault:\n    provider: aws-secrets-manager\n    config:\n      region: us-east-1",
+      "example": "secretStores:\n  primary:\n    provider: env\n  payment-vault:\n    provider: aws-secrets-manager\n    config:\n      region: us-east-1\n  github-env:\n    provider: github\n    config:\n      repo: GoCodeAlone/example-app\n      token_env: GH_MANAGEMENT_TOKEN\n      environment: ${WORKFLOW_ENV}",
       "relationships": [
         "`secrets.defaultStore` references a named store from `secretStores`",
         "`secrets.entries[*].store` routes an individual secret to a specific store",
@@ -300,7 +300,7 @@
       "description": "The optional `secrets:` section declares the application's secret management configuration: which stores to use, rotation policy, and what secrets the application needs.",
       "requiredFields": null,
       "optionalFields": null,
-      "example": "secretStores:\n  primary:\n    provider: env\n  payment-vault:\n    provider: aws-secrets-manager\n    config:\n      region: us-east-1\n\nsecrets:\n  defaultStore: primary\n  entries:\n    - name: DATABASE_URL\n      description: PostgreSQL connection string\n    - name: JWT_SECRET\n      description: JWT signing key\n      rotation:\n        enabled: true\n        interval: 7d\n        strategy: graceful\n    - name: STRIPE_SECRET_KEY\n      description: Stripe payment API key\n      store: payment-vault\nsecrets:\n  provider: env\n  rotation:\n    enabled: true\n    interval: 30d\n    strategy: dual-credential\n  entries:\n    - name: DATABASE_URL\n      description: PostgreSQL connection string\n    - name: JWT_SECRET\n      description: JWT signing key",
+      "example": "secretStores:\n  primary:\n    provider: env\n  payment-vault:\n    provider: aws-secrets-manager\n    config:\n      region: us-east-1\n\nsecrets:\n  defaultStore: primary\n  entries:\n    - name: DATABASE_URL\n      description: PostgreSQL connection string\n    - name: JWT_SECRET\n      description: JWT signing key\n      rotation:\n        enabled: true\n        interval: 7d\n        strategy: graceful\n    - name: STRIPE_SECRET_KEY\n      description: Stripe payment API key\n      store: payment-vault\n  generate:\n    - key: DATABASE_URL\n      type: infra_output\n      source: main-db.uri\n      store: github-env\nsecrets:\n  provider: env\n  rotation:\n    enabled: true\n    interval: 30d\n    strategy: dual-credential\n  entries:\n    - name: DATABASE_URL\n      description: PostgreSQL connection string\n    - name: JWT_SECRET\n      description: JWT signing key",
       "relationships": [
         "`secretStores` must be declared before referencing store names in `secrets.defaultStore` or `secrets.entries[*].store`",
         "`environments[*].secretsProvider` overrides the store for all secrets in that environment",
