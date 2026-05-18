@@ -9987,14 +9987,19 @@
       ],
       "outputs": [
         {
-          "key": "matched_route",
+          "key": "matched_value",
           "type": "string",
-          "description": "The route value that was matched"
+          "description": "The field value that was matched"
         },
         {
           "key": "next_step",
           "type": "string",
           "description": "Name of the next step to execute"
+        },
+        {
+          "key": "used_default",
+          "type": "boolean",
+          "description": "Whether the default route was used"
         }
       ]
     },
@@ -10162,14 +10167,19 @@
       ],
       "outputs": [
         {
-          "key": "rows_affected",
+          "key": "affected_rows",
           "type": "number",
           "description": "Number of rows affected by the statement"
         },
         {
-          "key": "last_insert_id",
-          "type": "number",
+          "key": "last_id",
+          "type": "string",
           "description": "Last inserted row ID (if supported by driver)"
+        },
+        {
+          "key": "ignored_error",
+          "type": "string",
+          "description": "Error text when ignore_error is enabled and execution fails"
         }
       ]
     },
@@ -10211,6 +10221,11 @@
         }
       ],
       "outputs": [
+        {
+          "key": "found",
+          "type": "boolean",
+          "description": "Whether a row was found (single mode)"
+        },
         {
           "key": "row",
           "type": "map",
@@ -10281,9 +10296,9 @@
       ],
       "outputs": [
         {
-          "key": "row",
-          "type": "map",
-          "description": "First result row (single mode, not nested under 'row')"
+          "key": "(query-column)",
+          "type": "any",
+          "description": "Selected columns are emitted as top-level fields in single mode"
         },
         {
           "key": "rows",
