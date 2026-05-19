@@ -369,7 +369,7 @@
       "description": "Cross-validates the IaC config (and an optional plan JSON) across 8 rule families. Writes a markdown findings table to stdout and to `$GITHUB_STEP_SUMMARY` when running in CI.",
       "requiredFields": null,
       "optionalFields": null,
-      "example": "\n\nExample output when a finding is detected:\n",
+      "example": "\n\nUse `wfctl infra apply --skip-bootstrap` only for scoped/operator applies where\nthe required secrets and state backend already exist and bootstrap would mutate\nunrelated secret material.\n\nExample output when a finding is detected:\n",
       "relationships": null
     }
   ]
