@@ -3,6 +3,9 @@ dist/
 *.tsbuildinfo
 data/
 test-results/
+_worktrees/
+.worktrees/
+.claude/worktrees/
 *.tgz
 *.tar.gz
 *.zip
