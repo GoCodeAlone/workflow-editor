@@ -59,6 +59,7 @@ export default function PropertyPanel() {
   const selectedNodeId = useWorkflowStore((s) => s.selectedNodeId);
   const updateNodeConfig = useWorkflowStore((s) => s.updateNodeConfig);
   const updateNodeName = useWorkflowStore((s) => s.updateNodeName);
+  const updateNodeSatisfies = useWorkflowStore((s) => s.updateNodeSatisfies);
   const removeNode = useWorkflowStore((s) => s.removeNode);
   const setSelectedNode = useWorkflowStore((s) => s.setSelectedNode);
 
@@ -476,6 +477,18 @@ export default function PropertyPanel() {
             })}
           </div>
         )}
+
+        {/* Module requirement keys */}
+        <label style={{ display: 'block', marginBottom: 16 }}>
+          <span style={{ color: '#a6adc8', fontSize: 11, display: 'block', marginBottom: 4 }}>Satisfies</span>
+          <textarea
+            aria-label="Satisfies"
+            value={((node.data.satisfies as string[] | undefined) ?? []).join('\n')}
+            onChange={(e) => updateNodeSatisfies(node.id, e.target.value.split('\n'))}
+            rows={Math.max(2, ((node.data.satisfies as string[] | undefined)?.length ?? 1))}
+            style={{ ...inputStyle, resize: 'vertical', fontFamily: 'monospace' }}
+          />
+        </label>
 
         {/* I/O Signature */}
         {info?.ioSignature && (info.ioSignature.inputs.length > 0 || info.ioSignature.outputs.length > 0) && (

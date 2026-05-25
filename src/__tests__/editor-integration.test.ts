@@ -86,6 +86,29 @@ triggers: {}
     expect(names).toContain('health-handler');
   });
 
+  it('round-trips module satisfies keys for derived IaC modules', () => {
+    const { config, yaml } = roundTrip(`
+modules:
+  - name: otel-collector
+    type: infra.otel_collector
+    satisfies:
+      - observability.telemetry.default
+      - observability.metrics.default
+    config:
+      endpoint: "\${OTEL_EXPORTER_OTLP_ENDPOINT}"
+workflows: {}
+triggers: {}
+`);
+
+    const collector = config.modules.find((m) => m.name === 'otel-collector');
+    expect(collector?.satisfies).toEqual([
+      'observability.telemetry.default',
+      'observability.metrics.default',
+    ]);
+    expect(yaml).toContain('satisfies:');
+    expect(yaml).toContain('observability.telemetry.default');
+  });
+
   it('adding a node and exporting produces 4 modules', () => {
     const { nodes, edges, parsed } = roundTrip(httpYaml);
     // Simulate adding a middleware node

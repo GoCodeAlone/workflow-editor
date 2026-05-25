@@ -294,6 +294,10 @@ export function nodesToConfig(
       mod.config = { ...node.data.config };
     }
 
+    if (node.data.satisfies && node.data.satisfies.length > 0) {
+      mod.satisfies = [...node.data.satisfies];
+    }
+
     const deps = dependencyMap[node.id];
     if (deps && deps.length > 0) {
       mod.dependsOn = deps;
@@ -575,6 +579,7 @@ export function configToNodes(
         moduleType: mod.type,
         label: mod.name,
         config: mod.config ?? (info ? { ...info.defaultConfig } : {}),
+        ...(mod.satisfies && mod.satisfies.length > 0 ? { satisfies: [...mod.satisfies] } : {}),
         ...(sourceFile ? { sourceFile } : {}),
       },
     });

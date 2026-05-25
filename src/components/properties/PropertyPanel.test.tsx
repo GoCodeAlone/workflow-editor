@@ -133,6 +133,55 @@ describe('PropertyPanel', () => {
     expect(updatedNode?.data.label).toBe('My Custom Server');
   });
 
+  it('edits module satisfies keys outside config', () => {
+    act(() => {
+      useModuleSchemaStore.getState().loadEditorBundle({
+        version: 'editor-bundle/v1',
+        moduleSchemas: {
+          'infra.otel_collector': {
+            type: 'infra.otel_collector',
+            label: 'OTel Collector',
+            category: 'observability',
+            configFields: [],
+            defaultConfig: {},
+          },
+        },
+        coercionRules: {},
+        contracts: {},
+        messages: {},
+        schemas: { app: {} },
+      });
+      useWorkflowStore.setState({
+        nodes: [{
+          id: 'otel-collector',
+          type: 'observabilityNode',
+          position: { x: 0, y: 0 },
+          data: {
+            moduleType: 'infra.otel_collector',
+            label: 'otel-collector',
+            config: {},
+            satisfies: ['observability.telemetry.default'],
+          },
+        }],
+        selectedNodeId: 'otel-collector',
+      });
+    });
+
+    render(<PropertyPanel />);
+
+    const satisfiesInput = screen.getByLabelText('Satisfies');
+    fireEvent.change(satisfiesInput, {
+      target: { value: 'observability.telemetry.default\nobservability.metrics.default' },
+    });
+
+    const updatedNode = useWorkflowStore.getState().nodes.find((n) => n.id === 'otel-collector');
+    expect(updatedNode?.data.satisfies).toEqual([
+      'observability.telemetry.default',
+      'observability.metrics.default',
+    ]);
+    expect(updatedNode?.data.config.satisfies).toBeUndefined();
+  });
+
   it('close button clears selection', () => {
     act(() => {
       useWorkflowStore.getState().addNode('http.server', { x: 0, y: 0 });

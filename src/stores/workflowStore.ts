@@ -31,6 +31,7 @@ export interface WorkflowNodeData extends Record<string, unknown> {
   moduleType: string;
   label: string;
   config: Record<string, unknown>;
+  satisfies?: string[];
   synthesized?: boolean;
   /** Source file path this node originated from (multi-file configs) */
   sourceFile?: string;
@@ -93,6 +94,7 @@ interface WorkflowStore {
   removeNode: (id: string) => void;
   updateNodeConfig: (id: string, config: Record<string, unknown>) => void;
   updateNodeName: (id: string, name: string) => void;
+  updateNodeSatisfies: (id: string, satisfies: string[]) => void;
   updateHandlerRoutes: (nodeId: string, routes: Array<{
     method: string;
     path: string;
@@ -449,6 +451,16 @@ const useWorkflowStore = create<WorkflowStore>()(
     set({
       nodes: get().nodes.map((n) =>
         n.id === id ? { ...n, data: { ...n.data, label: name } } : n
+      ),
+    });
+  },
+
+  updateNodeSatisfies: (id, satisfies) => {
+    get().pushHistory();
+    const next = satisfies.map((key) => key.trim()).filter(Boolean);
+    set({
+      nodes: get().nodes.map((n) =>
+        n.id === id ? { ...n, data: { ...n.data, satisfies: next } } : n
       ),
     });
   },

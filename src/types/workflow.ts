@@ -6,6 +6,7 @@ export interface ModuleConfig {
   type: string;
   config?: Record<string, unknown>;
   dependsOn?: string[];
+  satisfies?: string[];
   branches?: Record<string, string>;
   ui_position?: { x: number; y: number };
 }
