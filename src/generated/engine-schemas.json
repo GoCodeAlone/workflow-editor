@@ -6013,6 +6013,48 @@
       "description": "Plans infrastructure changes without applying",
       "configFields": []
     },
+    "step.iac_provider_apply": {
+      "type": "step.iac_provider_apply",
+      "label": "IaC Provider Apply",
+      "category": "pipeline",
+      "description": "Two-phase hash-guard apply via IaCProvider service",
+      "configFields": []
+    },
+    "step.iac_provider_catalog": {
+      "type": "step.iac_provider_catalog",
+      "label": "IaC Provider Catalog",
+      "category": "pipeline",
+      "description": "Fetches regions and resource types from IaCProvider service",
+      "configFields": []
+    },
+    "step.iac_provider_destroy": {
+      "type": "step.iac_provider_destroy",
+      "label": "IaC Provider Destroy",
+      "category": "pipeline",
+      "description": "Destroys resources via IaCProvider service",
+      "configFields": []
+    },
+    "step.iac_provider_drift": {
+      "type": "step.iac_provider_drift",
+      "label": "IaC Provider Drift",
+      "category": "pipeline",
+      "description": "Detects drift via IaCProvider service",
+      "configFields": []
+    },
+    "step.iac_provider_list": {
+      "type": "step.iac_provider_list",
+      "label": "IaC Provider List",
+      "category": "pipeline",
+      "description": "Lists resource statuses from IaCProvider service",
+      "configFields": []
+    },
+    "step.iac_provider_plan": {
+      "type": "step.iac_provider_plan",
+      "label": "IaC Provider Plan",
+      "category": "pipeline",
+      "description": "Plans infrastructure changes via IaCProvider service",
+      "configFields": []
+    },
     "step.iac_status": {
       "type": "step.iac_status",
       "label": "IaC Status",
@@ -12228,6 +12270,266 @@
           "key": "changes",
           "type": "number",
           "description": "Number of changes planned"
+        }
+      ]
+    },
+    "step.iac_provider_apply": {
+      "type": "step.iac_provider_apply",
+      "plugin": "platform",
+      "description": "Applies an IaC plan via two-phase hash guard: recomputes DesiredStateHash and rejects with 'plan hash mismatch' when hashes diverge.",
+      "configFields": [
+        {
+          "key": "provider",
+          "label": "",
+          "type": "string",
+          "description": "Name of the registered IaCProvider service",
+          "required": true
+        },
+        {
+          "key": "specs",
+          "label": "",
+          "type": "array",
+          "description": "Desired resource specs passed to plan and hash recomputation"
+        },
+        {
+          "key": "desired_hash",
+          "label": "",
+          "type": "string",
+          "description": "Client-submitted hash from the plan step; must match recomputed hash",
+          "required": true
+        }
+      ],
+      "outputs": [
+        {
+          "key": "apply_result",
+          "type": "any",
+          "description": "ApplyResult from wfctlhelpers.ApplyPlanWithHooks"
+        },
+        {
+          "key": "desired_hash",
+          "type": "string",
+          "description": "Recomputed desired-state hash"
+        },
+        {
+          "key": "provider",
+          "type": "string",
+          "description": "Provider service name"
+        },
+        {
+          "key": "action_count",
+          "type": "number",
+          "description": "Number of plan actions dispatched"
+        }
+      ]
+    },
+    "step.iac_provider_catalog": {
+      "type": "step.iac_provider_catalog",
+      "plugin": "platform",
+      "description": "Fetches provider regions and supported resource types; falls back to a static region list when the provider does not advertise IaCProviderRegionLister.",
+      "configFields": [
+        {
+          "key": "provider",
+          "label": "",
+          "type": "string",
+          "description": "Name of the registered IaCProvider service",
+          "required": true
+        },
+        {
+          "key": "env",
+          "label": "",
+          "type": "string",
+          "description": "Environment name forwarded to ListRegions for env-scoped region lists"
+        }
+      ],
+      "outputs": [
+        {
+          "key": "provider",
+          "type": "string",
+          "description": "Provider service name"
+        },
+        {
+          "key": "regions",
+          "type": "[]any",
+          "description": "Available region identifiers"
+        },
+        {
+          "key": "types",
+          "type": "[]any",
+          "description": "Supported resource type capability declarations"
+        },
+        {
+          "key": "source",
+          "type": "string",
+          "description": "Region source: live | static | static_fallback_error"
+        }
+      ]
+    },
+    "step.iac_provider_destroy": {
+      "type": "step.iac_provider_destroy",
+      "plugin": "platform",
+      "description": "Destroys resources via an IaCProvider service.",
+      "configFields": [
+        {
+          "key": "provider",
+          "label": "",
+          "type": "string",
+          "description": "Name of the registered IaCProvider service",
+          "required": true
+        },
+        {
+          "key": "refs",
+          "label": "",
+          "type": "array",
+          "description": "Resource refs to destroy (list of {name, type, provider_id})"
+        }
+      ],
+      "outputs": [
+        {
+          "key": "destroyed",
+          "type": "[]any",
+          "description": "Names of destroyed resources"
+        },
+        {
+          "key": "destroy_errors",
+          "type": "[]any",
+          "description": "Per-resource errors if any"
+        },
+        {
+          "key": "provider",
+          "type": "string",
+          "description": "Provider service name"
+        }
+      ]
+    },
+    "step.iac_provider_drift": {
+      "type": "step.iac_provider_drift",
+      "plugin": "platform",
+      "description": "Detects drift via an IaCProvider service; uses config-aware DetectDriftWithSpecs when the provider advertises DriftDetectorProvider, else falls back to existence-only DetectDrift.",
+      "configFields": [
+        {
+          "key": "provider",
+          "label": "",
+          "type": "string",
+          "description": "Name of the registered IaCProvider service",
+          "required": true
+        },
+        {
+          "key": "refs",
+          "label": "",
+          "type": "array",
+          "description": "Resource refs to check (list of {name, type, provider_id})"
+        }
+      ],
+      "outputs": [
+        {
+          "key": "provider",
+          "type": "string",
+          "description": "Provider service name"
+        },
+        {
+          "key": "supported",
+          "type": "boolean",
+          "description": "Whether drift detection is supported"
+        },
+        {
+          "key": "reason",
+          "type": "string",
+          "description": "Why drift detection is unsupported (set only when supported=false)"
+        },
+        {
+          "key": "any_drifted",
+          "type": "boolean",
+          "description": "Whether any resource has drifted"
+        },
+        {
+          "key": "drifts",
+          "type": "[]any",
+          "description": "Per-resource drift results"
+        },
+        {
+          "key": "count",
+          "type": "number",
+          "description": "Number of resources checked"
+        }
+      ]
+    },
+    "step.iac_provider_list": {
+      "type": "step.iac_provider_list",
+      "plugin": "platform",
+      "description": "Lists current resource statuses from an IaCProvider service.",
+      "configFields": [
+        {
+          "key": "provider",
+          "label": "",
+          "type": "string",
+          "description": "Name of the registered IaCProvider service",
+          "required": true
+        },
+        {
+          "key": "refs",
+          "label": "",
+          "type": "array",
+          "description": "Optional list of resource refs to query; empty queries all"
+        }
+      ],
+      "outputs": [
+        {
+          "key": "provider",
+          "type": "string",
+          "description": "Provider service name"
+        },
+        {
+          "key": "resources",
+          "type": "[]any",
+          "description": "Resource status summaries"
+        },
+        {
+          "key": "count",
+          "type": "number",
+          "description": "Number of resources returned"
+        }
+      ]
+    },
+    "step.iac_provider_plan": {
+      "type": "step.iac_provider_plan",
+      "plugin": "platform",
+      "description": "Plans infrastructure changes against an IaCProvider service; computes a stable desired-state hash using a no-op env resolver.",
+      "configFields": [
+        {
+          "key": "provider",
+          "label": "",
+          "type": "string",
+          "description": "Name of the registered IaCProvider service",
+          "required": true
+        },
+        {
+          "key": "specs",
+          "label": "",
+          "type": "array",
+          "description": "Desired resource specs (list of {name, type, config, size})"
+        },
+        {
+          "key": "env",
+          "label": "",
+          "type": "string",
+          "description": "Environment name (reserved; unused by hash computation)"
+        }
+      ],
+      "outputs": [
+        {
+          "key": "plan",
+          "type": "any",
+          "description": "IaCPlan with DesiredHash set"
+        },
+        {
+          "key": "desired_hash",
+          "type": "string",
+          "description": "SHA-256 hex of canonical desired state"
+        },
+        {
+          "key": "provider",
+          "type": "string",
+          "description": "Provider service name"
         }
       ]
     },
