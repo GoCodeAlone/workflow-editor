@@ -3099,6 +3099,33 @@
       ],
       "configFields": []
     },
+    "sandbox.remote_runners": {
+      "type": "sandbox.remote_runners",
+      "label": "Sandbox Remote Runners",
+      "category": "infrastructure",
+      "description": "Registers named remote sandbox agents for use by step.sandbox_exec via exec_env",
+      "outputs": [
+        {
+          "name": "registry",
+          "type": "RemoteRunnerRegistry",
+          "description": "Named remote runner lookup registry consumed by step.sandbox_exec"
+        }
+      ],
+      "configFields": [
+        {
+          "key": "remote_runners",
+          "label": "Remote Runners",
+          "type": "array",
+          "description": "List of remote runner specs: name, address, token, tls.{cert,key,ca}, allow_insecure"
+        },
+        {
+          "key": "secrets_provider",
+          "label": "Secrets Provider",
+          "type": "string",
+          "description": "Name of a secrets module used to resolve secret:// token references"
+        }
+      ]
+    },
     "scheduler.modular": {
       "type": "scheduler.modular",
       "label": "Scheduler",
@@ -5992,6 +6019,13 @@
       "description": "Applies infrastructure changes",
       "configFields": []
     },
+    "step.iac_commit_back": {
+      "type": "step.iac_commit_back",
+      "label": "IaC Commit Back",
+      "category": "pipeline",
+      "description": "Commits serialised authored specs back to git after a full-success apply",
+      "configFields": []
+    },
     "step.iac_destroy": {
       "type": "step.iac_destroy",
       "label": "IaC Destroy",
@@ -6053,6 +6087,20 @@
       "label": "IaC Provider Plan",
       "category": "pipeline",
       "description": "Plans infrastructure changes via IaCProvider service",
+      "configFields": []
+    },
+    "step.iac_provider_reconcile": {
+      "type": "step.iac_provider_reconcile",
+      "label": "IaC Provider Reconcile",
+      "category": "pipeline",
+      "description": "Drift → import → approximate cloud-snapshot YAML → draft PR (review-required)",
+      "configFields": []
+    },
+    "step.iac_secret_reachability": {
+      "type": "step.iac_secret_reachability",
+      "label": "IaC Secret Reachability",
+      "category": "pipeline",
+      "description": "Pre-flight gate: reports whether a plan's secret:// refs are reachable from the chosen exec-env",
       "configFields": []
     },
     "step.iac_status": {
@@ -7037,7 +7085,7 @@
       "type": "step.sandbox_exec",
       "label": "Sandbox Exec",
       "category": "pipeline",
-      "description": "Runs a command in a hardened Docker sandbox container with resource limits",
+      "description": "Runs a command in a hardened sandbox with resource limits — locally in a Docker container (default) or, via exec_env, on a remote runner or an ephemeral Argo Workflow",
       "configFields": [
         {
           "key": "image",
@@ -7079,6 +7127,23 @@
           "label": "Environment",
           "type": "map",
           "description": "Environment variables"
+        },
+        {
+          "key": "exec_env",
+          "label": "Execution Environment",
+          "type": "select",
+          "description": "Execution backend: local-docker (default) or ephemeral (Argo Workflow on k8s). Named remote runners (sandbox.remote_runners) are not listed here because they are registered dynamically.",
+          "defaultValue": "local-docker",
+          "options": [
+            "local-docker",
+            "ephemeral"
+          ]
+        },
+        {
+          "key": "argo_module",
+          "label": "Argo Module",
+          "type": "string",
+          "description": "Name of the argo.workflows service to use when exec_env is ephemeral. If unset, the sole registered argo.workflows module is used (error if 0 or \u003e1 exist)."
         }
       ]
     },
@@ -12158,6 +12223,79 @@
         }
       ]
     },
+    "step.iac_commit_back": {
+      "type": "step.iac_commit_back",
+      "plugin": "platform",
+      "description": "Serialises the authored resource specs to YAML via iac/specgen.SpecToYAML and commits the result back to a git branch after a full-success apply. On partial apply returns {committed:false, reason:\"partial-apply\"} without committing. On apply-succeeded-but-git-failed returns {state_diverged:true} so the caller can surface HTTP 207. secret:// refs survive verbatim in the serialised YAML.",
+      "configFields": [
+        {
+          "key": "repo_dir",
+          "label": "",
+          "type": "string",
+          "description": "Git working directory the commands run in",
+          "required": true
+        },
+        {
+          "key": "branch",
+          "label": "",
+          "type": "string",
+          "description": "Branch name to create and push",
+          "required": true
+        },
+        {
+          "key": "message",
+          "label": "",
+          "type": "string",
+          "description": "Git commit message (default: chore: commit back applied infrastructure specs)"
+        },
+        {
+          "key": "target",
+          "label": "",
+          "type": "string",
+          "description": "Publish target: 'branch-push' (default; git push) or 'gh-pr' (gh pr create --fill)"
+        },
+        {
+          "key": "apply_result_from",
+          "label": "",
+          "type": "string",
+          "description": "Context path to the upstream apply step result (default: steps.apply.apply_result)"
+        },
+        {
+          "key": "specs",
+          "label": "",
+          "type": "array",
+          "description": "Static authored specs to serialise (mutually exclusive with specs_from)"
+        },
+        {
+          "key": "specs_from",
+          "label": "",
+          "type": "string",
+          "description": "Context path to the specs (mutually exclusive with specs)"
+        }
+      ],
+      "outputs": [
+        {
+          "key": "committed",
+          "type": "boolean",
+          "description": "Whether a commit was produced"
+        },
+        {
+          "key": "ref",
+          "type": "string",
+          "description": "Branch or PR reference (set when committed:true)"
+        },
+        {
+          "key": "state_diverged",
+          "type": "boolean",
+          "description": "True when apply succeeded but git failed (HTTP 207 scenario)"
+        },
+        {
+          "key": "reason",
+          "type": "string",
+          "description": "Reason when committed:false or state_diverged:true"
+        }
+      ]
+    },
     "step.iac_destroy": {
       "type": "step.iac_destroy",
       "plugin": "platform",
@@ -12289,14 +12427,25 @@
           "key": "specs",
           "label": "",
           "type": "array",
-          "description": "Desired resource specs passed to plan and hash recomputation"
+          "description": "Desired resource specs passed to plan and hash recomputation; mutually exclusive with specs_from"
+        },
+        {
+          "key": "specs_from",
+          "label": "",
+          "type": "string",
+          "description": "Dotted context path to resolve specs at Execute time (e.g. steps.parse-request.body.specs); mutually exclusive with specs"
         },
         {
           "key": "desired_hash",
           "label": "",
           "type": "string",
-          "description": "Client-submitted hash from the plan step; must match recomputed hash",
-          "required": true
+          "description": "Client-submitted hash from the plan step; must match recomputed hash; mutually exclusive with desired_hash_from"
+        },
+        {
+          "key": "desired_hash_from",
+          "label": "",
+          "type": "string",
+          "description": "Dotted context path to resolve the client-submitted hash at Execute time (e.g. steps.parse-request.body.desired_hash); mutually exclusive with desired_hash"
         }
       ],
       "outputs": [
@@ -12506,7 +12655,13 @@
           "key": "specs",
           "label": "",
           "type": "array",
-          "description": "Desired resource specs (list of {name, type, config, size})"
+          "description": "Desired resource specs (list of {name, type, config, size}); mutually exclusive with specs_from"
+        },
+        {
+          "key": "specs_from",
+          "label": "",
+          "type": "string",
+          "description": "Dotted context path to resolve specs at Execute time (e.g. steps.parse-request.body.specs); mutually exclusive with specs"
         },
         {
           "key": "env",
@@ -12530,6 +12685,115 @@
           "key": "provider",
           "type": "string",
           "description": "Provider service name"
+        }
+      ]
+    },
+    "step.iac_provider_reconcile": {
+      "type": "step.iac_provider_reconcile",
+      "plugin": "platform",
+      "description": "Drift → import → approximate cloud-snapshot YAML → draft PR. APPROXIMATE: the YAML is a cloud snapshot, NOT a faithful reconstruction of authored specs (no SpecToYAML). The draft PR body carries the mandatory disclaimer: 'imported from cloud; approximate; does NOT reconstruct your secret:// refs — review before merge'. On git failure returns {draft:false, state_diverged:true}. Use step.iac_commit_back for authoritative spec commits.",
+      "configFields": [
+        {
+          "key": "provider",
+          "label": "",
+          "type": "string",
+          "description": "Name of the registered IaCProvider service",
+          "required": true
+        },
+        {
+          "key": "branch",
+          "label": "",
+          "type": "string",
+          "description": "Branch name for the draft commit (default: infra/reconcile)"
+        },
+        {
+          "key": "target",
+          "label": "",
+          "type": "string",
+          "description": "Publish target: 'branch-push' (default; git push) or 'gh-pr' (gh pr create --draft)"
+        },
+        {
+          "key": "repo_dir",
+          "label": "",
+          "type": "string",
+          "description": "Git working directory the commands run in",
+          "required": true
+        }
+      ],
+      "outputs": [
+        {
+          "key": "draft",
+          "type": "boolean",
+          "description": "True iff a draft commit/PR was produced (false when no drift detected or git failed)"
+        },
+        {
+          "key": "ref",
+          "type": "string",
+          "description": "Branch or PR reference (set when draft:true)"
+        },
+        {
+          "key": "warning",
+          "type": "string",
+          "description": "The mandatory disclaimer string"
+        },
+        {
+          "key": "count",
+          "type": "number",
+          "description": "Number of drifted resources detected"
+        },
+        {
+          "key": "state_diverged",
+          "type": "boolean",
+          "description": "True when drift was detected but the git commit/push failed"
+        },
+        {
+          "key": "reason",
+          "type": "string",
+          "description": "Reason when state_diverged:true"
+        }
+      ]
+    },
+    "step.iac_secret_reachability": {
+      "type": "step.iac_secret_reachability",
+      "plugin": "platform",
+      "description": "Pre-flight gate: collects the secret:// refs in a plan's specs and reports whether they are reachable from the chosen exec-env (fail-safe; the direct-apply route 409s when any are unreachable). The verdict is provider-level (one AccessChecker probe), reported per ref.",
+      "configFields": [
+        {
+          "key": "provider",
+          "label": "",
+          "type": "string",
+          "description": "Name of the registered secrets.Provider service",
+          "required": true
+        },
+        {
+          "key": "exec_env",
+          "label": "",
+          "type": "string",
+          "description": "Execution environment the apply will run in (empty/local/local-docker = local; anything else = remote)"
+        },
+        {
+          "key": "specs",
+          "label": "",
+          "type": "array",
+          "description": "Static resource specs (mutually exclusive with specs_from)"
+        },
+        {
+          "key": "specs_from",
+          "label": "",
+          "type": "string",
+          "description": "Pipeline-context path to the specs (e.g. steps.parse-request.body.specs); mutually exclusive with specs"
+        }
+      ],
+      "outputs": [
+        {
+          "key": "secrets",
+          "type": "[]any",
+          "description": "Per-ref verdicts: {ref, reachable, reason}"
+        },
+        {
+          "key": "all_reachable",
+          "type": "boolean",
+          "description": "True iff every referenced secret is reachable from the exec-env"
         }
       ]
     },
@@ -14198,7 +14462,7 @@
     "step.sandbox_exec": {
       "type": "step.sandbox_exec",
       "plugin": "pipelinesteps",
-      "description": "Runs a command in a hardened Docker sandbox container with resource limits.",
+      "description": "Runs a command in a hardened sandbox with resource limits — locally in a Docker container (default) or, via exec_env, on a remote runner or an ephemeral Argo Workflow.",
       "configFields": [
         {
           "key": "image",
@@ -14255,6 +14519,23 @@
           "type": "boolean",
           "description": "Stop pipeline if exit_code != 0",
           "defaultValue": true
+        },
+        {
+          "key": "exec_env",
+          "label": "",
+          "type": "select",
+          "description": "Execution environment backend: local-docker (default) or ephemeral (one-off Argo Workflow on k8s). Named remote runners (configured via sandbox.remote_runners) are also valid values but are not listed here because they are registered dynamically.",
+          "defaultValue": "local-docker",
+          "options": [
+            "local-docker",
+            "ephemeral"
+          ]
+        },
+        {
+          "key": "argo_module",
+          "label": "",
+          "type": "string",
+          "description": "Name of the argo.workflows service to use when exec_env is ephemeral. If unset, the sole registered argo.workflows module is used (error if 0 or \u003e1 exist)."
         }
       ],
       "outputs": [
