@@ -12539,13 +12539,19 @@
           "key": "refs",
           "label": "",
           "type": "array",
-          "description": "Resource refs to destroy (list of {name, type, provider_id}); mutually exclusive with resources"
+          "description": "Resource refs to destroy (list of {name, type, provider_id}); mutually exclusive with refs_from and resources"
+        },
+        {
+          "key": "refs_from",
+          "label": "",
+          "type": "string",
+          "description": "Dotted context path to resolve resource refs at Execute time (e.g. steps.parse-request.body.refs); mutually exclusive with refs and resources"
         },
         {
           "key": "resources",
           "label": "",
           "type": "array",
-          "description": "Named app infra resources to destroy; mutually exclusive with refs"
+          "description": "Named app infra resources to destroy; mutually exclusive with refs and refs_from"
         }
       ],
       "outputs": [
@@ -12634,13 +12640,19 @@
           "key": "refs",
           "label": "",
           "type": "array",
-          "description": "Optional list of resource refs to query; mutually exclusive with resources"
+          "description": "Optional list of resource refs to query; mutually exclusive with refs_from and resources"
+        },
+        {
+          "key": "refs_from",
+          "label": "",
+          "type": "string",
+          "description": "Dotted context path to resolve resource refs at Execute time (e.g. steps.parse-request.body.refs); mutually exclusive with refs and resources"
         },
         {
           "key": "resources",
           "label": "",
           "type": "array",
-          "description": "Optional list of named app infra resources to query; mutually exclusive with refs"
+          "description": "Optional list of named app infra resources to query; mutually exclusive with refs and refs_from"
         }
       ],
       "outputs": [
