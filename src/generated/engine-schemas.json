@@ -1838,6 +1838,64 @@
         }
       ]
     },
+    "iac.provider": {
+      "type": "iac.provider",
+      "label": "IaC Provider",
+      "category": "infrastructure",
+      "description": "Aliases an external plugin-served IaC provider into the application service graph",
+      "inputs": [
+        {
+          "name": "provider",
+          "type": "IaCProvider",
+          "description": "External plugin-served provider"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "provider",
+          "type": "IaCProvider",
+          "description": "App-local IaC provider service"
+        }
+      ],
+      "configFields": [
+        {
+          "key": "plugin",
+          "label": "Plugin",
+          "type": "string",
+          "description": "External plugin service name, for example workflow-plugin-aws; one of plugin, service, or provider is required"
+        },
+        {
+          "key": "service",
+          "label": "Service",
+          "type": "string",
+          "description": "Alias for plugin: external IaC provider service name"
+        },
+        {
+          "key": "provider",
+          "label": "Provider",
+          "type": "string",
+          "description": "Provider shorthand: aws, azure, digitalocean, or gcp; one of plugin, service, or provider is required"
+        },
+        {
+          "key": "mode",
+          "label": "Mode",
+          "type": "string",
+          "description": "Provider-specific mode such as mock"
+        },
+        {
+          "key": "region",
+          "label": "Region",
+          "type": "string",
+          "description": "Primary provider region"
+        },
+        {
+          "key": "credentials",
+          "label": "Credentials",
+          "type": "map",
+          "description": "Provider-specific credential configuration"
+        }
+      ]
+    },
     "iac.state": {
       "type": "iac.state",
       "label": "IaC State Store",
@@ -6199,7 +6257,7 @@
           "key": "body_from",
           "label": "Body From",
           "type": "string",
-          "description": "Dotted path to resolve body from step outputs (e.g., steps.get-company.row)",
+          "description": "Dotted path to resolve body from pipeline context or step outputs; use . for the full current context (e.g., steps.get-company.row)",
           "placeholder": "steps.get-company.row"
         }
       ]
@@ -7011,7 +7069,7 @@
           "key": "body_from",
           "label": "Body From",
           "type": "string",
-          "description": "Dotted path to resolve body from step outputs (e.g., steps.get-company.row)",
+          "description": "Dotted path to resolve body from pipeline context or step outputs; use . for the full current context (e.g., steps.get-company.row)",
           "placeholder": "steps.get-company.row"
         }
       ]
@@ -9082,7 +9140,7 @@
     "step.artifact_download": {
       "type": "step.artifact_download",
       "plugin": "storage",
-      "description": "Downloads an artifact from the artifact store.",
+      "description": "Downloads artifact content from the artifact store to a file or pipeline output.",
       "configFields": [
         {
           "key": "store",
@@ -9102,19 +9160,46 @@
           "key": "dest",
           "label": "",
           "type": "string",
-          "description": "Local path to write the artifact"
+          "description": "Local path to write the artifact; mutually exclusive with content_encoding"
+        },
+        {
+          "key": "content_encoding",
+          "label": "",
+          "type": "string",
+          "description": "Return content in step output using this encoding when dest is omitted (raw, text, base64)"
+        },
+        {
+          "key": "max_bytes",
+          "label": "",
+          "type": "number",
+          "description": "Maximum whole-number bytes to load in content-output mode; 0 means unlimited"
         }
       ],
       "outputs": [
         {
-          "key": "path",
+          "key": "key",
           "type": "string",
-          "description": "Local path where artifact was written"
+          "description": "Artifact key"
+        },
+        {
+          "key": "dest",
+          "type": "string",
+          "description": "Local path where artifact was written in file mode"
+        },
+        {
+          "key": "artifact_content",
+          "type": "string",
+          "description": "Artifact content when content_encoding is used"
         },
         {
           "key": "size",
           "type": "number",
           "description": "Artifact size in bytes"
+        },
+        {
+          "key": "metadata",
+          "type": "object",
+          "description": "Artifact metadata"
         }
       ]
     },
@@ -9263,7 +9348,7 @@
     "step.artifact_upload": {
       "type": "step.artifact_upload",
       "plugin": "storage",
-      "description": "Uploads a file as an artifact to the artifact store.",
+      "description": "Uploads file-backed or context-backed content to the artifact store.",
       "configFields": [
         {
           "key": "store",
@@ -9283,8 +9368,19 @@
           "key": "source",
           "label": "",
           "type": "string",
-          "description": "Local file path to upload",
-          "required": true
+          "description": "Local file path to upload; mutually exclusive with content_from"
+        },
+        {
+          "key": "content_from",
+          "label": "",
+          "type": "string",
+          "description": "Pipeline context path containing artifact content as a string; mutually exclusive with source"
+        },
+        {
+          "key": "content_encoding",
+          "label": "",
+          "type": "string",
+          "description": "Encoding for content_from (raw, text, base64)"
         },
         {
           "key": "metadata",
@@ -9303,6 +9399,11 @@
           "key": "store",
           "type": "string",
           "description": "Name of the store used"
+        },
+        {
+          "key": "size",
+          "type": "number",
+          "description": "Stored artifact size in bytes"
         }
       ]
     },
@@ -9520,20 +9621,50 @@
     "step.build_binary": {
       "type": "step.build_binary",
       "plugin": "cicd",
-      "description": "Builds a Go binary from source.",
+      "description": "Generates a Workflow Go project from config and optionally builds a binary.",
       "configFields": [
         {
-          "key": "source",
+          "key": "config_file",
           "label": "",
           "type": "string",
-          "description": "Source directory or package path",
-          "required": true
+          "description": "Workflow config file to embed; exactly one of config_file or config_from is required"
+        },
+        {
+          "key": "config_from",
+          "label": "",
+          "type": "string",
+          "description": "Pipeline context path resolving to workflow config YAML; exactly one of config_file or config_from is required"
         },
         {
           "key": "output",
           "label": "",
           "type": "string",
           "description": "Output binary path"
+        },
+        {
+          "key": "module_path",
+          "label": "",
+          "type": "string",
+          "description": "Generated Go module path"
+        },
+        {
+          "key": "go_version",
+          "label": "",
+          "type": "string",
+          "description": "Generated go.mod Go version"
+        },
+        {
+          "key": "embed_config",
+          "label": "",
+          "type": "boolean",
+          "description": "Embed app.yaml in the generated binary",
+          "defaultValue": true
+        },
+        {
+          "key": "dry_run",
+          "label": "",
+          "type": "boolean",
+          "description": "Return generated files without compiling"
         },
         {
           "key": "os",
@@ -9546,19 +9677,53 @@
           "label": "",
           "type": "string",
           "description": "Target architecture (GOARCH)"
-        },
-        {
-          "key": "ldflags",
-          "label": "",
-          "type": "string",
-          "description": "Linker flags"
         }
       ],
       "outputs": [
         {
+          "key": "dry_run",
+          "type": "boolean",
+          "description": "Whether the step returned generated files without compiling"
+        },
+        {
+          "key": "files",
+          "type": "array",
+          "description": "Generated file paths in dry-run mode"
+        },
+        {
+          "key": "file_contents",
+          "type": "object",
+          "description": "Generated file contents keyed by path in dry-run mode"
+        },
+        {
+          "key": "module_path",
+          "type": "string",
+          "description": "Generated Go module path"
+        },
+        {
+          "key": "go_version",
+          "type": "string",
+          "description": "Generated go.mod Go version"
+        },
+        {
+          "key": "target_os",
+          "type": "string",
+          "description": "Target OS (GOOS)"
+        },
+        {
+          "key": "target_arch",
+          "type": "string",
+          "description": "Target architecture (GOARCH)"
+        },
+        {
           "key": "binary_path",
           "type": "string",
           "description": "Path to the built binary"
+        },
+        {
+          "key": "binary_size",
+          "type": "number",
+          "description": "Built binary size in bytes"
         }
       ]
     },
@@ -9881,11 +10046,21 @@
           "key": "account",
           "label": "",
           "type": "string",
-          "description": "Name of the cloud.account module",
-          "required": true
+          "description": "Static name of the cloud.account module; mutually exclusive with account_from"
+        },
+        {
+          "key": "account_from",
+          "label": "",
+          "type": "string",
+          "description": "Pipeline context path resolving to the cloud.account module name; mutually exclusive with account"
         }
       ],
       "outputs": [
+        {
+          "key": "account",
+          "type": "string",
+          "description": "Validated cloud account service name"
+        },
         {
           "key": "valid",
           "type": "boolean",
@@ -12256,13 +12431,19 @@
           "key": "specs",
           "label": "",
           "type": "array",
-          "description": "Desired resource specs passed to plan and hash recomputation; mutually exclusive with specs_from"
+          "description": "Desired resource specs passed to plan and hash recomputation; mutually exclusive with specs_from and resources"
         },
         {
           "key": "specs_from",
           "label": "",
           "type": "string",
-          "description": "Dotted context path to resolve specs at Execute time (e.g. steps.parse-request.body.specs); mutually exclusive with specs"
+          "description": "Dotted context path to resolve specs at Execute time (e.g. steps.parse-request.body.specs); mutually exclusive with specs and resources"
+        },
+        {
+          "key": "resources",
+          "label": "",
+          "type": "array",
+          "description": "Named app infra resources to resolve into desired specs; mutually exclusive with specs and specs_from"
         },
         {
           "key": "desired_hash",
@@ -12358,7 +12539,13 @@
           "key": "refs",
           "label": "",
           "type": "array",
-          "description": "Resource refs to destroy (list of {name, type, provider_id})"
+          "description": "Resource refs to destroy (list of {name, type, provider_id}); mutually exclusive with resources"
+        },
+        {
+          "key": "resources",
+          "label": "",
+          "type": "array",
+          "description": "Named app infra resources to destroy; mutually exclusive with refs"
         }
       ],
       "outputs": [
@@ -12447,7 +12634,13 @@
           "key": "refs",
           "label": "",
           "type": "array",
-          "description": "Optional list of resource refs to query; empty queries all"
+          "description": "Optional list of resource refs to query; mutually exclusive with resources"
+        },
+        {
+          "key": "resources",
+          "label": "",
+          "type": "array",
+          "description": "Optional list of named app infra resources to query; mutually exclusive with refs"
         }
       ],
       "outputs": [
@@ -12484,13 +12677,19 @@
           "key": "specs",
           "label": "",
           "type": "array",
-          "description": "Desired resource specs (list of {name, type, config, size}); mutually exclusive with specs_from"
+          "description": "Desired resource specs (list of {name, type, config, size}); mutually exclusive with specs_from and resources"
         },
         {
           "key": "specs_from",
           "label": "",
           "type": "string",
-          "description": "Dotted context path to resolve specs at Execute time (e.g. steps.parse-request.body.specs); mutually exclusive with specs"
+          "description": "Dotted context path to resolve specs at Execute time (e.g. steps.parse-request.body.specs); mutually exclusive with specs and resources"
+        },
+        {
+          "key": "resources",
+          "label": "",
+          "type": "array",
+          "description": "Named app infra resources to resolve into desired specs; mutually exclusive with specs and specs_from"
         },
         {
           "key": "env",
@@ -12753,7 +12952,7 @@
           "key": "body_from",
           "label": "",
           "type": "string",
-          "description": "Template expression to build body from step outputs (e.g. 'steps.query.rows')"
+          "description": "Dotted path to resolve body from pipeline context or step outputs; use '.' for the full current context (e.g. 'steps.query.rows')"
         },
         {
           "key": "headers",
@@ -14192,7 +14391,7 @@
           "key": "body_from",
           "label": "",
           "type": "string",
-          "description": "Template expression to build body from step outputs (e.g. 'steps.query.rows')"
+          "description": "Dotted path to resolve body from pipeline context or step outputs; use '.' for the full current context (e.g. 'steps.query.rows')"
         },
         {
           "key": "headers",
