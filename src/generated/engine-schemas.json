@@ -8885,6 +8885,18 @@
           "type": "string",
           "description": "Name of the app.container module",
           "required": true
+        },
+        {
+          "key": "spec",
+          "label": "",
+          "type": "map",
+          "description": "Optional deployment spec overrides for this deploy call; mutually exclusive with spec_from"
+        },
+        {
+          "key": "spec_from",
+          "label": "",
+          "type": "string",
+          "description": "Dotted pipeline context path resolving to deployment spec overrides; mutually exclusive with spec"
         }
       ],
       "outputs": [
