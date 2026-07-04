@@ -10,3 +10,4 @@ _worktrees/
 *.tar.gz
 *.zip
 *.gz
+release-artifacts/
