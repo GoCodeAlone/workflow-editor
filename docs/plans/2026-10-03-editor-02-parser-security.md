@@ -33,7 +33,8 @@
 
 Requirements: E1-E3. Modify `package.json`, `package-lock.json`; create
 `src/utils/yamlSecurity.test.ts`, `scripts/pack-maintenance.mjs`,
-`scripts/pack-maintenance.test.mjs`, `scripts/verify-yaml-security.mjs`.
+`scripts/pack-maintenance.node-tests.mjs`, `scripts/verify-yaml-security.mjs`,
+`scripts/yaml-security-eslint.config.mjs`.
 
 1. Baseline Node 22: `npm ci`, `npm test`, `npm run build`; expected existing
    69 tests PASS and built parser chunks match installed published 0.2.0.
@@ -53,20 +54,25 @@ Requirements: E1-E3. Modify `package.json`, `package-lock.json`; create
    using owned installed external peers. Assert version/exact gitHead before
    positive/negative parser matrix. Reject wrong metadata. Clean owned staging/
    extraction in finally; retain only caller-requested output.
-5. `npm ci`; `npm test`; `npx tsc --noEmit`; targeted new-test eslint;
-   `npm run build`; `node --test scripts/pack-maintenance.test.mjs`;
+5. `npm ci`; `npm test`; `npx tsc --noEmit`;
+   `npx eslint --config scripts/yaml-security-eslint.config.mjs src/utils/yamlSecurity.test.ts --max-warnings=0`;
+   `npm run build`; `node --test scripts/pack-maintenance.node-tests.mjs`;
    `node scripts/pack-maintenance.mjs <owned-output-directory>` then
    `node scripts/verify-yaml-security.mjs <returned-tarball> <verified-head>`.
    Expected full suite and ESM/CJS/export matrices PASS, version 0.2.1/HEAD
    exact, YAML >=4.3.2 and no vulnerable bundled duplicate. Classify unrelated
-   full-lint baseline, no unrelated rewrite. Commit owning files after proof.
+   full-lint baseline, no unrelated rewrite. The targeted flat config explicitly
+   matches the new test and enforces no-undef/no-unused-vars with the installed
+   ESLint parser; keep that TypeScript test JavaScript-syntax-compatible, with
+   tsc providing type checks. No new parser dependency or ignored-file pass.
+   Commit owning files after proof.
    Rollback: reviewed narrow revert/rebuild/reprobe, then hold vulnerable release.
 
 ### Task 2: Guard Maintenance CI And Release Authority
 
 Requirements: E4-E6. Modify `.github/workflows/build.yml`, `publish.yml`;
 create `scripts/verify-maintenance-release.mjs`,
-`scripts/maintenance-workflows.test.mjs`.
+`scripts/maintenance-workflows.node-tests.mjs`.
 
 1. Add real parsed-workflow tests: maintenance PR/push coverage, hosted Node 22,
    immutable action pins, explicit minimal permissions, tests/build/stamped
@@ -81,11 +87,12 @@ create `scripts/verify-maintenance-release.mjs`,
    pinned checkout/setup-node and automatic token. Publisher only `v0.2.*`,
    contents/write + packages/write, full checkout. Validate numeric patch tag,
    package equality, exact peeled tag commit = HEAD, and fetched remote
-   `release/0.2.x` ancestry before pack/publication. Run types/tests/build,
+   `release/0.2.x` ancestry before pack/publication. Run types/Vitest tests,
+   both explicit Node test suites, the targeted lint command above, and build,
    staged commit-bound pack and extracted probe; `npm publish <tested-tgz>
    --tag maintenance-0.2`; `gh release create <tag> <tested-tgz> --verify-tag
    --latest=false`. No named secret, default-latest publish or notifications.
-4. `node --test scripts/maintenance-workflows.test.mjs`, actionlint if available:
+4. `node --test scripts/maintenance-workflows.node-tests.mjs`, actionlint if available:
    all real guard/graph assertions PASS. Actual pack/probe at HEAD PASS;
    mismatched packed identity rejects. Commit only owning workflow/guard files.
 5. Re-read operator membership/rules. Two existing Default rulesets apply only
@@ -141,3 +148,11 @@ Worker: Task 1 package/lock/source tests/packer/probe. Lead: Task 2 workflows/
 guard/settings. Disjoint writes; no concurrent source mutation during package
 snapshots. Task 3 follows both; source Workflow cold Linux test runs separately.
 No further operator approval needed; standing approval recorded in design.
+
+## Alignment
+
+PASS after bounded plan review. Forward: E1-E3 -> Task 1; E4-E6 -> Task 2;
+E7 -> Task 3. Reverse: Task 1 -> E1-E3; Task 2 -> E4-E6; Task 3 -> E3/E5-E7.
+Every task belongs to the single PR row; settings/provenance/consumer/rollback
+requirements assigned. Node suites use `.node-tests.mjs` to avoid Vitest
+discovery collision; both hosted paths explicitly run suites and targeted lint.
