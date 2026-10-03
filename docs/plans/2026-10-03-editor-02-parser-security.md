@@ -36,6 +36,11 @@ Requirements: E1-E3. Modify `package.json`, `package-lock.json`; create
 `scripts/pack-maintenance.node-tests.mjs`, `scripts/verify-yaml-security.mjs`,
 `scripts/yaml-security-eslint.config.mjs`.
 
+Necessary E4 baseline compatibility backport: modify only the three Node-only
+`global` references in `src/test/setup.ts` to equivalent `globalThis`; preserve
+polyfill behavior and the full type gate, no added typings/suppression. Lead
+owns that narrow fix; Task 1 verification below covers it. Manifest unchanged.
+
 1. Baseline Node 22: `npm ci`, `npm test`, `npm run build`; expected existing
    69 tests PASS and built parser chunks match installed published 0.2.0.
 2. Add real utils-export tests for `parseYaml` and `multiConfigToTabs`: two

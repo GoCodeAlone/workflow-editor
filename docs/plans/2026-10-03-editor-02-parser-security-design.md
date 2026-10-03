@@ -106,3 +106,23 @@ prefer a forward maintenance patch, because 0.2.0 remains vulnerable. Repair a
 failed package/GitHub-release publication at the same verified immutable tag only
 when the artifact is not already published; otherwise use a new patch. Never move
 the current-line `latest` dist-tag as rollback.
+
+### Backport 2026-10-03: Existing Full Type Gate
+
+Cause: existing `npx tsc --noEmit` fails on three Node-only `global` references
+in `src/test/setup.ts`, whose mocks are excluded from the successful library
+declaration build. The historical workflow already declares this full gate.
+
+Correction: use standard `globalThis` for those same ResizeObserver/DOMMatrix
+test polyfills, preserving runtime identity/mutations. No added typings,
+suppression, removed check or unrelated test refactor. This is necessary E4
+verification wiring, owned by Task 1's baseline compatibility check. No manifest
+task/PR/API change. Verify full types, all tests and both packaged consumers.
+
+### Backport 2026-10-03: Build Before Packed Tests
+
+Code review identified warm-checkout masking: the Node packing fixtures copy
+actual built dist, so clean CI must build before those suites. Both hosted
+paths now order types/source tests/lint, build, Node suites, pack and consumers.
+Real workflow graph regression fails for the prior order; require a fresh
+committed checkout with no initial dist for final rehearsal. No manifest change.
