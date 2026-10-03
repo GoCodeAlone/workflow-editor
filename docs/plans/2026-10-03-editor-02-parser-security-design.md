@@ -37,8 +37,8 @@ contract. No `0.2.1` tag/package existed at preflight; `latest` was `0.85.4`.
 | ID | Required behavior |
 |---|---|
 | E1 | Exact `0.2.1` package; patched resolved YAML; unchanged exports, peers, serialization API and exception propagation. No unrelated dependency refresh. |
-| E2 | Actual exported parser accepts parametric valid input and the 10,000-merge boundary; throws on malformed YAML and 10,001 merges. First demonstrate RED against old dependency. |
-| E3 | Build and `npm pack`; launch consumers against the extracted tarball's ESM and CJS utils exports. Same positive/negative assertions, no source imports or mocked parser. |
+| E2 | Actual exported `parseYaml` and `multiConfigToTabs` accept parametric valid input and the 10,000-merge boundary; throw on malformed YAML and 10,001 merges. First demonstrate RED against old dependency. |
+| E3 | Build, copy only the package manifest/dist into private generated staging, explicitly stamp the verified checkout commit as manifest `gitHead`, and `npm pack`. Before publication, assert packed version/gitHead and launch consumers against the extracted tarball's ESM and CJS utils exports. Same positive/negative assertions, no source imports or mocked parser. |
 | E4 | Maintenance Build runs on PR/push `release/0.2.x`: install, types, tests, targeted new-test lint, build, pack consumer probe. Baseline unrelated lint issues classified, not silently rewritten. |
 | E5 | Maintenance publisher accepts only `v0.2.*`, validates tag/package identity and exact tag commit's remote maintenance-branch ancestry, runs E4, publishes the tested tarball using automatic token and `maintenance-0.2` dist-tag, creates non-latest GitHub release. No notifications or named secrets. |
 | E6 | Before tagging, active creation/update/deletion protection for `v0.2.*` with only trusted organization/repository-admin bypass, plus PR/non-fast-forward/deletion protection of `release/0.2.x`; verify operator identity and exact merged HEAD. Never move/delete tags or replace current latest. |
@@ -61,6 +61,14 @@ contract. No `0.2.1` tag/package existed at preflight; `latest` was `0.85.4`.
 - Both editor lines are vulnerable: this backport unblocks Workflow; a separate
   compatible current-line security patch follows, with its safe-parser/fallback
   contract tested. Do not call the whole editor ecosystem fixed after this PR.
+
+### Design Review Correction D1
+
+The npm tarball-publish path cannot reliably discover the checkout's Git commit.
+Bind `gitHead` in the generated staged manifest before final packing/testing,
+assert exact version/commit in the packed probe, and publish those tested bytes.
+Do not discover missing provenance only after immutable publication. The
+source manifest remains unmodified by generated packing. No additional PR/task.
 
 ## Security Review
 
