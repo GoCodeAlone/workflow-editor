@@ -27,7 +27,7 @@
 |------|-------|-------|--------|
 | 1 | Backport bundled YAML security to editor 0.2 | Task 1, Task 2, Task 3 | fix/editor-02-yaml-security |
 
-**Status:** Locked 2026-10-03T19:46:17Z
+**Status:** Complete 2026-10-03T20:53:47Z
 
 ### Task 1: Prove And Patch Real Source/Packed Consumers
 
